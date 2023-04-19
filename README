@@ -4,7 +4,7 @@ THis file contains instructions for managing code (git, documentation, ...)
 ---------------------------------------------------------------------------------------------
 Code Documentation
 ---------------------------------------------------------------------------------------------
-run the following repeatedly until no errors exist ot get the code docuemntation clean
+run the following repeatedly until no errors exist to get the code docuemntation clean
 
 devtools::document()
 
@@ -26,7 +26,7 @@ Running documentation - this builds the file toxvaldb09_manual.pdf
 
 Sys.setenv(PATH = paste(Sys.getenv("PATH"), "C:/Program Files/MiKTeX 2.9/miktex/bin/x64", sep=.Platform$path.sep))
 Sys.setenv(R_PAPERSIZE="letter")
-system("R CMD Rd2pdf . --title=toxvaldb09 toxvaldb09 --output=../toxvaldb94_manual.pdf --force --no-clean --internals")
+system("R CMD Rd2pdf . --title=toxvaldbmain toxvaldbmain --output=toxvaldbmain_manual.pdf --force --no-clean --internals")
 
 ---------------------------------------------------------------------------------------------
 Managing git and bitbucket - internal
