@@ -68,7 +68,7 @@ toxval.load.heast <- function(toxval.db,source.db,log=F) {
   # examples ...
   # names(res)[names(res) == "source_url"] = "url"
   # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-browser()
+
   #####################################################################
   cat("Generic steps \n")
   #####################################################################

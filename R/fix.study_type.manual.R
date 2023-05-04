@@ -4,7 +4,7 @@
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-04-10"){
+fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-05-04"){
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",sys.date,".xlsx")
   print(file)
@@ -42,7 +42,7 @@ fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-04-10"){
       st = temp3[i,"study_type"]
       query = paste0("update toxval set study_type='",st,"' where source_hash='",hk,"'")
       #print(query)
-      runQuery(query,db)
+      runQuery(query,toxval.db)
       if(i%%100==0) cat("finished",i,"out of",nrow(temp3),"\n")
     }
 
