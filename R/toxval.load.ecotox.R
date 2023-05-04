@@ -7,7 +7,7 @@
 #' @param do.load If TRUE, load the data from the input file and put into a global variable
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="2023-01-26") {
+toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="2023-05-03") {
   printCurrentFunction(toxval.db)
   source <- "ECOTOX"
   source_table = "direct_load"
@@ -38,7 +38,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   if(!exists("ECOTOX")) do.load=T
   if(do.load) {
     cat("load ECOTOX data\n")
-    file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX Prod ",sys.date,".RData")
+    file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX ",sys.date,".RData")
     #file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX Dev small ",sys.date,".RData")
     print(file)
     load(file=file)
@@ -54,8 +54,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   nlist = c( "dsstox_substance_id","dsstox_casrn","dsstox_pref_nm",
   "species_number","species_common_name","species_scientific_name","habitat","organism_lifestage","species_group",
   "effect",
-  "endpoint","conc1_type_std","conc1_units_std",
-  "conc1_author","conc1_mean_std",
+  "endpoint","conc1_type_std","conc1_units_std","conc1_units_author",
+  "conc1_author","conc1_mean_std","conc1_author",
   "conc1_author","conc1_mean_op","conc1_mean","conc1_min_op","conc1_min","conc1_max_op","conc1_max",
   "conc1_units_std","conc1_mean_std",
   "observed_duration_units_std","observed_duration_std",
@@ -67,8 +67,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   nlist = c( "dtxsid","casrn","name",
              "species_id","common_name","latin_name","habitat","lifestage","ecotox_group",
              "study_type",
-             "toxval_type","toxval_subtype","toxval_units",
-             "toxval_numeric_qualifier","toxval_numeric",
+             "toxval_type","toxval_subtype","toxval_units","toxval_units2",
+             "toxval_numeric_qualifier","toxval_numeric","toxval_numeric2",
              "conc1_author","conc1_mean_op","conc1_mean","conc1_min_op","conc1_min","conc1_max_op","conc1_max",
              "conc1_units_std","conc1_mean_std",
              "study_duration_units","study_duration_value",
@@ -140,19 +140,21 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
 
   res$long_ref = paste(res$long_ref,res$author,res$title,res$year)
   res$critical_effect = paste(res$study_type, res$effect_measurement)
+  res[is.na(res$toxval_units),"toxval_units"] = res[is.na(res$toxval_units),"toxval_units2"]
+  res[is.na(res$toxval_numeric),"toxval_numeric"] = res[is.na(res$toxval_numeric),"toxval_numeric2"]
+
   res = subset(res,select = -c(effect_measurement,
                                conc1_author,conc1_mean_op,conc1_mean,conc1_min_op,conc1_min,conc1_max_op,conc1_max,
-                               conc1_units_std,conc1_mean_std))
+                               conc1_units_std,conc1_mean_std,toxval_units2,toxval_numeric2))
 
-  cat("set the source_hash\n")
-  res$key = NA
-  for (i in 1:nrow(res)){
-    row <- res[i,]
-    res[i,"key"] = digest(paste0(row,collapse=""), serialize = FALSE)
-    if(i%%10000==0) cat(i," out of ",nrow(res),"\n")
-  }
-
-  res = subset(res,select = -c(key))
+  # cat("set the key\n")
+  # res$key = NA
+  # for (i in 1:nrow(res)){
+  #   row <- res[i,]
+  #   res[i,"key"] = digest(paste0(row,collapse=""), serialize = FALSE)
+  #   if(i%%10000==0) cat(i," out of ",nrow(res),"\n")
+  # }
+  # res = subset(res,select = -c(key))
   res = unique(res)
   print(dim(res))
 
@@ -166,6 +168,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
 
   res = source_chemical.ecotox(toxval.db,source.db,res,source,chem.check.halt=FALSE,
                                casrn.col="casrn",name.col="name",verbose=F)
+
   tt.list <- res$toxval_type
   tt.list <- gsub("(^[a-zA-Z]+)([0-9]*)(.*)","\\1",tt.list)
 
