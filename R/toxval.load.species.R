@@ -4,7 +4,7 @@
 #' @param date_string The date string for the dictionary files
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.species <- function(toxval.db,date_string="2023-02-14") {
+toxval.load.species <- function(toxval.db,date_string="2023-05-18") {
   printCurrentFunction(toxval.db)
 
   #################################################################
@@ -45,6 +45,19 @@ toxval.load.species <- function(toxval.db,date_string="2023-02-14") {
   #
   # runQuery("delete from species where species_id>=0",toxval.db)
   runInsertTable(dict3,"species",toxval.db)
+  d2 = unique(dict[,c("species_id","ecotox_group")])
+  d3 = runQuery("select species_id,ecotox_group from species",db)
+  d2$index = paste(d2$species_id,d2$ecotox_group)
+  d3$index = paste(d3$species_id,d3$ecotox_group)
+  d2 = d2[!is.element(d2$index,d3$index),]
+  if(nrow(d2)>0) {
+    cat("update the ecotox group",nrow(d2),"\n")
+    for(i in 1:nrow(d2)) {
+      query = paste0("update species set ecotox_group='",d2[i,"ecotox_group"],"' where species_id=",d2[i,"species_id"])
+      runQuery(query,toxval.db)
+      if(i%%1000==0) cat("finished ",i," out of ",nrow(dict),"\n")
+    }
+  }
   runQuery("update species set common_name='Rat' where species_id=4510",toxval.db)
   runQuery("update species set common_name='Mouse' where species_id=4913",toxval.db)
   runQuery("update species set common_name='Dog' where species_id=4928",toxval.db)
@@ -52,4 +65,5 @@ toxval.load.species <- function(toxval.db,date_string="2023-02-14") {
   runQuery("update species set common_name='Rabbit' where species_id=22808",toxval.db)
   runQuery("update species set common_name='Cat' where species_id=7378",toxval.db)
   runQuery("update toxval set species_id=4510 where species_id=23410",toxval.db)
+  fix.species.common_name(toxval.db)
 }
