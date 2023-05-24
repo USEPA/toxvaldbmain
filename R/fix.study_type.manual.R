@@ -4,7 +4,7 @@
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-05-04"){
+fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-05-19"){
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",sys.date,".xlsx")
   print(file)
@@ -28,6 +28,49 @@ fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-05-04"){
                             "' and toxval_type in (select toxval_type from toxval_type_dictionary where toxval_type_supercategory in ('Point of Departure','Lethality Effect Level','Toxicity Value'))
                             and human_eco='human health'"),toxval.db)
 
+    shlist = unique(temp0$source_hash)
+    shlist.db = unique(temp.old$source_hash)
+    missing = shlist.db[!is.element(shlist.db,shlist)]
+    if(length(missing)>0) {
+      cat("Missing source_hash in replacement file:",source," missing ",length(missing)," out of ",length(shlist.db),"\n")
+
+      query = paste0("SELECT
+                    a.dtxsid,a.name,
+                    b.source,
+                    b.risk_assessment_class,
+                    b.toxval_type,
+                    b.toxval_subtype,
+                    b.toxval_units,
+                    b.study_type_original,
+                    b.study_type,
+                    b.study_type as study_type_corrected,
+                    b.study_duration_value,
+                    b.study_duration_units,
+                    d.common_name,
+                    b.generation,
+                    b.exposure_route,
+                    b.exposure_method,
+                    b.critical_effect,
+                    f.long_ref,
+                    f.title,
+                    b.source_hash
+                    FROM
+                    toxval b
+                    INNER JOIN source_chemical a on a.chemical_id=b.chemical_id
+                    LEFT JOIN species d on b.species_id=d.species_id
+                    INNER JOIN record_source f on b.toxval_id=f.toxval_id
+                    INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type
+                    WHERE
+                    b.source='",source,"'
+                    and b.human_eco='human health'
+                    and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level')")
+      replacements = runQuery(query,toxval.db,T,F)
+      replacements$fixed = 0
+      replacements = replacements[is.element(replacements$source_hash,missing),]
+      file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",sys.date,".csv")
+      write.csv(replacements,file,row.names=F)
+      #browser()
+    }
     temp$code = paste(temp$source_hash,temp$study_type)
     temp.old$code = paste(temp.old$source_hash,temp.old$study_type)
     n1 = nrow(temp)
@@ -46,24 +89,24 @@ fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-05-04"){
       if(i%%100==0) cat("finished",i,"out of",nrow(temp3),"\n")
     }
 
-    check = runQuery(paste0("select dtxsid,source,study_type,source_hash from toxval where dtxsid!='NODTXSID' and source='",source,
-                            "' and toxval_type in (select toxval_type from toxval_type_dictionary where toxval_type_supercategory in ('Point of Departure','Lethality Effect Level','Toxicity Value'))
-                            and human_eco='human health'"),toxval.db)
-    check = unique(check)
-    check$key = paste(check[,1],check[,2],check[,3],check[,4])
-    check = check[order(check$source_hash),]
-    temp0 = temp0[order(temp0$source_hash),]
-    missing.new = check[!is.element(check$key,temp0$key),]
-    missing.old = temp0[!is.element(temp0$key,check$key),]
-    n1 = nrow(missing.old)
-    n2 = nrow(missing.new)
-    cat("  check: ",source,n1,n2,"\n")
-    #if(n1>0 || n2>0) {
-    if(n2>0) {
-        # temp0 is read from the input (new study type spreadsheet)
-      # check is from the current version of the database
-      cat("\n\nStopping here means that the study_type fix process did not work for source:",source,"\n")
-      browser()
-    }
+    # check = runQuery(paste0("select dtxsid,source,study_type,source_hash from toxval where dtxsid!='NODTXSID' and source='",source,
+    #                         "' and toxval_type in (select toxval_type from toxval_type_dictionary where toxval_type_supercategory in ('Point of Departure','Lethality Effect Level','Toxicity Value'))
+    #                         and human_eco='human health'"),toxval.db)
+    # check = unique(check)
+    # check$key = paste(check[,1],check[,2],check[,3],check[,4])
+    # check = check[order(check$source_hash),]
+    # temp0 = temp0[order(temp0$source_hash),]
+    # missing.new = check[!is.element(check$key,temp0$key),]
+    # missing.old = temp0[!is.element(temp0$key,check$key),]
+    # n1 = nrow(missing.old)
+    # n2 = nrow(missing.new)
+    # cat("  check: ",source,n1,n2,"\n")
+    # #if(n1>0 || n2>0) {
+    # if(n2>0) {
+    #     # temp0 is read from the input (new study type spreadsheet)
+    #   # check is from the current version of the database
+    #   cat("\n\nStopping here means that the study_type fix process did not work for source:",source,"\n")
+    #   browser()
+    # }
   }
 }
