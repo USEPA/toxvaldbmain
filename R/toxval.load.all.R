@@ -73,21 +73,20 @@ toxval.load.all <- function(toxval.db,
       toxval.load.penn(toxval.db,source.db,log)
       toxval.load.pfas_150_sem_v2(toxval.db,source.db,log)
       toxval.load.pprtv.ncea(toxval.db,source.db,log)
-      toxval.load.pprtv.ornl(toxval.db,source.db,log)
+      toxval.load.pprtv.cphea(toxval.db,source.db,log)
       toxval.load.rsl(toxval.db,source.db,log)
       toxval.load.ut_hb(toxval.db,source.db,log)
       toxval.load.wignall(toxval.db,source.db,log)
       toxval.load.test(toxval.db,source.db,log)
       toxval.load.chemidplus(toxval.db,source.db,log)
       toxval.load.toxrefdb2.1(toxval.db,source.db,log)
-      toxval.load.ecotox(toxval.db,source.db,log)
-      toxval.load.echa_iuclid(toxval.db,source.db,log)
-      toxval.load.pprtv.cphea(toxval.db,source.db,log)
+      #toxval.load.ecotox(toxval.db,source.db,log)
+      #toxval.load.echa_iuclid(toxval.db,source.db,log)
     }
   }
   if(do.post) {
     fix.study_type.manual(toxval.db,source=NULL)
-    fix.risk_assessment_class.all.source(toxval.db,restart=T)
+    fix.risk_assessment_class.by.source(toxval.db,restart=T)
     load.dsstox()
   }
   if(do.extra) {
