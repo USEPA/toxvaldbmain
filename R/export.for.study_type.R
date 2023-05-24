@@ -65,4 +65,6 @@ export.for.study_type <- function(toxval.db,source=NULL) {
   else file = paste0(dir,"/study_type/toxval_new_study_type ",source," ",toxval.db," ",Sys.Date(),".xlsx")
   sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   write.xlsx(res,file,firstRow=T,headerStyle=sty)
+  file = paste0(dir,"/study_type/toxval_new_study_type ",source," ",toxval.db," ",Sys.Date(),".csv")
+  write.csv(res,file=file,row.names=F)
 }
