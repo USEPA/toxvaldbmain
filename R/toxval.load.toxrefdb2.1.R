@@ -134,7 +134,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db,source.db,log=F,do.init=T) {
     for (i in 1:nrow(temp)){
       row <- temp[i,]
       res[i,"key"] = digest(paste0(row,collapse=""), serialize = FALSE)
-      if(i%%1000==0) cat("add key to res:,",i," out of ",nrow(res),"\n")
+      if(i%%1000==0) cat("add key to res:",i," out of ",nrow(res),"\n")
     }
 
     res2 <- res
