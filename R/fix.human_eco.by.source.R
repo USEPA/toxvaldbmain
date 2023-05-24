@@ -9,43 +9,84 @@
 fix.human_eco.by.source <- function(toxval.db,source=NULL, reset=T){
   printCurrentFunction(paste(toxval.db,":", source))
 
+  human.list = c("Alaska DEC","ATSDR MRLs 2020","ATSDR MRLs 2022",
+                 "ATSDR PFAS","ATSDR PFAS 2021","Cal OEHHA",
+                 "California DPH","ChemIDplus","Chiu",
+                 "Copper Manufacturers","COSMOS","DOD",
+                 "DOE Protective Action Criteria",
+                 "ECHA IUCLID","EFSA",
+                 "EFSA2","EPA AEGL",
+                 "EPA OPP","EPA OPPT","FDA CEDI",
+                 "HAWC PFAS 150","HAWC PFAS 430","HAWC Project",
+                 "Health Canada","HEAST","HESS",
+                 "HPVIS","IRIS","Mass. Drinking Water Standards",
+                 "NIOSH","OSHA Air contaminants","OW Drinking Water Standards",
+                 "Pennsylvania DEP MCLs","Pennsylvania DEP ToxValues","PFAS 150 SEM v2",
+                 "PPRTV (CPHEA)","PPRTV (NCEA)","RSL",
+                 "TEST","ToxRefDB",
+                 "Uterotrophic Hershberger DB","WHO IPCS","Wignall",
+                 "USGS HBSL")
+
+  hra.list = c("Alaska DEC","ATSDR MRLs 2020","ATSDR MRLs 2022",
+               "ATSDR PFAS","ATSDR PFAS 2021","Cal OEHHA",
+               "California DPH","EPA AEGL","FDA CEDI",
+               "Health Canada","HEAST",
+               "IRIS","Mass. Drinking Water Standards",
+               "NIOSH","OSHA Air contaminants","OW Drinking Water Standards",
+               "Pennsylvania DEP MCLs","Pennsylvania DEP ToxValues",
+               "PPRTV (CPHEA)","PPRTV (NCEA)","RSL")
+
   if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   else slist = source
   for(source in slist) {
     cat("fix human_eco:",source,"\n")
     if(reset) runQuery(paste0("update toxval set human_eco='not specified' where source like '",source,"'"),toxval.db)
 
-    human.list = c("Alaska DEC","ATSDR MRLs 2020","ATSDR MRLs 2022","NIOSH","DOE Protective Action Criteria","USGS HBSL",
-                   "Mass. Drinking Water Standards","DOD","DOE Protective Action Criteria",
-                   "OSHA Air contaminants","OW Drinking Water Standards","Pennsylvania DEP MCLs","Pennsylvania DEP ToxValues")
     if(is.element(source,human.list)) {
-      query = paste0("update toxval set species_original='Human (RA)',species_id=5000000 where source='",source,"'")
+      query = paste0("update toxval set target_species='Human' where source='",source,"'")
       runQuery(query,toxval.db)
-    }
-
-    human.list = c("Cal OEHHA","California DPH",
-                   "EPA AEGL","EPA OPP","FDA CEDI","IRIS",
-                   "PFAS Summary PODs","PPRTV (CPHEA)","PPRTV (NCEA)","PPRTV (ORNL)",
-                   "RSL","Wignall")
-    if(is.element(source,human.list)) {
-      query = paste0("update toxval set species_original='Human (RA)' where species_id=1000000 and source='",source,"'")
-      runQuery(query,toxval.db)
-      query = paste0("update toxval set species_id=5000000 where species_id=1000000 and source='",source,"'")
-      runQuery(query,toxval.db)
-    }
-    if(is.element(source,c("TEST","WHO IPCS","EPA OPPT","HESS","NIOSH","PFAS 150 SEM","Alaska DEC"))) {
       query = paste0("update toxval set human_eco='human health' where source='",source,"'")
       runQuery(query,toxval.db)
+      if(is.element(source,hra.list)) {
+        query = paste0("update toxval set human_ra='Y' where source='",source,"'")
+        runQuery(query,toxval.db)
+      }
+      # some of these human sources have some ECO records
+      query = paste0("update toxval set human_eco='eco' where species_id in
+                     (select species_id from species where ecotox_group not in
+                     ('Miscellaneous','Unspecified','Not specified','None','-','Mammals')) and source='",source,"'")
+      runQuery(query,toxval.db)
+
     }
     else {
-      query = paste0("update toxval set human_eco='not specified' where source='",source,"'")
-      runQuery(query,toxval.db)
       query = paste0("update toxval set human_eco='human health' where species_id in (select species_id from species where ecotox_group='Mammals') and source='",source,"'")
       runQuery(query,toxval.db)
       query = paste0("update toxval set human_eco='eco' where species_id in
                      (select species_id from species where ecotox_group not in ('Not specified','None','-','Mammals')) and source='",source,"'")
       runQuery(query,toxval.db)
-     }
+    }
+    # special cases
+    query = paste0("update toxval set human_eco='microorganisms' where species_id in
+                     (select species_id from species where ecotox_group in
+                     ('Fungi','Virus','Bacteria','Microorganisms','Yeast','Bacteriophage')) and source='",source,"'")
+    runQuery(query,toxval.db)
+    runQuery(paste0("update toxval set human_eco='eco' where species_id=23840 and source='",source,"'"),toxval.db)
+    runQuery(paste0("update toxval set target_species='-' where human_eco != 'human health' and source='",source,"'"),toxval.db)
+
+    tvtlist = c("8-hr TWA","adequate intake","aesthetic objective",
+                "ALD","critical value","discriminating dose","drinking water quality guideline",
+                "cancer slope factor","cancer unit risk",
+                "RDA","RfC","RfD","RfD (screening chronic)","RfD (screening subchronic)","STEL (15 min)",
+                "TDI","TDLo","threshold dose","ERCL (10)",
+                "tolerable concentration in air","tolerable upper intake","UL","optimal intake value")
+    stvtlist = runQuery(paste0("select distinct toxval_type from toxval where source='",source,"'"),toxval.db)[,1]
+    tvtlist = tvtlist[is.element(tvtlist,stvtlist)]
+    for(tvt in tvtlist) {
+      query = paste0("update toxval set species_id=1000000, target_species='Human' where source='",source,"' and toxval_type='",tvt,"'")
+      runQuery(query,toxval.db)
+    }
+   # "BMC","BMDL","BMDL (01)","BMDL (05)","BMDL (10)","HNEL","LC0",
+   # "LD0","LD100","LD50","LEC","LEL","LOAEL", "LOEL","NOAEC","NOAEL","NOEL","POD"
   }
 }
 
