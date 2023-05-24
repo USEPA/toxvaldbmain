@@ -38,6 +38,8 @@ export.all.by.source <- function(toxval.db, source=NULL) {
                     b.qc_status,
                     b.study_group,
                     b.risk_assessment_class,
+                    b.human_ra,
+                    b.target_species,
                     b.human_eco,
                     b.toxval_type,b.toxval_type_original,
                     b.toxval_subtype,
