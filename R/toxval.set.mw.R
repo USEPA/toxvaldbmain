@@ -12,6 +12,7 @@ toxval.set.mw <- function(toxval.db, source=NULL){
     cat(source,"\n")
     runQuery(paste0("update toxval set mw=-1 where mw is null and source='",source,"'"),toxval.db)
     dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0"),toxval.db)[,1]
+    counter = 0
     for(dtxsid in dlist) {
       query = paste0(
         "select ",dsstox.db,".compounds.mol_weight
@@ -30,6 +31,8 @@ toxval.set.mw <- function(toxval.db, source=NULL){
         query = paste0("update toxval set mw=",mw," where dtxsid='",dtxsid,"' and source='",source,"'")
         runQuery(query,toxval.db)
       }
+      counter = counter+1
+      if(counter%%1000==0) cat("  finished",counter," out of ",length(dlist),"\n")
     }
   }
 }
