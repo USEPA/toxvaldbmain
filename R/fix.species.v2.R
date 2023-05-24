@@ -10,7 +10,7 @@
 #' @param date_string The date version of the dictionary
 #' @export
 #--------------------------------------------------------------------------------------
-fix.species.v2 <- function(toxval.db,source,date_string="2023-02-14") {
+fix.species.v2 <- function(toxval.db,source=NULL,date_string="2023-05-18") {
   printCurrentFunction()
   file =paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
   dict = read.xlsx(file)
@@ -47,7 +47,7 @@ fix.species.v2 <- function(toxval.db,source,date_string="2023-02-14") {
   for(source in slist) {
     cat(">>> fix.species.v2: ",source,"\n")
 
-    so.1 = runQuery(paste0("select distinct species_original from toxval where source='",source,"' and species_id in(-1,1000000)"),toxval.db)[,1]
+    so.1 = runQuery(paste0("select distinct species_original from toxval where source='",source,"' and species_id in (-1,1000000)"),toxval.db)[,1]
     so.2 = runQuery(paste0("select distinct species_original from toxval where source='",source,"' and species_id not in (select species_id from species)"),toxval.db)[,1]
     so = c(so.1,so.2)
 
@@ -111,5 +111,6 @@ fix.species.v2 <- function(toxval.db,source,date_string="2023-02-14") {
       }
     }
     runQuery("update toxval set species_id=4510 where species_id=23410",toxval.db)
+    runQuery("update toxval set species_id=1000000 where species_id=-1",toxval.db)
   }
 }
