@@ -36,6 +36,7 @@ export.all.by.source <- function(toxval.db, source=NULL) {
                     a.dtxsid,a.casrn,a.name,a.cleaned_casrn, a.cleaned_name,
                     b.source,b.subsource,
                     b.qc_status,
+                    b.study_group,
                     b.risk_assessment_class,
                     b.human_eco,
                     b.toxval_type,b.toxval_type_original,
