@@ -34,8 +34,15 @@ Managing git and bitbucket - internal
 
 adding to the remote bitbucket ...
 
-git config --global user.name "Richard Judson"
+git config --global user.name "richardjudson"
 git config --global user.email "judson.richard@epa.gov"
+
+git config --get remote.origin.url
+https://github.com/USEPA/toxvaldbmain.git
+
+
+
+
 
 cd existing-project
 git init
