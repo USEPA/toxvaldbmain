@@ -60,7 +60,7 @@ toxval.load.doe.pac <- function(toxval.db,source.db,log=F) {
   res$subsource <- "DOE EHSS"
   res$year <- "2016"
   res$toxval_numeric_original <- res$toxval_numeric
-  res$species_original = "human"
+  res$species_original = "-"
   res <- unique(res)
 
   #####################################################################
@@ -154,8 +154,8 @@ toxval.load.doe.pac <- function(toxval.db,source.db,log=F) {
   res = unique(res)
   refs = unique(refs)
   res$datestamp = Sys.Date()
-  for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))

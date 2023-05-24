@@ -93,7 +93,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res1$study_duration_class = "chronic"
   res1$exposure_route = "inhalation"
   res1$critical_effect = "-"
-  res1$species_original = "Human (RA)"
+  res1$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # Inhalation slope factor
@@ -111,7 +111,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res2$study_duration_class = "chronic"
   res2$exposure_route = "inhalation"
   res2$critical_effect = "-"
-  res2$species_original = "Human (RA)"
+  res2$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # oral slope factor
@@ -129,7 +129,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res3$study_duration_class = "chronic"
   res3$exposure_route = "oral"
   res3$critical_effect = "-"
-  res3$species_original = "Human (RA)"
+  res3$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # acute REL
@@ -165,7 +165,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res5$study_duration_class = "acute"
   res5$exposure_route = "inhalation"
   res5$critical_effect = "-"
-  res5$species_original = "Human (RA)"
+  res5$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # Chronic inhalation REL
@@ -183,7 +183,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res6$study_duration_class = "chronic"
   res6$exposure_route = "inhalation"
   res6$critical_effect = "-"
-  res6$species_original = "Human (RA)"
+  res6$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # Chronic Oral REL
@@ -203,7 +203,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res7$study_type = "chronic"
   res7$study_duration_class = "chronic"
   res7$exposure_route = "oral"
-  res7$species_original = "Human (RA)"
+  res7$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # MCL
@@ -221,7 +221,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res8$study_duration_class = "chronic"
   res8$exposure_route = "oral"
   res8$critical_effect = "-"
-  res8$species_original = "Human (RA)"
+  res8$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # PHG
@@ -240,7 +240,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res9$study_duration_class = "chronic"
   res9$exposure_route = "oral"
   res9$critical_effect = "-"
-  res9$species_original = "Human (RA)"
+  res9$species_original = "-"
   #-------------------------------------------------------------------------------------------------------------
   # Inhalation NSRL
   nlist = c("casrn","name","chemical_id","document_name","source", "source_hash","qc_status","details_text",
@@ -257,7 +257,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res10$study_duration_class = "chronic"
   res10$exposure_route = "inhalation"
   res10$critical_effect = "-"
-  res10$species_original = "Human (RA)"
+  res10$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # Oral NSRL
@@ -275,7 +275,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res11$study_duration_class = "chronic"
   res11$exposure_route = "oral"
   res11$critical_effect = "-"
-  res11$species_original = "Human (RA)"
+  res11$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # MADL Inhalation
@@ -293,7 +293,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res12$study_duration_class = "chronic"
   res12$exposure_route = "inhalation"
   res12$critical_effect = "-"
-  res12$species_original = "Human (RA)"
+  res12$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # MADL oral
@@ -310,7 +310,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res13$study_duration_class = "chronic"
   res13$exposure_route = "oral"
   res13$critical_effect = "-"
-  res13$species_original = "Human (RA)"
+  res13$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   # ChRfD
@@ -327,7 +327,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res14$study_duration_class = "chronic"
   res14$exposure_route = "oral"
   res14$critical_effect = "-"
-  res14$species_original = "Human (RA)"
+  res14$species_original = "-"
 
   #-------------------------------------------------------------------------------------------------------------
   nlist = c("casrn","name","chemical_id","document_name","source", "source_hash","qc_status","details_text",
@@ -350,6 +350,10 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res14 = res14[,nlist]
 
   res = rbind(res1,res2,res3,res4,res5,res6,res7,res8,res9,res10,res11,res12,res13,res14)
+  res$human_ra = "Y"
+  res$target_species = "Human"
+  res$species_original = "-"
+  res$human_eco = "human health"
   ##########################################################
   cat("remove the redundancy from the source_hash\n")
   ##########################################################
@@ -386,7 +390,7 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
                                    "study_duration_units_original","document_name","chemical_id"))]
   res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
   res = res[!is.na(res[,"casrn"]),]
-  res[is.element(res$species_original,"Human"),"species_original"] = "Human (RA)"
+  res[is.element(res$species_original,"Human"),"species_original"] = "-"
   #####################################################################
   cat("add other columns to res\n")
   #####################################################################
@@ -486,8 +490,8 @@ toxval.load.caloehha <- function(toxval.db,source.db ,log=F){
   res$source_url = "https://oehha.ca.gov/chemicals"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))

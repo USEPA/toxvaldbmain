@@ -114,7 +114,9 @@ toxval.load.atsdr_mrl_2020 <- function(toxval.db,source.db, log=F){
   res$human_eco <- "human health"
   res$media <- "-"
   res$sex <- "-"
-  res[,"species_original"] <- "Human (RA)"
+  res[,"species_original"] <- "-"
+  res$human_ra = "Y"
+  res$target_species = "Human"
   res$subsource <- "CDC"
   res$details_text <- "ATSDR Details"
   res$toxval_numeric_original <- res$toxval_numeric
@@ -203,8 +205,8 @@ toxval.load.atsdr_mrl_2020 <- function(toxval.db,source.db, log=F){
   res$source_url = "https://www.atsdr.cdc.gov/mrls/index.html"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))

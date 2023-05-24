@@ -77,9 +77,20 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=F){
                                    "Chronic Reference Dose (c-RfD)",
                                    "Sub-chronic Reference Dose (s-RfD)",
                                    "Sub-chronic Reference Concentration (s-RfC)")),
-      "species_original"] = "Human (RA)"
+      "species_original"] = "-"
+  res[is.element(res$toxval_type,c("Chronic Reference Concentration (c-RfC)",
+                                   "Chronic Reference Dose (c-RfD)",
+                                   "Sub-chronic Reference Dose (s-RfD)",
+                                   "Sub-chronic Reference Concentration (s-RfC)")),
+      "human_ra"] = "Y"
+  res[is.element(res$toxval_type,c("Chronic Reference Concentration (c-RfC)",
+                                   "Chronic Reference Dose (c-RfD)",
+                                   "Sub-chronic Reference Dose (s-RfD)",
+                                   "Sub-chronic Reference Concentration (s-RfC)")),
+      "target_species"] = "Human"
+   res$human_eco = "human health"
 
-  res[is.element(res$study_type,c("Human")),"species_original"] = "Human"
+  res[is.element(res$study_type,c("Human","human")),"species_original"] = "Human"
 
   cremove = c("rfv_id","","","")
   res = res[ , !(names(res) %in% cremove)]

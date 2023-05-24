@@ -78,9 +78,10 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=F){
   res[is.na(res[,"document_name"]),"document_name"] <- "-"
   res <- unique(res)
 
-  res[is.element(res$toxval_type,c("RfD","RfC","cancer slope factor","cancer unit risk","")),
-      "species_original"] = "Human (RA)"
-
+  res[is.element(res$toxval_type,c("RfD","RfC","cancer slope factor","cancer unit risk","")),"species_original"] = "-"
+  res[is.element(res$toxval_type,c("RfD","RfC","cancer slope factor","cancer unit risk","")),"human_ra"] = "Y"
+  res[is.element(res$toxval_type,c("RfD","RfC","cancer slope factor","cancer unit risk","")),"target_species"] = "Human"
+  res$human_eco = "human health"
 
   cremove = c("last_updated","assessment_type","table_title","endpoint","uncertainty_factor","confidence","study_reference",
               "tumor_site","cancer_type","duration_original","notes")

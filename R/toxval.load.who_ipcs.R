@@ -38,7 +38,7 @@ toxval.load.who_ipcs <- function(toxval.db, source.db,log=F){
   res$source = source
   res$details_text = paste(source,"Details")
   print(dim(res))
-
+  res$species_original = "Rat"
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################

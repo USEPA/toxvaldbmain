@@ -43,12 +43,14 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
   colnames(res)[which(names(res) == "phenotype")] <- "critical_effect"
   res$details_text<-"-"
   res$human_eco <- "human health"
-  res$species_original = "human"
+  res$species_original = "-"
+  res$target_species = "Human"
+  res$human_ra = "Y"
   res <- unique(res)
   res <- fill.toxval.defaults(toxval.db,res)
   res <- generate.originals(toxval.db,res)
   if(is.element("species_original",names(res))) res[,"species_original"] <- tolower(res[,"species_original"])
-  res$species_original = "Human (RA)"
+  res$species_original = "-"
   res$toxval_numeric <- as.numeric(res$toxval_numeric)
   print(dim(res))
 
@@ -105,8 +107,8 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
   res$source_url = "https://dec.alaska.gov/spar/csp/"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
 

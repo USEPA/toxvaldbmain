@@ -39,7 +39,10 @@ toxval.load.heast <- function(toxval.db,source.db,log=F) {
   res$source = source
   res$details_text = paste(source,"Details")
   print(dim(res))
-  res[is.element(res$toxval_type,c("RfD","RfC")),"species"] = "Human (RA)"
+  res[is.element(res$toxval_type,c("RfD","RfC")),"human_ra"] = "Y"
+  res[is.element(res$toxval_type,c("RfD","RfC")),"target_species"] = "Human"
+  res[is.element(res$toxval_type,c("RfD","RfC")),"species"] = "-"
+  res$human_eco = "human health"
 
   #####################################################################
   cat("Add the code from the original version from Aswani\n")

@@ -89,17 +89,17 @@ toxval.load.flex <- function(toxval.db,verbose=F,only.new=F) {
       name.list <- names(res)
       name.list[is.element(name.list,"phenotype")] <- "critical_effect"
       names(res) <- name.list
-      
+
       res$datestamp <- Sys.time()
       if(is.element("species_original",names(res))) res[,"species_original"] <- tolower(res[,"species_original"])
       cat("step6",nrow(res),"\n")
       res <- unique(res)
       cat("step7",nrow(res),"\n")
-      for(i in 1:nrow(res)) res[i,"toxval_uuid"] <- UUIDgenerate()
+      #for(i in 1:nrow(res)) res[i,"toxval_uuid"] <- UUIDgenerate()
 
       runInsertTable(res, "toxval", toxval.db)
       if(!is.null(refs)) {
-        for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] <- UUIDgenerate()
+        #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] <- UUIDgenerate()
         runInsertTable(refs, "record_source", toxval.db)
       }
       cat(i, "was successfully loaded!\n")

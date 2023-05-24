@@ -93,6 +93,10 @@ toxval.load.cosmos <- function(toxval.db,source.db,log=F){
   res[is.na(res)] <- "-"
   res$duration <- gsub("Gestation day","GD",res$duration, ignore.case = TRUE)
   res$duration <- gsub(" NA","-1 -",res$duration, ignore.case = TRUE)
+  x = res$duration
+  x[x=="NA"] = NA
+  x[is.na(x)] = "-1 -"
+  res$duration = x
   res <- separate(res,duration,c("study_duration_value", "study_duration_units")," ")
   res[grep("[0-9]-",res$study_duration_value),"study_duration_value"] <- as.numeric(sapply(strsplit(res[grep("[0-9]-",res$study_duration_value),"study_duration_value"],"-"), '[[',2)) - as.numeric(sapply(strsplit(res[grep("[0-9]-",res$study_duration_value),"study_duration_value"],"-"), '[[',1))
   res$study_duration_value <- as.numeric(res$study_duration_value)
@@ -208,8 +212,8 @@ toxval.load.cosmos <- function(toxval.db,source.db,log=F){
   res$source_url = "https://www.ng.cosmosdb.eu/"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))

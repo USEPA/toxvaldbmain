@@ -7,9 +7,10 @@
 #--------------------------------------------------------------------------------------
 toxval.load.hawc <- function(toxval.db, source.db,log=F){
   printCurrentFunction(toxval.db)
-  source <- "HAWC"
+  source <- "HAWC Project"
   source_table = "source_hawc"
   verbose = log
+  runQuery("update source_chemical set source='HAWC Project' where source='HAWC'",source.db)
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
@@ -28,7 +29,6 @@ toxval.load.hawc <- function(toxval.db, source.db,log=F){
   cat("clean by source\n")
   #####################################################################
   clean.toxval.by.source(toxval.db,source)
-  clean.toxval.by.source(toxval.db,"HAWC Project")
 
   #####################################################################
   cat("load data to res\n")
@@ -223,10 +223,10 @@ toxval.load.hawc <- function(toxval.db, source.db,log=F){
   #####################################################################
   toxval.load.postprocess(toxval.db,source.db,source)
 
-  runQuery("update toxval set details_text='HAWC Project Details' where source='HAWC'",toxval.db)
-  runQuery("update toxval set source='HAWC Project' where source='HAWC'",toxval.db)
-  runQuery("update record_source set source='HAWC Project' where source='HAWC'",toxval.db)
-  runQuery("update source_chemical set source='HAWC Project' where source='HAWC'",toxval.db)
+  # runQuery("update toxval set details_text='HAWC Project Details' where source='HAWC'",toxval.db)
+  # runQuery("update toxval set source='HAWC Project' where source='HAWC'",toxval.db)
+  # runQuery("update record_source set source='HAWC Project' where source='HAWC'",toxval.db)
+  # runQuery("update source_chemical set source='HAWC Project' where source='HAWC'",toxval.db)
   export.all.by.source(toxval.db, source="HAWC Project")
 
   if(log) {
