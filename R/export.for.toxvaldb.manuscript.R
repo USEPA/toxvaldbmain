@@ -17,6 +17,7 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
                     a.dtxsid,a.casrn,a.name,
                     b.source,b.subsource,
                     b.qc_status,
+                    b.study_group,
                     b.toxval_type,
                     b.toxval_subtype,
                     e.toxval_type_supercategory,
@@ -27,12 +28,14 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
                     b.toxval_numeric_original,
                     b.toxval_units_original,
                     b.risk_assessment_class,
+                    b.human_ra,
                     b.study_type,
                     b.study_type as study_type_corrected,
                     b.study_type_original,
                     b.study_duration_value,
                     b.study_duration_units,
                     b.study_duration_class,
+                    b.target_species,
                     d.species_id,d.common_name,d.latin_name,d.ecotox_group,
                     b.strain,
                     b.strain_group,
@@ -78,12 +81,12 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
                 "exposure_method","year","long_ref","ref_year","title","author","journal","volume","issue")
       temp = mat[,nlist]
       mat$hashkey = NA
-      mat$study_group = NA
+      mat$study_group_2 = NA
       for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest(paste0(temp[i,],collapse=""), serialize = FALSE)
       hlist = unique(mat$hashkey)
       for(i in 1:length(hlist)) {
         sg = paste0(src,"_",i)
-        mat[mat$hashkey==hlist[i],"study_group"] = sg
+        mat[mat$hashkey==hlist[i],"study_group_2"] = sg
       }
       mat = mat[!is.element(mat$dtxsid,c("-","none","NODTXSID")),]
       res = rbind(res,mat)
@@ -101,4 +104,9 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
   openxlsx::write.xlsx(resa,file,firstRow=T,headerStyle=sty)
   file = paste0(dir,"/toxval_all_for_manuscript_RAvals_",toxval.db," ",Sys.Date(),".xlsx")
   openxlsx::write.xlsx(resb,file,firstRow=T,headerStyle=sty)
+
+  file = paste0(dir,"/toxval_all_for_manuscript_PODs_",toxval.db," ",Sys.Date(),".csv")
+  write.csv(resa,file=file,row.names=F)
+  file = paste0(dir,"/toxval_all_for_manuscript_RAvals_",toxval.db," ",Sys.Date(),".csv")
+  write.csv(resb,file=file,row.names=F)
 }
