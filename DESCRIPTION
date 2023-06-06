@@ -21,7 +21,6 @@ Imports:
     tibble,
     janitor,
     XML,
-    logr,
     miniUI,
     RCurl,
     gsubfn,
