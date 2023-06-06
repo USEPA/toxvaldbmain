@@ -17,7 +17,7 @@ library(uuid)
 library(tibble)
 library(janitor)
 library(textclean)
-library(logr)
+#library(logr)
 
 #--------------------------------------------------------------------------------------
 #'
