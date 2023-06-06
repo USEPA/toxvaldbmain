@@ -115,6 +115,11 @@ toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.unit
   fix.qc_status.by.source(toxval.db, source)
 
   #####################################################################
+  cat("fix study group by source\n")
+  #####################################################################
+  fix.study_group(toxval.db, source)
+  
+  #####################################################################
   #cat("set hash toxval by source\n")
   # currently not set - may not be needed for future dashboard releases
   #####################################################################
