@@ -4,7 +4,6 @@
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The version of toxval_source from which the tables are loaded.
 #' @param log If TRUE, send output to a log file
-#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.wignall <- function(toxval.db,source.db, log=F){
   printCurrentFunction(toxval.db)

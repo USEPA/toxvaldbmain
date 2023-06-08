@@ -76,7 +76,7 @@ toxval.load.all <- function(toxval.db,
       toxval.load.pprtv.cphea(toxval.db,source.db,log)
       toxval.load.rsl(toxval.db,source.db,log)
       toxval.load.ut_hb(toxval.db,source.db,log)
-      toxval.load.wignall(toxval.db,source.db,log)
+      #toxval.load.wignall(toxval.db,source.db,log)
       toxval.load.test(toxval.db,source.db,log)
       toxval.load.chemidplus(toxval.db,source.db,log)
       toxval.load.toxrefdb2.1(toxval.db,source.db,log)
