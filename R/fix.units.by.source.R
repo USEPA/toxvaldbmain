@@ -52,7 +52,6 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
     runQuery(paste0("update toxval set toxval_numeric=toxval_numeric_original where source = '",source,"'"),toxval.db)
 
     # Remove special characters
-    #
     cat(">>> Fix special characters in units\n")
     unit.list = sort(runQuery(paste0("select distinct toxval_units_original from toxval where source = '",source,"' group by toxval_units_original"),toxval.db)[,1])
     for(i in 1:length(unit.list)) {
@@ -62,139 +61,95 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
       #if(temp!=output) cat(output,":",temp,"\n")
       output = temp
       output = str_trim(output)
-
       query <- paste0("update toxval set toxval_units_original='",output,"' where toxval_units_original='",input,"' and source = '",source,"'")
-
       runInsert(query,toxval.db,T,F,T)
     }
-    #
-    # Replace variant unit names with standard ones,
 
+    # Replace variant unit names with standard ones,
     cat(">>> Transform variant unit names to standard ones\n")
     fix.single.param.by.source(toxval.db,"toxval_units", source, ignore = F)
 
-    #
     # Replace mg/kg with mg/kg-day where toxval type is NOAEL or NOEL
-    #
     cat(">>> Replace mg/kg with mg/kg-day where toxval type is NOAEL or NOEL\n")
     query <- paste0("update toxval set toxval_units='mg/kg-day' where toxval_type in ('BMDL','BMDL05','BMDL10','HNEL','LOAEC','LOAEL','LOEC','LOEL','NEL','NOAEC','NOAEL','NOEC','NOEL') and toxval_units='mg/kg' and source = '",source,"'")
     runInsert(query,toxval.db,T,F,T)
 
-    #
     # Convert units to standard denominator (e.g. ppb to ppm by dividing by 1000)
-    #
-#    if(do.convert.units) {
-      cat(">>> Convert units that are simple multiples of standard units\n")
-      convos = read.xlsx(paste0(toxval.config()$datapath,"dictionary/toxval_units conversions 2022-08-22.xlsx"))
-      #browser()
-      query = paste0("select distinct toxval_units from toxval where source='",source,"'")
-      if(!is.null(subsource)) query = paste0("select distinct toxval_units from toxval where subsource='",subsource,"'")
-      tulist = runQuery(query,toxval.db)[,1]
-      convos = convos[is.element(convos$toxval_units,tulist),]
-      nrows = dim(convos)[1]
-      if(nrows>0) {
-        for (i in 1:nrows){
-          cat("  ",convos[i,1],convos[i,2],convos[i,3],"\n")
-          query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*",convos[i,3]," where toxval_units = '",convos[i,1],"' and source = '",source,"'")
-          if(!is.null(subsource))
-            query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*",convos[i,3]," where toxval_units = '",convos[i,1],"' and subsource = '",subsource,"'")
-          runInsert(query,toxval.db,T,F,T)
-        }
-      }
-#    }
-    # Run conversions from molar to mg units, using MW
-
-#    if(do.convert.units) {
-      cat(">>> Run conversions from molar to mg units, using MW\n")
-      convos <- read.xlsx(paste0(toxval.config()$datapath,"dictionary/MW conversions.xlsx"))
-      query = paste0("select distinct toxval_units from toxval where source='",source,"'")
-      if(!is.null(subsource)) query = paste0("select distinct toxval_units from toxval where subsource='",subsource,"'")
-      tulist = runQuery(query,toxval.db)[,1]
-      convos = convos[is.element(convos$toxval_units,tulist),]
-      nrows = dim(convos)[1]
+    cat(">>> Convert units that are simple multiples of standard units\n")
+    convos = read.xlsx(paste0(toxval.config()$datapath,"dictionary/toxval_units conversions 2022-08-22.xlsx"))
+    #browser()
+    query = paste0("select distinct toxval_units from toxval where source='",source,"'")
+    if(!is.null(subsource)) query = paste0("select distinct toxval_units from toxval where subsource='",subsource,"'")
+    tulist = runQuery(query,toxval.db)[,1]
+    convos = convos[is.element(convos$toxval_units,tulist),]
+    nrows = dim(convos)[1]
+    if(nrows>0) {
       for (i in 1:nrows){
-        units = convos[i,1]
-        units.new = convos[i,2]
-        cat("  ",convos[i,1],convos[i,2],"\n")
-        query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*mw
-                         where mw>0 and toxval_units = '",convos[i,1],"' and source = '",source,"' ")
+        cat("  ",convos[i,1],convos[i,2],convos[i,3],"\n")
+        query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*",convos[i,3]," where toxval_units = '",convos[i,1],"' and source = '",source,"'")
         if(!is.null(subsource))
-          query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*mw
-                           where mw>0 and toxval_units = '",convos[i,1],"' and subsource = '",subsource,"' ")
+          query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*",convos[i,3]," where toxval_units = '",convos[i,1],"' and subsource = '",subsource,"'")
         runInsert(query,toxval.db,T,F,T)
       }
-#    }
+    }
+
+    # Run conversions from molar to mg units, using MW
+    cat(">>> Run conversions from molar to mg units, using MW\n")
+    convos <- read.xlsx(paste0(toxval.config()$datapath,"dictionary/MW conversions.xlsx"))
+    query = paste0("select distinct toxval_units from toxval where source='",source,"'")
+    if(!is.null(subsource)) query = paste0("select distinct toxval_units from toxval where subsource='",subsource,"'")
+    tulist = runQuery(query,toxval.db)[,1]
+    convos = convos[is.element(convos$toxval_units,tulist),]
+    nrows = dim(convos)[1]
+    for (i in 1:nrows){
+      units = convos[i,1]
+      units.new = convos[i,2]
+      cat("  ",convos[i,1],convos[i,2],"\n")
+      query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*mw
+                         where mw>0 and toxval_units = '",convos[i,1],"' and source = '",source,"' ")
+      if(!is.null(subsource))
+        query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*mw
+                           where mw>0 and toxval_units = '",convos[i,1],"' and subsource = '",subsource,"' ")
+      runInsert(query,toxval.db,T,F,T)
+    }
 
     # Convert ppm to mg/m3 for inhalation studies
-    #
     # https://cfpub.epa.gov/ncer_abstracts/index.cfm/fuseaction/display.files/fileID/14285
-#    if(do.convert.units) {
-      cat(">>> Convert ppm to mg/m3 for inhalation studies\n")
-      query = paste0("update toxval
+    cat(">>> Convert ppm to mg/m3 for inhalation studies\n")
+    query = paste0("update toxval
                       set toxval_units = 'mg/m3', toxval_numeric = toxval_numeric*mw*0.0409
                       where mw>0 and toxval_units like 'ppm%' and exposure_route = 'inhalation'
                       and human_eco='human health' and source = '",source,"' ")
-      if(!is.null(subsource))
-        query = paste0("update toxval
+    if(!is.null(subsource))
+      query = paste0("update toxval
                         set toxval_units = 'mg/m3', toxval_numeric = toxval_numeric*mw*0.0409
                         where mw>0 and toxval_units like 'ppm%' and exposure_route = 'inhalation' and
                         huamn_eco='human health' and subsource = '",subsource,"' ")
-      runInsert(query,toxval.db)
-#     }
+    runInsert(query,toxval.db)
+
 
     # Do the conversion from ppm to mg/kg-day on a species-wise basis for oral exposures
-    #
-#    if(do.convert.units) {
-      cat(">>> Do the conversion from ppm to mg/kg-day on a species-wise basis\n")
-      conv = read.xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx"))
-      for (i in 1: nrow(conv)){
-        species <- conv[i,1]
-        factor <- conv[i,2]
-        sid.list <- runQuery(paste0("select species_id from species where common_name ='",species,"'"),toxval.db)[,1]
-        for(sid in sid.list) {
-          cat(species, sid,":",length(sid.list),"\n")
-          query = paste0("update toxval
+    cat(">>> Do the conversion from ppm to mg/kg-day on a species-wise basis\n")
+    conv = read.xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx"))
+    for (i in 1: nrow(conv)){
+      species <- conv[i,1]
+      factor <- conv[i,2]
+      sid.list <- runQuery(paste0("select species_id from species where common_name ='",species,"'"),toxval.db)[,1]
+      for(sid in sid.list) {
+        cat(species, sid,":",length(sid.list),"\n")
+        query = paste0("update toxval
                          set toxval_numeric = toxval_numeric_original*",factor,", toxval_units = 'mg/kg-day'
                          where exposure_route='oral'
                          and toxval_units='ppm'
                          and species_id = ",sid," and source = '",source,"'")
-          if(!is.null(subsource))
-            query = paste0("update toxval
+        if(!is.null(subsource))
+          query = paste0("update toxval
                            set toxval_numeric = toxval_numeric_original*",factor,", toxval_units = 'mg/kg-day'
                            where exposure_route='oral'
                            and toxval_units='ppm'
                            and species_id = ",sid," and subsource = '",subsource,"'")
-          runInsert(query,toxval.db,T,F,T)
-          #browser()
-        }
+        runInsert(query,toxval.db,T,F,T)
       }
-#    }
-    #
-    # make sure that eco studies are in mg/L and human health in mg/m3
-    #
- #   if(do.convert.units) {
-      cat(">>> Make sure that eco studies are in mg/L and human health in mg/m3\n")
-      query = paste0("
-      update toxval
-      set toxval_numeric = toxval_numeric/1000, toxval_units = 'mg/L'
-      where toxval_units = 'mg/m3' and human_eco = 'eco' and source = '",source,"'")
-      if(!is.null(subsource))
-        query = paste0("
-        update toxval
-        set toxval_numeric = toxval_numeric/1000, toxval_units = 'mg/L'
-        where toxval_units = 'mg/m3' and human_eco = 'eco' and subsource = '",subsource,"'")
-      runInsert(query,toxval.db,T,F,T)
-
-      query = paste0("
-      update toxval set
-      toxval_units = 'mg/m3', toxval_numeric = toxval_numeric*1000
-      where toxval_units = 'mg/L' and human_eco = 'human health' and source = '",source,"'")
-      if(!is.null(subsource))
-        query = paste0("
-        update toxval set
-        toxval_units = 'mg/m3', toxval_numeric = toxval_numeric*1000
-        where toxval_units = 'mg/L' and human_eco = 'human health' and subsource = '",subsource,"'")
-      runInsert(query,toxval.db,T,F,T)
-#    }
+    }
   }
 }
