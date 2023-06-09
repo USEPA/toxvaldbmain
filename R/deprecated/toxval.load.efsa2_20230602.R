@@ -3,7 +3,6 @@
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source databse from which data should be loaded
 #' @param log If TRUE, send output to a log file
-#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.efsa2 <- function(toxval.db,source.db, log=F) {
   printCurrentFunction(toxval.db)
