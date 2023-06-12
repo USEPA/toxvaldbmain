@@ -6,13 +6,13 @@
 #' @return Write a file with the results
 #'
 #-----------------------------------------------------------------------------------
-duplicate.hunter <- function(toxval.db,source=NULL) {
+duplicate.hunter <- function(toxval.db,source=NULL,source_table=NULL) {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath,"duplicate_hunter/")
 
   if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   else slist = source
-  nlist = c("source","rows","unique","drop.source_hash","drop.toxval_numeric","drop.critical_effect")
+  nlist = c("source","source_table","rows","unique","drop.source_hash","drop.toxval_numeric","drop.critical_effect")
   res = as.data.frame(matrix(nrow=length(slist),ncol=length(nlist)))
   names(res) = nlist
   for(i in 1:length(slist)) {
@@ -20,6 +20,7 @@ duplicate.hunter <- function(toxval.db,source=NULL) {
     cat(source,"\n")
     x1 = runQuery(paste0("select * from toxval where source='",source,"'"),toxval.db)
     res[i,"source"] = source
+    res[i,"source_table"] = source_table
     res[i,"rows"] = nrow(x1)
     x2 = unique(subset(x1,select= -c(toxval_id,toxval_uuid)))
     res[i,"unique"] = nrow(x2)
