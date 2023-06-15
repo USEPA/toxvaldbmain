@@ -3,7 +3,6 @@
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
-#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
   printCurrentFunction(toxval.db)
@@ -24,29 +23,64 @@ toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
-  
+
   #####################################################################
   cat("clean by source\n")
   #####################################################################
   clean.toxval.by.source(toxval.db,source)
-  
+
   #####################################################################
   cat("load data to res\n")
   #####################################################################
   query = paste0("select * from ",source_table)
   res = runQuery(query,source.db,T,F)
-  res = res[,!names(res)%in%toxval.config()$non_hash_cols]
+  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
+  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
   res$source = source
   res$details_text = paste(source,"Details")
   print(dim(res))
-  
+
+  #####################################################################
+  cat("Add the code from the original version from Aswani\n")
+  #####################################################################
+  names(res)[is.element(names(res),"url")] = "source_url"
+
+  nlist = c("chemical_id","casrn","name","document_name","source","source_hash","qc_status","source_url",
+            "endpoint_species",
+            "test_species_noael")
+  t1 = res[,nlist]
+  t1$toxval_type = "NOAEL"
+  t1$toxval_subtype = "test_species_noael"
+  t1$toxval_units = "mg/kg-day"
+  t1$media = "food"
+  t1$exposure_route = "oral"
+  names(t1)[is.element(names(t1),"test_species_noael")] = "toxval_numeric"
+  names(t1)[is.element(names(t1),"endpoint_species")] = "species_original"
+
+  nlist = c("chemical_id","casrn","name","document_name","source","source_hash","qc_status","source_url",
+            "test_species",
+            "test_species_loael")
+  t2 = res[,nlist]
+  t2$toxval_type = "LOAEL"
+  t2$toxval_subtype = "test_species_loael"
+  t2$toxval_units = "mg/kg-day"
+  t2$media = "food"
+  t2$exposure_route = "oral"
+  names(t2)[is.element(names(t2),"test_species_loael")] = "toxval_numeric"
+  names(t2)[is.element(names(t2),"test_species")] = "species_original"
+
+  res1 = rbind(t1,t2)
+
+  res1 = res1[!is.element(res1$toxval_numeric,c("day-old white","-","0")),]
+  res1$toxval_numeric = as.numeric(res1$toxval_numeric )
+  res = res1
   ##########################################################
   cat("remove the redundancy from the source_hash\n")
   ##########################################################
   x=seq(from=1,to=nrow(res))
   y = paste0(res$source_hash,"_",x)
   res$source_hash = y
-  
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -64,11 +98,11 @@ toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
     browser()
   }
   print(dim(res))
-  
+
   # examples ...
   # names(res)[names(res) == "source_url"] = "url"
   # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-  
+
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
@@ -84,7 +118,7 @@ toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
   res = unique(res)
   res = res[,!is.element(names(res),c("casrn","name"))]
   print(dim(res))
-  
+
   #####################################################################
   cat("add toxval_id to res\n")
   #####################################################################
@@ -94,7 +128,7 @@ toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
-  
+
   #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
@@ -107,7 +141,7 @@ toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
   remove = nlist[!is.element(nlist,cols)]
   res = res[ , !(names(res) %in% c(remove))]
   print(dim(res))
-  
+
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
@@ -115,7 +149,7 @@ toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
   refs$record_source_note = "to be cleaned up"
   refs$record_source_level = "primary (risk assessment values)"
   print(dim(res))
-  
+
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
@@ -131,12 +165,12 @@ toxval.load.doe.benchmarks <- function(toxval.db,source.db,log=F) {
   runInsertTable(res, "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))
-  
+
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
   toxval.load.postprocess(toxval.db,source.db,source)
-  
+
   if(log) {
     #####################################################################
     cat("stop output log \n")
