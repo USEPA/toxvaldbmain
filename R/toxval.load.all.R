@@ -45,9 +45,10 @@ toxval.load.all <- function(toxval.db,
     doit=T
     if(doit) {
       toxval.load.atsdr.pfas.2021(toxval.db,source.db,log)
-      toxval.load.atsdr.pfas(toxval.db,source.db,log)
-      toxval.load.atsdr_mrl_2020(toxval.db,source.db,log)
-      toxval.load.atsdr_mrl_2022(toxval.db,source.db,log)
+      # toxval.load.atsdr.pfas(toxval.db,source.db,log)
+      # toxval.load.atsdr_mrl_2020(toxval.db,source.db,log)
+      # toxval.load.atsdr_mrl_2022(toxval.db,source.db,log)
+      # toxval.load.atsdr_mrl(toxval.db,source.db,log) (TBD)
       toxval.load.caloehha(toxval.db,source.db,log)
       toxval.load.chiu(toxval.db,source.db,log)
       toxval.load.copper(toxval.db,source.db,log)
@@ -56,7 +57,7 @@ toxval.load.all <- function(toxval.db,
       toxval.load.doe.benchmarks(toxval.db,source.db,log)
       toxval.load.doe.ecorisk(toxval.db,source.db,log)
       toxval.load.doe.pac(toxval.db,source.db,log)
-      #toxval.load.efsa2(toxval.db,source.db,log)
+      # toxval.load.efsa2(toxval.db,source.db,log)
       toxval.load.efsa(toxval.db,source.db,log)
       toxval.load.envirotox(toxval.db,source.db,log)
       toxval.load.hawc_pfas_150(toxval.db,source.db,log)
@@ -76,12 +77,12 @@ toxval.load.all <- function(toxval.db,
       toxval.load.pprtv.cphea(toxval.db,source.db,log)
       toxval.load.rsl(toxval.db,source.db,log)
       toxval.load.ut_hb(toxval.db,source.db,log)
-      #toxval.load.wignall(toxval.db,source.db,log)
+      # toxval.load.wignall(toxval.db,source.db,log)
       toxval.load.test(toxval.db,source.db,log)
       toxval.load.chemidplus(toxval.db,source.db,log)
       toxval.load.toxrefdb2.1(toxval.db,source.db,log)
-      #toxval.load.ecotox(toxval.db,source.db,log)
-      #toxval.load.echa_iuclid(toxval.db,source.db,log)
+      # toxval.load.ecotox(toxval.db,source.db,log)
+      # toxval.load.echa_iuclid(toxval.db,source.db,log)
     }
   }
   if(do.post) {
