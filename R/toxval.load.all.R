@@ -56,7 +56,7 @@ toxval.load.all <- function(toxval.db,
       toxval.load.doe.benchmarks(toxval.db,source.db,log)
       toxval.load.doe.ecorisk(toxval.db,source.db,log)
       toxval.load.doe.pac(toxval.db,source.db,log)
-      toxval.load.efsa2(toxval.db,source.db,log)
+      #toxval.load.efsa2(toxval.db,source.db,log)
       toxval.load.efsa(toxval.db,source.db,log)
       toxval.load.envirotox(toxval.db,source.db,log)
       toxval.load.hawc_pfas_150(toxval.db,source.db,log)
