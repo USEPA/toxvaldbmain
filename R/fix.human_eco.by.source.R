@@ -9,13 +9,13 @@
 fix.human_eco.by.source <- function(toxval.db,source=NULL, reset=T){
   printCurrentFunction(paste(toxval.db,":", source))
 
-  human.list = c("Alaska DEC","ATSDR MRLs 2020","ATSDR MRLs 2022",
-                 "ATSDR PFAS","ATSDR PFAS 2021","Cal OEHHA",
+  human.list = c("Alaska DEC","ATSDR MRLs",
+                 "ATSDR PFAS 2021","Cal OEHHA",
                  "California DPH","ChemIDplus","Chiu",
                  "Copper Manufacturers","COSMOS","DOD",
                  "DOE Protective Action Criteria",
                  "ECHA IUCLID","EFSA",
-                 "EFSA2","EPA AEGL",
+                 "EPA AEGL",
                  "EPA OPP","EPA OPPT","FDA CEDI",
                  "HAWC PFAS 150","HAWC PFAS 430","HAWC Project",
                  "Health Canada","HEAST","HESS",
@@ -24,11 +24,11 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL, reset=T){
                  "Pennsylvania DEP MCLs","Pennsylvania DEP ToxValues","PFAS 150 SEM v2",
                  "PPRTV (CPHEA)","PPRTV (NCEA)","RSL",
                  "TEST","ToxRefDB",
-                 "Uterotrophic Hershberger DB","WHO IPCS","Wignall",
+                 "Uterotrophic Hershberger DB","WHO IPCS",
                  "USGS HBSL")
 
-  hra.list = c("Alaska DEC","ATSDR MRLs 2020","ATSDR MRLs 2022",
-               "ATSDR PFAS","ATSDR PFAS 2021","Cal OEHHA",
+  hra.list = c("Alaska DEC","ATSDR MRLs",
+               "ATSDR PFAS 2021","Cal OEHHA",
                "California DPH","EPA AEGL","FDA CEDI",
                "Health Canada","HEAST",
                "IRIS","Mass. Drinking Water Standards",

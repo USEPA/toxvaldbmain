@@ -31,7 +31,7 @@ chem.check.v2 <- function(res0,source=NULL,verbose=F) {
     n2 = str_replace_all(n2,"\n"," ")
     n2 = str_replace_all(n2,"  "," ")
     n2 = str_trim(n2)
-    if(is.element(source,c("Alaska DEC",
+    if(source %in% c("Alaska DEC",
                            "California DPH",
                            "EPA AEGL",
                            "Mass. Drinking Water Standards",
@@ -40,7 +40,7 @@ chem.check.v2 <- function(res0,source=NULL,verbose=F) {
                            "Pennsylvania DEP MCLs",
                            "USGS HBSL",
                            "WHO IPCS",
-                           "ATSDR MRLs 2020",
+                           "ATSDR MRLs",
                            "Cal OEHHA",
                            "Chiu",
                            "COSMOS",
@@ -51,7 +51,7 @@ chem.check.v2 <- function(res0,source=NULL,verbose=F) {
                            "EPA OPP",
                            "Pennsylvania DEP ToxValues",
                            "EnviroTox_v2",
-                           "HEAST"))) {
+                           "HEAST")) {
       if(contains(n2,";")) {
         start = gregexpr(";",n2)[[1]][1]
         n3 = str_trim(substr(n2,1,start-1))

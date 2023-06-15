@@ -4,9 +4,8 @@
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
-#' @export
 #--------------------------------------------------------------------------------------
-toxval.load.atsdr_mrl_2020 <- function(toxval.db,source.db, log=F){
+toxval.load.atsdr <- function(toxval.db,source.db, log=F){
   verbose = log
   printCurrentFunction(toxval.db)
   source <- "ATSDR MRLs 2020"
@@ -112,11 +111,12 @@ toxval.load.atsdr_mrl_2020 <- function(toxval.db,source.db, log=F){
   res$risk_assessment_class <- res$study_type
   res$exposure_method <- "-"
   res$human_eco <- "human health"
+  res$human_ra = "Y"
+  res$target_species = "Human"
+
   res$media <- "-"
   res$sex <- "-"
   res[,"species_original"] <- "-"
-  res$human_ra = "Y"
-  res$target_species = "Human"
   res$subsource <- "CDC"
   res$details_text <- "ATSDR Details"
   res$toxval_numeric_original <- res$toxval_numeric
@@ -140,12 +140,6 @@ toxval.load.atsdr_mrl_2020 <- function(toxval.db,source.db, log=F){
   # examples ...
   # names(res)[names(res) == "source_url"] = "url"
   # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-  ##########################################################
-  cat("remove the redundancy from the source_hash\n")
-  ##########################################################
-  x=seq(from=1,to=nrow(res))
-  y = paste0(res$source_hash,"_",x)
-  res$source_hash = y
 
   #####################################################################
   cat("Generic steps \n")

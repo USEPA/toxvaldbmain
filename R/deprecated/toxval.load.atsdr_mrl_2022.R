@@ -1,17 +1,15 @@
 #--------------------------------------------------------------------------------------
-#' Load the original ATSDR PFAS from toxval_source to toxval
+#' Load the ATSDR MRLs 2022 data from toxval_source to toxval
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
-#' @export
 #--------------------------------------------------------------------------------------
-toxval.load.atsdr.pfas <- function(toxval.db,source.db, log=F){
+toxval.load.atsdr_mrl_2022 <- function(toxval.db,source.db, log=F){
   verbose = log
   printCurrentFunction(toxval.db)
-  source = "ATSDR PFAS"
-  source_table = "source_atsdr_pfas"
-
+  source <- "ATSDR MRLs 2022"
+  source_table = "source_atsdr_mrls_2022"
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
@@ -26,7 +24,6 @@ toxval.load.atsdr.pfas <- function(toxval.db,source.db, log=F){
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
-
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -37,29 +34,12 @@ toxval.load.atsdr.pfas <- function(toxval.db,source.db, log=F){
   #####################################################################
   query = paste0("select * from ",source_table)
   res = runQuery(query,source.db,T,F)
-  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
-  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version"))]
-  names(res)[names(res) == "source_url"] = "url"
+  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by","parent_chemical_id"))]
   res$source = source
   res$details_text = paste(source,"Details")
-  res = res[!is.na(res$toxval_numeric),]
-  #####################################################################
-  cat("find columns in res that do not map to toxval or record_source\n")
-  #####################################################################
-  cols1 = runQuery("desc record_source",toxval.db)[,1]
-  cols2 = runQuery("desc toxval",toxval.db)[,1]
-  cols = unique(c(cols1,cols2))
-  colnames(res)[which(names(res) == "species")] = "species_original"
-  res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","parent_chemical_id"))]
-  nlist = nlist[!is.element(nlist,cols)]
-  if(length(nlist)>0) {
-    cat("columns to be dealt with\n")
-    print(nlist)
-    browser()
-  }
-
+  res[is.element(res$study_type,"Acute"),"study_type"] = "acute"
+  res[is.element(res$study_type,"Intermediate"),"study_type"] = "short-term"
+  res[is.element(res$study_type,"Chronic"),"study_type"] = "chronic"
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
@@ -84,6 +64,12 @@ toxval.load.atsdr.pfas <- function(toxval.db,source.db, log=F){
   res$toxval_id = tids
 
   #####################################################################
+  cat("pull out toxval_uf to uf\n")
+  #####################################################################
+  uf = res[,c("toxval_id","total_factors")]
+  uf$uf_type = "total"
+
+  #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
   cols = runQuery("desc record_source",toxval.db)[,1]
@@ -98,9 +84,9 @@ toxval.load.atsdr.pfas <- function(toxval.db,source.db, log=F){
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type <- "url"
-  refs$record_source_note <- "All data is on single web page for ATSDR"
-  refs$record_source_level <- "primary (risk assessment values)"
+  refs$record_source_type = "website"
+  refs$record_source_note = "to be cleaned up"
+  refs$record_source_level = "primary (risk assessment values)"
 
   #####################################################################
   cat("load res and refs to the database\n")
@@ -109,7 +95,7 @@ toxval.load.atsdr.pfas <- function(toxval.db,source.db, log=F){
   refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://www.atsdr.cdc.gov/toxprofiledocs/index.html"
+  res$source_url = "https://www.atsdr.cdc.gov/mrls/index.html"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
