@@ -5,7 +5,7 @@
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #--------------------------------------------------------------------------------------
-toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
+toxval.load.rsl <- function(toxval.db, source.db,log=F){
   printCurrentFunction(toxval.db)
   source <- "RSL"
   source_table = "source_rsl"
@@ -15,7 +15,7 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = logr::log_open(con1)
+    con1 = log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -33,11 +33,18 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   cat("load data to res\n")
   #####################################################################
   query = paste0("select * from ",source_table)
-  res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols]
+  res = runQuery(query,source.db,T,F)
+  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
+  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
+  print(dim(res))
+
+  #####################################################################
+  cat("Add the code from the original version from Aswani\n")
+  #####################################################################
+  cremove = c("","","","")
+  res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -47,67 +54,63 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  print("Temporarily removing the 'risk_assessment_type' column until further instructions...")
-  res$risk_assessment_type = NULL
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
-
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
     browser()
   }
-  print(paste0("Dimensions of source data after checks: ", toString(dim(res))))
+  print(dim(res))
+
+  # examples ...
+  # names(res)[names(res) == "source_url"] = "url"
+  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
 
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = unique(res)
   res = res[!is.na(res$toxval_numeric),]
   res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
 
-  res$toxval_units[res$toxval_type=="GIABS"] = "unitless"
-  res$toxval_units[res$toxval_type=="ABSd"] = "unitless"
+  res[res$toxval_type=="GIABS","toxval_units"] = "unitless"
+  res[res$toxval_type=="ABSd","toxval_units"] = "unitless"
 
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
+  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
+  print(dim(res))
   res=fix.non_ascii.v2(res,source)
-  # Remove excess whitespace
-  res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
-  res = res[, !names(res) %in% c("casrn","name")]
-  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
+  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
+  res = unique(res)
+  res = res[,!is.element(names(res),c("casrn","name"))]
+  print(dim(res))
 
   #####################################################################
   cat("add toxval_id to res\n")
   #####################################################################
   count = runQuery("select count(*) from toxval",toxval.db)[1,1]
-  if(count==0) {
-    tid0 = 1
-  } else {
-    tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
-  }
+  if(count==0) tid0 = 1
+  else tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
-  print(paste0("Dimensions of source data after toxval_id added: ", toString(dim(res))))
+  print(dim(res))
 
   #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
   cols = runQuery("desc record_source",toxval.db)[,1]
   nlist = names(res)
-  keep = nlist[nlist %in% cols]
-  refs = res[, keep]
+  keep = nlist[is.element(nlist,cols)]
+  refs = res[,keep]
   cols = runQuery("desc toxval",toxval.db)[,1]
   nlist = names(res)
-  remove = nlist[!nlist %in% cols]
+  remove = nlist[!is.element(nlist,cols)]
   res = res[ , !(names(res) %in% c(remove))]
-  print(paste0("Dimensions of source data after removing record source fields: ", toString(dim(res))))
+  print(dim(res))
 
   #####################################################################
   cat("add extra columns to refs\n")
@@ -115,37 +118,38 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   refs$record_source_type = "-"
   refs$record_source_note = "-"
   refs$record_source_level = "-"
-  print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
+  print(dim(res))
 
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = unique(res)
+  refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
+  res$source_url = "https://www.epa.gov/risk/regional-screening-levels-rsls-generic-tables"
   res$subsource_url = "-"
-  # for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  # for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
+  res$details_text = paste(source,"Details")
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
-  print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
+  print(dim(res))
 
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE)
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
 
   if(log) {
     #####################################################################
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    logr::log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
+    log_close()
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))

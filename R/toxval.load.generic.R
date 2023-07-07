@@ -5,7 +5,7 @@
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxvaldb,source.db,log=F) {
+toxval.load.generic <- function(toxvaldb,source.db,log=FALSE) {
   source = SOURCE_NAME
   source_table = "source_"
   verbose = log
@@ -14,7 +14,7 @@ toxval.load.generic <- function(toxvaldb,source.db,log=F) {
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -33,11 +33,11 @@ toxval.load.generic <- function(toxvaldb,source.db,log=F) {
   cat("load data to res\n")
   #####################################################################
   query = paste0("select * from ",source_table)
-  res = runQuery(query,source.db,T,F)
-  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by","parent_chemical_id"))]
+  res = runQuery(query,source.db,TRUE,FALSE)
+  res = res[,!names(res)%in%toxval.config()$non_hash_cols]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(dim(res))
+  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
@@ -71,17 +71,19 @@ toxval.load.generic <- function(toxvaldb,source.db,log=F) {
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = unique(res)
+  res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
+  if(species_original %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(dim(res))
+  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
-  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  res = unique(res)
-  res = res[,!is.element(names(res),c("casrn","name"))]
-  print(dim(res))
+  # Remove excess whitespace
+  res = res %>%
+    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
+  res = distinct(res)
+  res = res[, !names(res) %in% c("casrn","name")]
+  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
@@ -112,13 +114,13 @@ toxval.load.generic <- function(toxvaldb,source.db,log=F) {
   refs$record_source_type = "-"
   refs$record_source_note = "-"
   refs$record_source_level = "-"
-  print(dim(res))
+  print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = unique(res)
-  refs = unique(refs)
+  res = distinct(res)
+  refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "source_url"
@@ -127,23 +129,24 @@ toxval.load.generic <- function(toxvaldb,source.db,log=F) {
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
+  print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(dim(res))
+  print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
 
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE)
 
   if(log) {
     #####################################################################
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    logr::log_close()
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))

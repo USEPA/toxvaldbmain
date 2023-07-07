@@ -8,7 +8,7 @@
 #--------------------------------------------------------------------------------------
 generate.originals <- function(toxval.db,mat){
   defs = runQuery("desc toxval",toxval.db)[,1]
-  defs = grep("_original",defs,value=T)
+  defs = grep("_original",defs,value=TRUE)
   defs = gsub("_original","",defs)
   targets = which(colnames(mat) %in% defs)
   for(i in targets){

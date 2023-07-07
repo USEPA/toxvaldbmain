@@ -18,14 +18,18 @@ toxval.set.mw <- function(toxval.db, source=NULL){
     # Pull list of DTXSID values as a vector
     dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0"),toxval.db)[,1]
 
+    # Test of API is up and running
+    api_test <- httr::GET("https://api-ccte.epa.gov/") %>%
+      httr::content()
+
     # Use bulk DTXSID CCTE Chemicals API pull (limit 200 per call)
-    if(!is.null(API_AUTH)){
+    if(!is.null(API_AUTH) & !grepl("404 Not Found", api_test)){
       cat("...Pulling DSSTox mw using CCTE API...\n")
       # Split list into subsets of 200
       mw <- dlist %>%
         split(., rep(1:ceiling(length(.)/200), each=200, length.out=length(.)))
       # Loop through the groups of 200 DTXSID values
-      for(i in seq_len(length(mw))){
+      for(i in seq_along(mw)){
         # Wait between calls for API courtesy
         Sys.sleep(0.25)
         cat("...Pulling DSSTox mw ", i , " of ", length(mw), "\n")
