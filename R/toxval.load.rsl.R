@@ -47,8 +47,9 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  print("Temporarily removing the 'risk_assessment_type' column until further instructions...")
-  res$risk_assessment_type = NULL
+  print("Remapping 'risk_assessment_type' column to 'toxval_subtype' per SME direction...")
+  res <- res %>%
+    dplyr::rename(toxval_subtype = risk_assessment_type)
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
