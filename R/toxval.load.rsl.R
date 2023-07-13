@@ -32,9 +32,12 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  query = paste0("select * from ",source_table)
+  query = paste0("select * from ",source_table, " ",
+                 # Filter out records without curated chemical information
+                 "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -47,9 +50,11 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  print("Remapping 'risk_assessment_type' column to 'toxval_subtype' per SME direction...")
-  res <- res %>%
-    dplyr::rename(toxval_subtype = risk_assessment_type)
+  # print("Remapping 'risk_assessment_type' column to 'toxval_subtype' per SME direction...")
+  # res <- res %>%
+  #   dplyr::rename(toxval_subtype = risk_assessment_type)
+  message("Removing the risk_assessment_type field for now...")
+  res$risk_assessment_type = NULL
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]

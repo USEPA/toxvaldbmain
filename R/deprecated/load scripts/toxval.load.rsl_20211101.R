@@ -36,6 +36,7 @@ toxval.load.rsl <- function(toxval.db, source.db,log=F){
   res = runQuery(query,source.db,T,F)
   res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
   res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
+
   res$source = source
   res$details_text = paste(source,"Details")
   print(dim(res))
