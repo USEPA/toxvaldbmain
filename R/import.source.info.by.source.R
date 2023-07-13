@@ -11,19 +11,19 @@ import.source.info.by.source <- function(toxval.db, source=NULL) {
   print(file)
   mat =openxlsx::read.xlsx(file)
   cols = runQuery("desc source_info",toxval.db)[,1]
-  mat = mat[,is.element(names(mat),cols)]
+  mat = mat[, names(mat) %in% cols]
 
   slist = source
-  if(is.null(source)) slist = runQuery("select distinct source from toxval",db)[,1]
+  if(is.null(source)) slist = runQuery("select distinct source from toxval", toxval.db)[,1]
   for(source in slist) {
     cat(source,"\n")
-    if(!is.element(source,mat$source)) {
+    if(!source %in% mat$source) {
       cat("source info missing for ",source,"\n")
       cat("add to file:",file,"\n")
       browser()
     }
     runInsert(paste0("delete from source_info where source='",source,"'"),toxval.db)
-    mat1 = mat[which(mat$source %in% source),]
+    mat1 = mat[mat$source %in% source,]
     runInsertTable(mat1,"source_info",toxval.db,do.halt=T,verbose=T)
   }
 }

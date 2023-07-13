@@ -33,13 +33,13 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
       nmiss = nrow(res)
       res.all = rbind(res.all,res)
       cat("Number of missing terms=",nmiss,"\n")
-      file = paste0("../dictionary/missing/missing_dictionary_entries ",source," ",Sys.Date(),".xlsx")
-      if(!is.null(subsource)) file = paste0("../dictionary/missing/missing_dictionary_entries ",source," ",subsource," ",Sys.Date(),".xlsx")
+      file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries ",source," ",Sys.Date(),".xlsx")
+      if(!is.null(subsource)) file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries ",source," ",subsource," ",Sys.Date(),".xlsx")
       if(nrow(res)>0) write.xlsx(res,file)
     }
   }
   if(!is.null(res.all)) {
-    file = paste0("../dictionary/missing/missing_dictionary_entries all sources ",Sys.Date(),".xlsx")
+    file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries all sources ",Sys.Date(),".xlsx")
     if(nrow(res.all)>0) write.xlsx(res.all,file)
   }
 }

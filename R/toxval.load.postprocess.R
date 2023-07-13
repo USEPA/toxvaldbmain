@@ -6,11 +6,11 @@
 #' @param do.convert.units If TRUE, convert units, mainly from ppm to mg/kg-day. This code is not debugged
 #' @param chem_source Used only for source=ECHA IUCLID
 #--------------------------------------------------------------------------------------
-toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.units=F,chem_source,subsource=NULL){
+toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.units=FALSE,chem_source,subsource=NULL){
   printCurrentFunction(toxval.db)
 
-  do.convert.units = T # override default because it is not specified in all toxval load functions
-  if(source=="ECOTOX") do.convert.units = F
+  do.convert.units = TRUE # override default because it is not specified in all toxval load functions
+  if(source=="ECOTOX") do.convert.units = FALSE
   #####################################################################
   cat("check that the dictionaries are loaded\n")
   #####################################################################
@@ -21,14 +21,20 @@ toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.unit
   #####################################################################
   cat("load chemical info to source_chemical\n")
   #####################################################################
-  if(is.element(source,c("ECHA IUCLID"))) toxval.load.source_chemical(toxval.db,source.db,chem_source,verbose=T)
-  else toxval.load.source_chemical(toxval.db,source.db,source,verbose=T)
+  if(source=="ECHA IUCLID") {
+    toxval.load.source_chemical(toxval.db,source.db,chem_source,verbose=TRUE)
+  } else {
+    toxval.load.source_chemical(toxval.db,source.db,source,verbose=TRUE)
+  }
 
   #####################################################################
   cat("fill chemical by source\n")
   #####################################################################
-  if(source=="ECHA IUCLID") fill.chemical.by.source(toxval.db, chem_source)
-  else fill.chemical.by.source(toxval.db, source)
+  if(source=="ECHA IUCLID") {
+    fill.chemical.by.source(toxval.db, chem_source)
+  } else {
+    fill.chemical.by.source(toxval.db, source)
+  }
 
   #####################################################################
   cat("fix species by source\n")
@@ -38,14 +44,14 @@ toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.unit
   #####################################################################
   cat("fix human_eco by source\n")
   #####################################################################
-  fix.human_eco.by.source(toxval.db, source, reset = T)
+  fix.human_eco.by.source(toxval.db, source, reset = TRUE)
 
   #####################################################################
-  cat("fix all.parameters(exposure_method, exposure_route, sex,strain,
+  cat("fix all.parameters (exposure_method, exposure_route, sex,strain,
     study_duration_class, study_duration_units, study_type,toxval_type,
     exposure_form, media, toxval_subtype) by source\n")
   #####################################################################
-  fix.all.param.by.source(toxval.db, source,subsource,fill.toxval_fix=T)
+  fix.all.param.by.source(toxval.db, source,subsource,fill.toxval_fix=TRUE)
 
   #####################################################################
   cat("get MW if needed for unit conversion\n")
@@ -70,8 +76,8 @@ toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.unit
   #####################################################################
   cat("fix critical_effect by source\n")
   #####################################################################
-  doit = T
-  if(is.element(source,c("ToxRefDB","ECOTOX"))) doit = F
+  doit = TRUE
+  if(is.element(source,c("ToxRefDB","ECOTOX"))) doit = FALSE
   if(doit) fix.critical_effect.icf.by.source(toxval.db, source)
 
   #####################################################################
@@ -118,7 +124,7 @@ toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.unit
   cat("fix study group by source\n")
   #####################################################################
   fix.study_group(toxval.db, source)
-  
+
   #####################################################################
   #cat("set hash toxval by source\n")
   # currently not set - may not be needed for future dashboard releases
