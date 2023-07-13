@@ -53,7 +53,7 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   # print("Remapping 'risk_assessment_type' column to 'toxval_subtype' per SME direction...")
   # res <- res %>%
   #   dplyr::rename(toxval_subtype = risk_assessment_type)
-  message("Removing the risk_assessment_type field for now...")
+  # Removing the risk_assessment_type field due to toxval_study_type already covering this
   res$risk_assessment_type = NULL
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]

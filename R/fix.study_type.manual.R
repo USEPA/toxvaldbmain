@@ -65,11 +65,13 @@ fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-05-19"){
                     and b.human_eco='human health'
                     and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level')")
       replacements = runQuery(query,toxval.db,T,F)
-      replacements$fixed = 0
-      replacements = replacements[is.element(replacements$source_hash,missing),]
-      file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",sys.date,".csv")
-      write.csv(replacements,file,row.names=F)
-      #browser()
+      if(nrow(replacements)){
+        replacements$fixed = 0
+        replacements = replacements[is.element(replacements$source_hash,missing),]
+        file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",sys.date,".csv")
+        write.csv(replacements,file,row.names=F)
+        #browser()
+      }
     }
     temp$code = paste(temp$source_hash,temp$study_type)
     temp.old$code = paste(temp.old$source_hash,temp.old$study_type)
