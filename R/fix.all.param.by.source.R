@@ -8,19 +8,18 @@
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.toxval_fix=T) {
+fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.toxval_fix=TRUE) {
   printCurrentFunction(toxval.db)
 
   n = runQuery("select count(*) from toxval_fix",toxval.db)[1,1]
-  if(n==0) fill.toxval_fix = T
+  if(n==0) fill.toxval_fix = TRUE
   if(fill.toxval_fix) {
     cat("load toxval_fix\n")
     runInsert("delete from toxval_fix",toxval.db)
 
     filenames <- list.files(path = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/"), pattern="_5.xlsx", full.names = T)
-    full_dict <- lapply(filenames, function(x) read.xlsx(x ,colNames = T))
-    for (i in 1:length(full_dict)){
-      names(full_dict)[i] <- gsub("(.*dictionary/2021_dictionaries/)(.*)(_5.*)","\\2",filenames)[i]
+    full_dict <- lapply(filenames, function(x) read.xlsx(x ,colNames = T)) %T>% {
+      names(.) <- gsub("_5.xlsx", "", basename(filenames))
     }
     field <- names(full_dict)
     full_dict <- mapply(cbind, full_dict, "field"=field, SIMPLIFY=F)
@@ -39,8 +38,7 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     full_dict = fix.trim_spaces(full_dict)
 
     runInsertTable(full_dict, "toxval_fix", toxval.db, verbose)
-  }
-  else {
+  } else {
     full_dict = runQuery("select * from toxval_fix",toxval.db)
   }
   full_dict = full_dict[!is.na(full_dict$term_original),]
