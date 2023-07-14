@@ -127,7 +127,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db,source=NULL, restart=T
                       b.datestamp
                       FROM
                       toxval b
-                      INNER JOIN chemical a on a.dtxsid=b.dtxsid
+                      INNER JOIN source_chemical a on a.chemical_id=b.chemical_id
                       WHERE
                       b.source='",source,"'
                       and risk_assessment_class='-'")

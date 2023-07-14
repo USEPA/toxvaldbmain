@@ -41,10 +41,12 @@ fill.chemical.by.source <- function(toxval.db, source, verbose=T) {
 
   res2 = res2[res2$duplicate==0,]
   dlist = runQuery("select distinct dtxsid from chemical",toxval.db)
-  res2 = res2[!is.element(res2$dtxsid,dlist),]
+  # Only add new dtxsid entries
+  res2 = res2[!res2$dtxsid %in% dlist$dtxsid,]
 
   cat("Unique rows in res2 to be added:",nrow(res2),"\n")
-  res2 = res2[,c("dtxsid","casrn","name")]
-
-  runInsertTable(res2, "chemical", toxval.db, verbose)
+  if(nrow(res2)){
+    res2 = res2[,c("dtxsid","casrn","name")]
+    runInsertTable(res2, "chemical", toxval.db, verbose)
+  }
 }
