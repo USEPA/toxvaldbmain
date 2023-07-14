@@ -132,7 +132,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db,source=NULL, restart=T
                       b.source='",source,"'
                       and risk_assessment_class='-'")
       temp = runQuery(query,toxval.db)
-      file = paste0(toxval.config()$datapath,"dictionary/missing/missing_rac/missing_",source,".xlsx")
+      file = paste0(toxval.config()$datapath,"dictionary/missing/missing_rac/missing_RAC_",source,".xlsx")
       write.xlsx(temp,file)
       cat("\n\n>>> ",source,"\nStopping here means that new values need to be added to the risk_assessment_class dictionary:\n",file,
           "\nFind the unique values of temp$study_type and enter them into the file.\nThen rerun the load.\n\n")
