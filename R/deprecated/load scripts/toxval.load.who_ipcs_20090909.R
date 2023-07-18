@@ -5,7 +5,6 @@
 #' @param log If TRUE, send output to a log file
 #--------------------------------------------------------------------------------------
 toxval.load.who_ipcs <- function(toxval.db, source.db,log=F){
-  stop("Await 2019 load script updates...")
   printCurrentFunction(toxval.db)
   source <- "WHO IPCS"
   source_table = "source_who_ipcs"
