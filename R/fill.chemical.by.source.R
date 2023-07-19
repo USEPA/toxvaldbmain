@@ -20,6 +20,10 @@ fill.chemical.by.source <- function(toxval.db, source, verbose=T) {
   res = res[order(res$dtxsid),]
   res2 = res
   res2 = res2[!is.na(res2$dtxsid),]
+  if(!nrow(res2)){
+    message("No curated DTXSID values available for source to add to 'chemicals' tables")
+    return()
+  }
   res2$duplicate <- 0
   for(i in 2:nrow(res2)) {
     if(res2[i,"dtxsid"]==res2[i-1,"dtxsid"]) {

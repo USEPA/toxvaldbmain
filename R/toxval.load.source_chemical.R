@@ -6,8 +6,9 @@
 #' @param source.db The source database version
 #' @param source The source to update for
 #' @param verbose If TRUE, print out extra diagnostic messages
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #-------------------------------------------------------------------------------------
-toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=T) {
+toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=TRUE, remove_null_dtxsid=TRUE) {
   printCurrentFunction(paste(toxval.db,":", source))
 
   # if(!exists("DSSTOX")) load.dsstox()
@@ -26,7 +27,11 @@ toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=
     cat("------------------------------------------------------\n")
     cat("pull data from the source database\n")
     runQuery(paste0("delete from source_chemical where source='",source,"'"),toxval.db)
-    chems = runQuery(paste0("select * from source_chemical where source='",source,"' and dtxsid is not null"),source.db)
+    if(remove_null_dtxsid){
+      chems = runQuery(paste0("select * from source_chemical where source='",source,"' and dtxsid is not null"),source.db)
+    } else {
+      chems = runQuery(paste0("select * from source_chemical where source='",source,"'"),source.db)
+    }
     # if(source=="IUCLID_iuclid_developmentaltoxicityteratogenicity") {
     #   chems[is.na(chems$casrn),"dtxsid"] = "NODTXSID"
     #   chems[is.na(chems$casrn),"casrn"] = chems[is.na(chems$casrn),"cleaned_casrn"]
@@ -38,21 +43,26 @@ toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=
     chems = chems[,nlist]
     runInsertTable(chems, "source_chemical", toxval.db)
 
-    # Remove toxval records with a chemical_id not present in source_chemical
-    chems_rm <- runQuery(paste0("SELECT * FROM toxval WHERE source = '", source, "' " ,
-                    "and chemical_id NOT IN (SELECT chemical_id FROM source_chemical)"),
-             toxval.db)
+    if(remove_null_dtxsid){
+      # Remove toxval records with a chemical_id not present in source_chemical
+      chems_rm <- runQuery(paste0("SELECT * FROM toxval WHERE source = '", source, "' " ,
+                                  "and chemical_id NOT IN (SELECT chemical_id FROM source_chemical)"),
+                           toxval.db)
 
-    # Remove if present - some source loads may already take care of this
-    if(nrow(chems_rm)){
-      # Remove record_source entries
-      runQuery(paste0("DELETE FROM record_source WHERE toxval_id IN (",
-                      toString(chems_rm$toxval_id), ")"), toxval.db)
-      # Remove toxval entries
-      runQuery(paste0("DELETE FROM toxval WHERE toxval_id IN (",
-                      toString(chems_rm$toxval_id), ")"), toxval.db)
+      # Remove if present - some source loads may already take care of this
+      if(nrow(chems_rm)){
+        # Remove record_source entries
+        runQuery(paste0("DELETE FROM record_source WHERE toxval_id IN (",
+                        toString(chems_rm$toxval_id), ")"), toxval.db)
+        # Remove toxval entries
+        runQuery(paste0("DELETE FROM toxval WHERE toxval_id IN (",
+                        toString(chems_rm$toxval_id), ")"), toxval.db)
+      }
     }
 
+    ############################################################################
+    ### Old Provisional chemical curation code no longer in use, but archived here for now
+    ############################################################################
     #count = runQuery(paste0("select count(*) from source_chemical where (dtxsid is null or (dtxsid in ('-','','NODTXSID'))) and source='",source,"'"),source.db)[1,1]
     # count = runQuery(paste0("select count(*) from source_chemical where (dtxsid is null or (dtxsid in ('-','','NODTXSID'))) and source='",source,"'"),toxval.db)[1,1]
     # clist = chems$casrn
