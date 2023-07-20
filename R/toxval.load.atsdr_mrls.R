@@ -122,7 +122,7 @@ toxval.load.atsdr_mrls <- function(toxval.db,source.db, log=FALSE, remove_null_d
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source, remove_null_dtxsid)
+  toxval.load.postprocess(toxval.db,source.db,source, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################
