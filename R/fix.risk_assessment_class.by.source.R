@@ -8,7 +8,7 @@
 #' @param restart If TRUE, delete all values and start from scratch
 #' @export
 #--------------------------------------------------------------------------------------
-fix.risk_assessment_class.by.source <- function(toxval.db,source=NULL, restart=T) {
+fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, restart=TRUE) {
   printCurrentFunction(paste(toxval.db,":", source))
   file = paste0(toxval.config()$datapath,"dictionary/RAC_rules_by_source v92.xlsx")
   conv = read.xlsx(file)
@@ -33,6 +33,11 @@ fix.risk_assessment_class.by.source <- function(toxval.db,source=NULL, restart=T
       runInsert(query,toxval.db,T,F,T)
     }
     dict = conv[conv$source==source,]
+    if(!nrow(dict)){
+      cat("\n\n>>> ",source,"\nStopping here means that new values need to be added to the risk_assessment_class dictionary:\n",file,
+          "\nFind the unique values of study_type and enter them into the file.\nThen rerun the load.\n\n")
+      browser()
+    }
     n1.0 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
     cat("Initial rows:",n1.0,"\n")
     for(i in 1:nrow(dict)){

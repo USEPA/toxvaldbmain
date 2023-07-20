@@ -45,6 +45,7 @@ toxval.load.all <- function(toxval.db,
     doit=T
     if(doit) {
       toxval.load.atsdr.pfas.2021(toxval.db,source.db,log)
+      toxval.load.atsdr_mrls(toxval.db, source.db, log)
       # toxval.load.atsdr.pfas(toxval.db,source.db,log)
       # toxval.load.atsdr_mrl_2020(toxval.db,source.db,log)
       # toxval.load.atsdr_mrl_2022(toxval.db,source.db,log)
