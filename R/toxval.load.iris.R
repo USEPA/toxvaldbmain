@@ -66,8 +66,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                   risk_assessment_class = risk_assessment_duration) %>%
     select(-dplyr::any_of(non_toxval_cols)) %>%
     # Combine endpoint and critical_effect
-    tidyr::unite(col="critical_effect_new", endpoint, critical_effect, sep=": ", remove=FALSE) %>%
-    dplyr::mutate(critical_effect_new = critical_effect_new %>%
+    tidyr::unite(col="critical_effect", endpoint, critical_effect, sep=": ") %>%
+    dplyr::mutate(critical_effect = critical_effect %>%
                     gsub("-: ", "", .)) %>%
     dplyr::filter(toxval_numeric != "-")
 
