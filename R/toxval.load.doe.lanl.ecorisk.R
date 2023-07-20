@@ -1,19 +1,19 @@
 #-------------------------------------------------------------------------------------
-#' Load the DOE ECORISK data (also called LANL) data from toxval_source to toxval
+#' Load the DOE LANL ECORISK data data from toxval_source to toxval
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The version of toxval_source from which the tables are loaded.
 #' @param log If TRUE, send output to a log file
 #' @export
 #-------------------------------------------------------------------------------------
-toxval.load.doe.ecorisk <- function(toxval.db,source.db,log=F) {
+toxval.load.doe.lanl.ecorisk <- function(toxval.db,source.db,log=F) {
   printCurrentFunction(toxval.db)
 
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
-  source <- "DOE ECORISK"
-  source_table = "source_lanl"
+  source <- "DOE LANL ECORISK"
+  source_table = "source_doe_lanl_ecorisk"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")

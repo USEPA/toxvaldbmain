@@ -56,7 +56,7 @@ toxval.load.all <- function(toxval.db,
       toxval.load.cosmos(toxval.db,source.db,log)
       toxval.load.dod(toxval.db,source.db,log)
       toxval.load.doe.benchmarks(toxval.db,source.db,log)
-      toxval.load.doe.ecorisk(toxval.db,source.db,log)
+      toxval.load.doe.lanl.ecorisk(toxval.db,source.db,log)
       toxval.load.doe.pac(toxval.db,source.db,log)
       # toxval.load.efsa2(toxval.db,source.db,log)
       toxval.load.efsa(toxval.db,source.db,log)
