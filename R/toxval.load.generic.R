@@ -74,7 +74,7 @@ toxval.load.generic <- function(toxvaldb,source.db,log=FALSE) {
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(species_original %in% names(res)) res$species_original = tolower(res$species_original)
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
