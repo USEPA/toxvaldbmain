@@ -54,208 +54,65 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
     write.xlsx(dict,file)
   }
   res = ECOTOX
-  nlist_old = c("dsstox_substance_id","dsstox_casrn","dsstox_pref_nm",
-  "species_number","species_common_name","species_scientific_name","habitat","organism_lifestage","species_group",
-  "effect",
-  "endpoint","conc1_type_std","conc1_units_std","conc1_units_author",
-  "conc1_author","conc1_mean_std","conc1_author",
-  # "conc1_author","conc1_mean_op","conc1_mean","conc1_min_op","conc1_min","conc1_max_op","conc1_max",
-  # "conc1_units_std","conc1_mean_std",
-  "observed_duration_units_std","observed_duration_std",
-  "exposure_group","exposure_type","media_type",
-  "source","author","title","publication_year","reference_number",
-  "effect_measurement", "species_common_name")
 
-  nlist_new = c("dtxsid","casrn","name",
-             "species_id","common_name","latin_name","habitat","lifestage","ecotox_group",
-             "study_type",
-             "toxval_type","toxval_subtype","toxval_units","toxval_units2",
-             "toxval_numeric_qualifier","toxval_numeric","toxval_numeric2",
-             # "conc1_author","conc1_mean_op","conc1_mean","conc1_min_op","conc1_min","conc1_max_op","conc1_max",
-             # "conc1_units_std","conc1_mean_std",
-             "study_duration_units","study_duration_value",
-             "exposure_route","exposure_method","media",
-             "long_ref","author","title","year","pmid",
-             "effect_measurement", "species_original")
+  rename_list <- c(
+    dtxsid = "dsstox_substance_id",
+    casrn = "dsstox_casrn",
+    name = "dsstox_pref_nm",
+    species_id = "species_number",
+    common_name = "species_common_name",
+    latin_name = "species_scientific_name",
+    habitat = "habitat",
+    lifestage = "organism_lifestage",
+    ecotox_group = "species_group",
+    study_type = "effect",
+    toxval_type = "endpoint",
+    conc1_author = "conc1_author",
+    conc1_units_author = "conc1_units_author",
+    conc1_mean_op = "conc1_mean_op",
+    conc1_mean = "conc1_mean",
+    conc1_min_op = "conc1_min_op",
+    conc1_min = "conc1_min",
+    conc1_max_op = "conc1_max_op",
+    conc1_max = "conc1_max",
+    conc1_units_std = "conc1_units_std",
+    conc1_mean_std = "conc1_mean_std",
+    study_duration_units = "observed_duration_units_std",
+    study_duration_value = "observed_duration_std",
+    exposure_route = "exposure_group",
+    exposure_method = "exposure_type",
+    media = "media_type",
+    long_ref = "source",
+    author = "author",
+    title = "title",
+    year = "publication_year",
+    pmid = "reference_number",
+    effect_measurement = "effect_measurement"
+  )
 
-  # Code used to generate the rename parameters from old/new list
-  # paste0(nlist_new, " = ", nlist_old, collapse = ", ")
   res <- res %>%
-    dplyr::rename(dtxsid = dsstox_substance_id,
-                  casrn = dsstox_casrn,
-                  name = dsstox_pref_nm,
-                  species_id = species_number,
-                  common_name = species_common_name,
-                  latin_name = species_scientific_name,
-                  # habitat = habitat,
-                  lifestage = organism_lifestage,
-                  ecotox_group = species_group,
-                  study_type = effect,
-                  toxval_type = endpoint,
-                  toxval_subtype = conc1_type_std,
-                  toxval_units = conc1_units_std,
-                  toxval_units2 = conc1_units_author,
-                  toxval_numeric = conc1_mean_std,
-                  # conc1_author = conc1_author,
-                  # conc1_mean_op = conc1_mean_op,
-                  # conc1_mean = conc1_mean,
-                  # conc1_min_op = conc1_min_op,
-                  # conc1_min = conc1_min,
-                  # conc1_max_op = conc1_max_op,
-                  # conc1_max = conc1_max,
-                  # conc1_units_std = conc1_units_std,
-                  # conc1_mean_std = conc1_mean_std,
-                  study_duration_units = observed_duration_units_std,
-                  study_duration_value = observed_duration_std,
-                  exposure_route = exposure_group,
-                  exposure_method = exposure_type,
-                  media = media_type,
-                  long_ref = source,
-                  author = author,
-                  title = title,
-                  year = publication_year,
-                  pmid = reference_number,
-                  effect_measurement = effect_measurement,
-                  species_original = species_common_name) %>%
-    dplyr::mutate(toxval_numeric_qualifier = conc1_author,
-                  toxval_numeric2 = conc1_author) %>%
-    dplyr::select(dplyr::any_of(nlist_new)) %>%
+    dplyr::rename(rename_list) %>%
+    dplyr::select(dplyr::all_of(names(rename_list))) %>%
+    dplyr::mutate(species_original = common_name) %>%
     # Replace NA values ("NA", "NR", "")
     dplyr::mutate(dplyr::across(where(is.character), na_if, "NA"),
                   dplyr::across(where(is.character), na_if, "NR"),
                   dplyr::across(where(is.character), na_if, ""))
 
-  # Fix decimal lists in toxval_numeric2
-  #'@title Split Decimal List
-  #'@description Helpter function to split a decimal list
-  #'@details The assumption is the decimal list contains numeric values
-  #'with the same significant figures per number. So, first split the list
-  #'and get the length of the last string in the split list. This is the assumed
-  #'length of the standard significant figures in the decimal list. Next, find the
-  #'leading values before the decimal by using the found decimal place count (perl regex).
-  #'Finally, get the tail values by substituting the leads before piecing the numerics
-  #'back together.
-  #'@param in_str Input decimal list string to split/fix.
-  #'@param get_min Boolean to return the min of the split list. Default is TRUE.
-  #'@examples
-  #'   split_decimal_list(in_str = "1226.131118.211344.27") returns 1118.21
-  #'   split_decimal_list(in_str = "40.5773.3", get_min=FALSE) returns c(40.5, 773.3)
-  #'   split_decimal_list(in_str = "0.5840.1141.054") returns c(0.584, 0.114, 1.054")
-  split_decimal_list <- function(in_str, get_min=TRUE){
-    # Skip NULL or NA strings
-    if(is.null(in_str) | is.na(in_str)){
-      return(in_str)
-    }
-    # Ignore ranges, single decimals, or empty strings
-    if(stringr::str_count(in_str, "[.]") <= 1 | grepl("-", in_str) | in_str %in% c("", " ")){
-      return(in_str)
-    }
-    # message("Fixing: ", in_str)
-    # Find decimal places (look at last in decimal list)
-    sig_n = in_str %>%
-      strsplit(split = "\\.") %>%
-      unlist() %>%
-      .[length(.)] %>%
-      stringr::str_length()
-
-    # Match leading numeric based on sig_n
-    lead = in_str %>%
-      strsplit(split = paste0("(?<=[.]).{1,",sig_n,"}"), perl = TRUE) %>%
-      unlist()
-    # Get decimal places (remove lead)
-    tail = in_str %>%
-      gsub(paste0(lead %>%
-                    gsub("\\.", "[.]", .),
-                  collapse="|"), ".", .) %>%
-      strsplit(split = "[.]") %>%
-      unlist() %>%
-      # REmove empty strings
-      .[!. %in% c("")]
-    # Recombine
-    out = paste0(lead, tail) %>%
-      as.numeric()
-
-    # Return a character string back
-    if(get_min){
-      return(min(out) %>% as.character())
-    } else{
-      return(out %>% as.character())
-    }
-  }
-
-  # Attempt to clean up toxval_numeric field
-  # Identify cases to handle
-  # tn_fix <- res %>%
-  #   dplyr::select(toxval_numeric) %>%
-  #   unique() %>%
-  #   dplyr::mutate(toxval_numeric_n = suppressWarnings(as.numeric(toxval_numeric))) %>%
-  #   filter(is.na(toxval_numeric_n), !is.na(toxval_numeric))
-
-  res$toxval_numeric = res$toxval_numeric %>%
-    gsub("\\*", "", .) %>%
-    as.numeric()
-
-  # Attempt to clean up toxval_numeric2 field
-  # Identify cases to handle
-  # tn_fix <- res %>%
-  #   dplyr::select(toxval_numeric2) %>%
-  #   unique() %>%
-  #   dplyr::mutate(toxval_numeric_n = suppressWarnings(as.numeric(toxval_numeric2))) %>%
-  #   filter(is.na(toxval_numeric_n), !is.na(toxval_numeric2)) %>%
-  #   # Temp filter out ranges
-  #   filter(!grepl("-", toxval_numeric2)) # %>%
-  #   # # Temp filter out multiple decimals
-  #   # dplyr::mutate(multi_decimals = stringr::str_count(toxval_numeric2, "\\.")) %>%
-  #   # filter(multi_decimals %in% c(0, 1))
-
-  res$toxval_numeric2 = res$toxval_numeric2 %>%
-    gsub("\\/NR|NR|\\/|\\*|>|<|>=|<=|=|~|ca|\\+", "", .)
-
-  # Fix decimal lists, assumes standard decimal places, only applied to those
-  # with multiple decimals, not ranges
-  res = res %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(toxval_numeric2 = split_decimal_list(toxval_numeric2, get_min = TRUE)) %>%
-    dplyr::ungroup()
+  # Programmatically set toxval_numeric, units, and qualifier from conc1_* fields
+  res <- ecotox.select.toxval.numeric(in_data = res)
 
   res$source = source
-  # res[res=="NA"] = NA
-  # res[res=="NR"] = NA
-  # res[res==""] = NA
-  # res$toxval_numeric_qualifier = "="
 
-  cat("fix the toxval_numeric_qualifier ranges\n")
-  x = res$toxval_numeric_qualifier
-  x = str_replace_all(x,"NR","")
-  x = str_replace_all(x,"/","")
-  xq = x
-  xq[] = "="
-  hits = grep("-",x)
-  if(length(hits)>0) {
-    for(i in 1:length(hits)) x[hits[i]] = str_split(x[hits[i]],"-")[[1]][1]
-    qlist = c("<=",">=","<",">","~","ca ")
-    for(ql in qlist) {
-      cat("  ",ql,"\n")
-      ql2 = ql
-      if(ql=="ca ") ql2 = "~"
-      qhits = grep(ql,x)
-      for(i in 1:length(qhits)) {
-        x[qhits[i]] = str_replace(x[qhits[i]],ql,"")
-        xq[qhits[i]] = ql2
-      }
-    }
-  }
-  res$toxval_numeric_qualifier = xq
-  res1 = res[!is.na(res$toxval_numeric),]
   cat(nrow(res),"\n")
   # Filter out NA toxval_type
   res = res[!is.na(res$toxval_type),]
   cat(nrow(res),"\n")
 
-  res$study_duration_units[res$study_duration_units == "d"] = "days"
-  res$study_duration_units[res$study_duration_units == "Day(s)"] <- "Day"
+  res$study_duration_units[res$study_duration_units %in% c("d", "Day(s)")] = "days"
   res$toxval_type = res$toxval_type %>%
-    gsub("\\/|\\*","", .)
+    gsub("\\/|\\*","", .) %>%
+    gsub("--", "-", .)
 
   res$study_duration_value = res$study_duration_value %>%
     gsub("\\/|\\~|\\*|>=|<=|>|<|=| ","", .) %>%
@@ -279,22 +136,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
 
   res$long_ref = paste(res$long_ref,res$author,res$title,res$year)
   res$critical_effect = paste(res$study_type, res$effect_measurement)
-  res$toxval_units[is.na(res$toxval_units)] = res$toxval_units2[is.na(res$toxval_units)]
-  res$toxval_numeric[is.na(res$toxval_numeric)] = res$toxval_numeric2[is.na(res$toxval_numeric)]
-
-  res = res %>%
-    dplyr::select(-c(effect_measurement,
-                     # conc1_author,
-                     # conc1_mean_op,
-                     # conc1_mean,
-                     # conc1_min_op,
-                     # conc1_min,
-                     # conc1_max_op,
-                     # conc1_max,
-                     # conc1_units_std,
-                     # conc1_mean_std,
-                     toxval_units2,
-                     toxval_numeric2))
+  # Remove effect_measurement field
+  res$effect_measurement = NULL
 
   res = distinct(res)
   print(dim(res))
@@ -307,18 +150,14 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
 
   dose.units <- res2$toxval_units
   time.value <- res2$study_duration_value
-  dose.value <- res2$toxval_numeric
-  dose.value <- gsub("NR",NA, dose.value)
+  dose.value <- res2$toxval_numeric %>%
+    gsub("NR",NA, .)
   dose.qualifier <- as.data.frame(str_extract_all(dose.value, "[^0-9.E+-]+", simplify = TRUE))[,1]
-  dose.value <- gsub("[^0-9.E+-]+", "", dose.value)
+  dose.value <- gsub("[^0-9.E+-]+", "", dose.value) %>%
+    { suppressWarnings(as.numeric(.)) } %>%
+    signif(digits=4)
   time.units <- res2$study_duration_units
   type <- res2$toxval_type
-
-  for(i in 1:length(dose.value)) {
-    if(!is.na(as.numeric(dose.value[i]))) {
-      dose.value[i] <- signif(as.numeric(dose.value[i]),digits=4)
-    }
-  }
 
   new.type <- paste0(type,"@",dose.qualifier," ",dose.value," ",dose.units)
   res3 <- res2
@@ -326,6 +165,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res3$toxval_numeric <- time.value
   res3$toxval_units <- time.units
   res <- rbind(res1,res3)
+
+  # Fix casrn
   x <- res[,"casrn"]
   for(i in 1:length(x)) x[i] <- fix.casrn(x[i])
   res[,"casrn"] <- x
@@ -333,7 +174,11 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res <- res[!is.na(res$toxval_numeric),]
   res$quality <- paste("Control type:",res$quality)
   res <- res[res$toxval_numeric>=0,]
-  res$toxval_numeric_qualifier[which(is.na(res$toxval_numeric_qualifier)|res$toxval_numeric_qualifier == "")] <- "-"
+  res$toxval_numeric_qualifier[is.na(res$toxval_numeric_qualifier) |
+                                 res$toxval_numeric_qualifier == ""] <- "-"
+
+  res$exposure_method <- res$exposure_method %>%
+    stringr::str_squish()
   message("Why is this line here? exposure_method was set to exposure_type originally...")
   browser(print("Why is this line here? exposure_method was set to exposure_type originally..."))
   res$exposure_method <- res$media
@@ -341,13 +186,12 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   #####################################################################
   cat("add other columns to res\n")
   #####################################################################
-  #Get rid of wacko characters
-  do.fix.units <- TRUE
-  if(do.fix.units) {
-    res$toxval_units <- str_replace_all(res$toxval_units,"AI ","")
-    res$toxval_units <- str_replace_all(res$toxval_units,"ae ","")
-    res$toxval_units <- str_replace_all(res$toxval_units,"ai ","")
-  }
+  #Get rid of wacko characters (seem to mean auto or AI generated)
+  res$toxval_units <- res$toxval_units %>%
+    # Starts with match to remove
+    gsub("^AI |^ae |^ai ", "", .) %>%
+    stringr::str_squish()
+
   res$toxval_type <- res$toxval_type %>%
     gsub("\\*|\\/|\\~", "", .)
 
