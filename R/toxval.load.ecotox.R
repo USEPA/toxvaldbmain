@@ -77,8 +77,6 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
     conc1_max = "conc1_max",
     conc1_units_std = "conc1_units_std",
     conc1_mean_std = "conc1_mean_std",
-    study_duration_units = "observed_duration_units_std",
-    study_duration_value = "observed_duration_std",
     exposure_route = "exposure_group",
     exposure_method = "exposure_type",
     media = "media_type",
@@ -87,6 +85,16 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
     title = "title",
     year = "publication_year",
     pmid = "reference_number",
+    observed_duration_std="observed_duration_std",
+    observed_duration_units_std="observed_duration_units_std",
+    observ_duration_mean_op="observ_duration_mean_op",
+    observ_duration_mean="observ_duration_mean",
+    observ_duration_min_op="observ_duration_min_op",
+    observ_duration_min="observ_duration_min",
+    observ_duration_max_op="observ_duration_max_op",
+    observ_duration_max="observ_duration_max",
+    observ_duration_unit="observ_duration_unit",
+    observ_duration_unit_desc="observ_duration_unit_desc",
     effect_measurement = "effect_measurement"
   )
 
@@ -101,6 +109,10 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
 
   # Programmatically set toxval_numeric, units, and qualifier from conc1_* fields
   res <- ecotox.select.toxval.numeric(in_data = res)
+  res$toxval_numeric_qualifier[is.na(res$toxval_numeric_qualifier) |
+                                 res$toxval_numeric_qualifier == ""] <- "-"
+  # Programmatically set study_duration, units, and qualifier from observ* fields
+  res <- ecotox.select.study.duration(in_data = res)
 
   res$source = source
 
@@ -113,11 +125,6 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res$toxval_type = res$toxval_type %>%
     gsub("\\/|\\*","", .) %>%
     gsub("--", "-", .)
-
-  res$study_duration_value = res$study_duration_value %>%
-    gsub("\\/|\\~|\\*|>=|<=|>|<|=| ","", .) %>%
-    gsub("NR", "-999", .) %>%
-    as.numeric()
 
   res$study_duration_value[is.na(res$study_duration_value)] <- -999
 
@@ -151,11 +158,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   dose.units <- res2$toxval_units
   time.value <- res2$study_duration_value
   dose.value <- res2$toxval_numeric %>%
-    gsub("NR",NA, .)
-  dose.qualifier <- as.data.frame(str_extract_all(dose.value, "[^0-9.E+-]+", simplify = TRUE))[,1]
-  dose.value <- gsub("[^0-9.E+-]+", "", dose.value) %>%
-    { suppressWarnings(as.numeric(.)) } %>%
-    signif(digits=4)
+    signif(., digits=4)
+  dose.qualifier <- res2$toxval_numeric_qualifier
   time.units <- res2$study_duration_units
   type <- res2$toxval_type
 
@@ -174,8 +178,6 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res <- res[!is.na(res$toxval_numeric),]
   res$quality <- paste("Control type:",res$quality)
   res <- res[res$toxval_numeric>=0,]
-  res$toxval_numeric_qualifier[is.na(res$toxval_numeric_qualifier) |
-                                 res$toxval_numeric_qualifier == ""] <- "-"
 
   res$exposure_method <- res$exposure_method %>%
     stringr::str_squish()
