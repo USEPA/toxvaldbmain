@@ -67,7 +67,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,date_string="2023-05-18") {
         slist = c("other aquatic arthropod ","other aquatic crustacea: ","other aquatic mollusc: ",
                   "other aquatic worm: ","other,","other,other algae: ","other: ")
         for(x in slist) {
-          if(contains(tag,x)) tag = str_replace(tag,x,"")
+          if(grepl(x, tag)) tag = stringr::str_replace(tag,x,"")
         }
         sid = -1
         if(is.element(tag,dict$common_name)) {

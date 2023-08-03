@@ -54,7 +54,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
     # Remove special characters
     cat(">>> Fix special characters in units\n")
     unit.list = sort(runQuery(paste0("select distinct toxval_units_original from toxval where source = '",source,"' group by toxval_units_original"),toxval.db)[,1])
-    for(i in 1:length(unit.list)) {
+    for(i in seq_len(length(unit.list))) {
       input = unit.list[i]
       output = input
       temp = str_replace_all(output,"\uFFFD","u")
@@ -84,7 +84,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
     convos = convos[is.element(convos$toxval_units,tulist),]
     nrows = dim(convos)[1]
     if(nrows>0) {
-      for (i in 1:nrows){
+      for (i in seq_len(nrows)){
         cat("  ",convos[i,1],convos[i,2],convos[i,3],"\n")
         query = paste0("update toxval set toxval_units = '",convos[i,2],"', toxval_numeric = toxval_numeric*",convos[i,3]," where toxval_units = '",convos[i,1],"' and source = '",source,"'")
         if(!is.null(subsource))
@@ -101,7 +101,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
     tulist = runQuery(query,toxval.db)[,1]
     convos = convos[is.element(convos$toxval_units,tulist),]
     nrows = dim(convos)[1]
-    for (i in 1:nrows){
+    for (i in seq_len(nrows)){
       units = convos[i,1]
       units.new = convos[i,2]
       cat("  ",convos[i,1],convos[i,2],"\n")
@@ -131,7 +131,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
     # Do the conversion from ppm to mg/kg-day on a species-wise basis for oral exposures
     cat(">>> Do the conversion from ppm to mg/kg-day on a species-wise basis\n")
     conv = read.xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx"))
-    for (i in 1: nrow(conv)){
+    for (i in seq_len(nrow(conv))){
       species <- conv[i,1]
       factor <- conv[i,2]
       sid.list <- runQuery(paste0("select species_id from species where common_name ='",species,"'"),toxval.db)[,1]

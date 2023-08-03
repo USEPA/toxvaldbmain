@@ -12,14 +12,17 @@ fix.strain.v2 <- function(toxval.db,source=NULL,date_string="2023-04-03") {
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
   dict = read.xlsx(file)
 
-  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  else slist = source
+  if(is.null(source)) {
+    slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  } else {
+    slist = source
+  }
   for(source in slist) {
     cat("fix strain:",source,"\n")
     so = runQuery(paste0("select distinct strain_original from toxval where source='",source,"'"),toxval.db)[,1]
     count.good = 0
     if(length(so)>0) {
-      for(i in 1:length(so)) {
+      for(i in seq_len(length(so))) {
         tag = stri_escape_unicode(so[i])
         tag = str_replace_all(tag,"\\'","")
         if(is.element(tag,dict$strain_original)) {

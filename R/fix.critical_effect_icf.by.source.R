@@ -27,7 +27,7 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source) {
   #####################################################################
 
   x <- unique(res$critical_effect_original)
-  x <- x[!is.element(x,dict[,2])]
+  x <- x[!x %in% dict$critical_effect_original]
   cat("   missing values in dictionary:",length(x),"\n")
   # file <- paste0(toxval.config()$datapath,"dictionary/critical_effect_icf_missing_",Sys.Date(),".xlsx")
   # write.xlsx(x, file)
@@ -36,7 +36,7 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source) {
   cat("find critical effect values from toxval that are in icf dict \n")
   #####################################################################
   y <- unique(res$critical_effect_original)
-  y <- y[is.element(y,dict[,2])]
+  y <- y[y %in% dict$critical_effect_original]
   cat("   values in dictionary:",length(y),"\n")
 
   print(dim(dict))
@@ -53,15 +53,15 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source) {
   print(dim(dict_current))
 
   z <- unique(dict_current$critical_effect_original_0)
-  z <- z[is.element(z,x)]
+  z <- z[z %in% x]
   cat("   missing icf values found in dictionary:",length(z),"\n")
   # file <- paste0(toxval.config()$datapath,"dictionary/critical_effect_icf_missing_values_in_dict_",Sys.Date(),".xlsx")
   # write.xlsx(z, file)
 
   dict_new2 <- dict_current[dict_current$critical_effect_original_0 %in% z,]
   # subset only the new value column and the original value column
-  dict_new2 <- dict_new2[,c(3,1)]
-  names(dict_new2) <- c("critical_effect","critical_effect_original")
+  dict_new2 <- dict_new2 %>% select(critical_effect=critical_effect_stage2,
+                                    critical_effect_original=critical_effect_original_0)
 
   # combine both dictionary(icf and current dictionary) values found in toxval to create new dictionary
 
@@ -76,14 +76,14 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source) {
   res <- runQuery(query,toxval.db)
   #print(View(res))
   x <- unique(res$critical_effect_original)
-  x <- x[!is.element(x,dict_new[,2])]
+  x <- x[!x %in% dict_new$critical_effect_original]
   cat("   missing values in dictionary:",length(x),"\n")
   # file <- paste0(toxval.config()$datapath,"dictionary/critical_effect_missing6_",Sys.Date(),".xlsx")
   # write.xlsx(x, file)
 
-  for(i in 1:nrow(dict_new)) {
-    original <- dict_new[i,2]
-    final <- dict_new[i,1]
+  for(i in seq_len(nrow(dict_new))) {
+    original <- dict_new$critical_effect_original[i]
+    final <- dict_new$critical_effect[i]
     #cat(original,":",final,"\n"); flush.console()
     query <- paste0("update toxval set critical_effect =\"",final,"\" where critical_effect_original=\"",original,"\" and source like '",source,"'")
     runInsert(query,toxval.db,T,F,T)

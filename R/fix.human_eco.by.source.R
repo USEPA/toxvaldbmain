@@ -36,8 +36,11 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL, reset=T){
                "Pennsylvania DEP MCLs","Pennsylvania DEP ToxValues",
                "PPRTV (CPHEA)","PPRTV (NCEA)","RSL")
 
-  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  else slist = source
+  if(is.null(source)) {
+    slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  } else {
+    slist = source
+  }
   for(source in slist) {
     cat("fix human_eco:",source,"\n")
     if(reset) runQuery(paste0("update toxval set human_eco='not specified' where source like '",source,"'"),toxval.db)
@@ -57,8 +60,7 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL, reset=T){
                      ('Miscellaneous','Unspecified','Not specified','None','-','Mammals')) and source='",source,"'")
       runQuery(query,toxval.db)
 
-    }
-    else {
+    } else {
       query = paste0("update toxval set human_eco='human health' where species_id in (select species_id from species where ecotox_group='Mammals') and source='",source,"'")
       runQuery(query,toxval.db)
       query = paste0("update toxval set human_eco='eco' where species_id in
@@ -80,9 +82,10 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL, reset=T){
                 "TDI","TDLo","threshold dose","ERCL (10)",
                 "tolerable concentration in air","tolerable upper intake","UL","optimal intake value")
     stvtlist = runQuery(paste0("select distinct toxval_type from toxval where source='",source,"'"),toxval.db)[,1]
-    tvtlist = tvtlist[is.element(tvtlist,stvtlist)]
-    for(tvt in tvtlist) {
-      query = paste0("update toxval set species_id=1000000, target_species='Human' where source='",source,"' and toxval_type='",tvt,"'")
+    tvtlist = tvtlist[tvtlist %in% stvtlist]
+    if(length(tvtlist)){
+      query = paste0("update toxval set species_id=1000000, target_species='Human' where source='",source,
+                     "' and toxval_type in ('",paste0(tvtlist, collapse="', '"),"')")
       runQuery(query,toxval.db)
     }
    # "BMC","BMDL","BMDL (01)","BMDL (05)","BMDL (10)","HNEL","LC0",
