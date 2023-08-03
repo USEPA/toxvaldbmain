@@ -59,6 +59,7 @@ ecotox.select.toxval.numeric <- function(in_data){
                   toxval_units = NA)
 
   # Check remaining fixes
+  # View(out_ls$unhandled_na %>% select(tidyr::starts_with("conc1_")) %>% distinct(), "unhandled_toxval_numeric")
   # in_data %>%
   #   dplyr::select(tidyr::starts_with("conc1")) %>%
   #   distinct() %>%
@@ -72,7 +73,7 @@ ecotox.select.toxval.numeric <- function(in_data){
   } else {
     out_ls %>%
       # Select out all conc1_* fields processed
-      dplyr::select(-tidyr::starts_with("conc1")) %>%
+      dplyr::select(-tidyr::starts_with("conc1"), -tmp_id) %>%
       return()
   }
 }

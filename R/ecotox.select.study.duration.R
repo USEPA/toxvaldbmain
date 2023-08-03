@@ -31,24 +31,25 @@ ecotox.select.study.duration <- function(in_data){
   in_data <- in_data %>%
     dplyr::filter(!tmp_id %in% out_ls$observ_duration_mean$tmp_id)
 
-  ### Select observ_duration_min
-  out_ls$observ_duration_min <- in_data %>%
+  ### Select observ_duration_max
+  out_ls$observ_duration_max <- in_data %>%
     dplyr::rename(study_duration_units = observ_duration_unit_desc) %>%
-    dplyr::mutate(observ_duration_min = gsub("\\/", "", observ_duration_min)) %>%
-    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(observ_duration_min)),
-                  study_duration_qualifier = observ_duration_min_op) %>%
+    dplyr::mutate(observ_duration_max = gsub("\\/", "", observ_duration_max)) %>%
+    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(observ_duration_max)),
+                  study_duration_qualifier = observ_duration_max_op) %>%
     dplyr::filter(!is.na(study_duration_value))
   # Filter out records
   in_data <- in_data %>%
-    dplyr::filter(!tmp_id %in% out_ls$observ_duration_min$tmp_id)
+    dplyr::filter(!tmp_id %in% out_ls$observ_duration_max$tmp_id)
 
   ### Lump remaining as NA
   out_ls$unhandled_na <- in_data %>%
-    dplyr::mutate(toxval_numeric = NA,
-                  toxval_numeric_qualifier = NA,
-                  toxval_units = NA)
+    dplyr::mutate(study_duration_value = NA,
+                  study_duration_qualifier = NA,
+                  study_duration_units = NA)
 
   # Check remaining fixes
+  # View(out_ls$unhandled_na %>% select(tidyr::starts_with("observ")) %>% distinct(), "unhandled_study_duration")
   # in_data %>%
   #   dplyr::select(tidyr::starts_with("observ")) %>%
   #   distinct() %>%
@@ -57,7 +58,7 @@ ecotox.select.study.duration <- function(in_data){
   out_ls <- dplyr::bind_rows(out_ls)
 
   if(nrow(out_ls) != orig_n){
-    stop("Error: Input ECOTOX rows does not match output rows for ecotox.select.toxval.numeric()")
+    stop("Error: Input ECOTOX rows does not match output rows for ecotox.select.study.duration()")
     browser()
   } else {
 
@@ -158,7 +159,7 @@ ecotox.select.study.duration <- function(in_data){
 
     out_ls %>%
       # Select out all conc1_* fields processed
-      dplyr::select(-tidyr::starts_with("observ")) %>%
+      dplyr::select(-tidyr::starts_with("observ"), -tmp_id) %>%
       return()
   }
 }
