@@ -143,7 +143,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res <- ecotox.select.study.duration(in_data = res)
   res$study_duration_units[res$study_duration_units %in% c("d", "Day(s)")] = "days"
   res$study_duration_value[is.na(res$study_duration_value)] <- -999
-  study_duration_qualifier[is.na(res$study_duration_qualifier)] <- "-"
+  res$study_duration_qualifier[is.na(res$study_duration_qualifier)] <- "-"
   res$source = source
 
   # Fix toxval_type, numeric, and units for type "LT*"
