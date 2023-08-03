@@ -17,7 +17,9 @@ fill.toxval.defaults <- function(toxval.db,mat){
   # }
   for(field_name in names(mat)){
     if(field_name %in% defs$Field){
-      mat[is.na(mat[[field_name]]), field_name] = defs$Default[defs$Field == field_name]
+      if(nrow(mat[is.na(mat[[field_name]]), field_name])){
+        mat[is.na(mat[[field_name]]), field_name] = defs$Default[defs$Field == field_name]
+      }
     }
   }
   # Ensure species is renamed to species_original
