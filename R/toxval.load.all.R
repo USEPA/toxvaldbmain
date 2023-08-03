@@ -45,6 +45,7 @@ toxval.load.all <- function(toxval.db,
     doit=T
     if(doit) {
       toxval.load.atsdr.pfas.2021(toxval.db,source.db,log)
+      toxval.load.atsdr_mrls(toxval.db, source.db, log)
       # toxval.load.atsdr.pfas(toxval.db,source.db,log)
       # toxval.load.atsdr_mrl_2020(toxval.db,source.db,log)
       # toxval.load.atsdr_mrl_2022(toxval.db,source.db,log)
@@ -55,7 +56,7 @@ toxval.load.all <- function(toxval.db,
       toxval.load.cosmos(toxval.db,source.db,log)
       toxval.load.dod(toxval.db,source.db,log)
       toxval.load.doe.benchmarks(toxval.db,source.db,log)
-      toxval.load.doe.ecorisk(toxval.db,source.db,log)
+      toxval.load.doe.lanl.ecorisk(toxval.db,source.db,log)
       toxval.load.doe.pac(toxval.db,source.db,log)
       # toxval.load.efsa2(toxval.db,source.db,log)
       toxval.load.efsa(toxval.db,source.db,log)

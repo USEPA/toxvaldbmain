@@ -57,6 +57,8 @@ rsconnect/
 # Ignore test data and dev setup
 Repo/
 dev_setup.R
+# Ignore temp file for test running functions from console
+tmp_delete.R
 
 ######################################################################################################################
 # Python based .gitignore

@@ -5,8 +5,15 @@
 #' @param source The source name
 #' @param do.convert.units If TRUE, convert units, mainly from ppm to mg/kg-day. This code is not debugged
 #' @param chem_source Used only for source=ECHA IUCLID
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.units=FALSE,chem_source,subsource=NULL){
+toxval.load.postprocess <- function(toxval.db,
+                                    source.db,
+                                    source,
+                                    do.convert.units=FALSE,
+                                    chem_source,
+                                    subsource=NULL,
+                                    remove_null_dtxsid=TRUE){
   printCurrentFunction(toxval.db)
 
   do.convert.units = TRUE # override default because it is not specified in all toxval load functions
@@ -22,9 +29,9 @@ toxval.load.postprocess <- function(toxval.db, source.db,source, do.convert.unit
   cat("load chemical info to source_chemical\n")
   #####################################################################
   if(source=="ECHA IUCLID") {
-    toxval.load.source_chemical(toxval.db,source.db,chem_source,verbose=TRUE)
+    toxval.load.source_chemical(toxval.db,source.db,source=chem_source,verbose=TRUE, remove_null_dtxsid=remove_null_dtxsid)
   } else {
-    toxval.load.source_chemical(toxval.db,source.db,source,verbose=TRUE)
+    toxval.load.source_chemical(toxval.db,source.db,source=source,verbose=TRUE, remove_null_dtxsid=remove_null_dtxsid)
   }
 
   #####################################################################
