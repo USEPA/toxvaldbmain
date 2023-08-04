@@ -17,7 +17,8 @@ fill.toxval.defaults <- function(toxval.db,mat){
   # }
   for(field_name in names(mat)){
     if(field_name %in% defs$Field){
-      if(nrow(mat[is.na(mat[[field_name]]), field_name])){
+      na_fields_n <- mat %>% dplyr::filter(is.na(!!field_name)) %>% nrow()
+      if(na_fields_n){
         mat[is.na(mat[[field_name]]), field_name] = defs$Default[defs$Field == field_name]
       }
     }
