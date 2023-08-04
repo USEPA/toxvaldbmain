@@ -313,11 +313,22 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res$subsource <- "EPA ORD"
   res$source_url <- "https://cfpub.epa.gov/ecotox/"
   res$details_text = paste(source,"Details")
-  cat("Inserting into toxval...(", format(Sys.time(),usetz = TRUE),")\n")
-  runInsertTable(res, "toxval", toxval.db, verbose)
-  cat("Inserting into record_source...(", format(Sys.time(),usetz = TRUE),")\n")
-  runInsertTable(refs, "record_source", toxval.db, verbose)
-  cat("Finished inserting into record_source...(", format(Sys.time(),usetz = TRUE),")\n")
+
+  # Batch upload to ensure it works
+  chunk <- 10000
+  n <- nrow(res)
+  r  <- rep(1:ceiling(n/chunk),each=chunk)[1:n]
+  d_res <- split(res,r)
+  d_refs <- split(refs, r)
+
+  for(i in seq_len(length(d_res))){
+    cat("(a) Uploading to toxval ", i, " of ", length(d_res), "(chunk size: ", chunk, ") (", format(Sys.time(),usetz = TRUE),")\n")
+    runInsertTable(d_res[[i]], "toxval", toxval.db, verbose)
+    cat("(b) Uploading to record_source ", i, " of ", length(d_res), "(chunk size: ", chunk, ") (", format(Sys.time(),usetz = TRUE),")\n")
+    runInsertTable(d_refs[[i]], "record_source", toxval.db, verbose)
+  }
+  cat("Finished inserting into toxval and record_source...(", format(Sys.time(),usetz = TRUE),")\n")
+
   print(dim(res))
   # Get rid of unneeded intermediates
   rm(res, refs)

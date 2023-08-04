@@ -16,11 +16,11 @@ fix.non_ascii.v2 <- function(df,source){
   }
   clist = names(df)[non_ascii_check==TRUE]
   if(length(clist)>0) {
-    file = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/unicode map.xlsx")
-    map = readxl::read_xlsx(file) %>%
-      dplyr::select(unicode, replacement)
-
-    rownames(map) = map$unicode
+    # file = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/unicode map.xlsx")
+    # map = readxl::read_xlsx(file) %>%
+    #   dplyr::select(unicode, replacement)
+    #
+    # rownames(map) = map$unicode
     # row = data.frame(matrix(nrow=1,ncol=2))
     # res = NULL
     # names(row) = c("raw","converted")
