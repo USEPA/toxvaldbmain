@@ -12,117 +12,150 @@
 #' res0=res0,name.OK=name.OK,casrn.OK=casrn.OK,checksum.OK=checksum.OK
 #'
 #--------------------------------------------------------------------------------------
-chem.check.v2 <- function(res0,source=NULL,verbose=F) {
+chem.check.v2 <- function(res0,source=NULL,verbose=FALSE) {
   printCurrentFunction(source)
-  ccheck = NULL
-  row = as.data.frame(matrix(nrow=1,ncol=4))
-  names(row)= c("original","escaped","cleaned","checksum")
-  name.OK = T
-  casrn.OK = T
-  checksum.OK = T
+  name.OK = TRUE
+  casrn.OK = TRUE
+  checksum.OK = TRUE
+
   cat(">>> Deal with name\n")
-  nlist = sort(unique(res0$name))
-  for(i in 1:length(nlist)) {
-    n0 = nlist[i]
-    n1 = iconv(n0,from="UTF-8",to="ASCII//TRANSLIT")
-    n2 = stri_escape_unicode(n1)
-    n2 = str_replace_all(n2,"\\\\'","\'")
-    n2 = str_replace_all(n2,"\r"," ")
-    n2 = str_replace_all(n2,"\n"," ")
-    n2 = str_replace_all(n2,"  "," ")
-    n2 = str_trim(n2)
+  chem.check.name <- function(in_name, source, verbose){
+    n0 = in_name %>%
+      # Replace zero width space unicode
+      gsub("\u200b", "", .)
+
+    if(is.na(n0)) {
+      cat("NA name found...\n")
+      browser()
+    }
+    n1 = n0 %>%
+      iconv(.,from="UTF-8",to="ASCII//TRANSLIT")
+    n2 <- n1 %>%
+      stringi::stri_escape_unicode() %>%
+
+      stringr::str_replace_all("\\\\'","\'") %>%
+      stringr::str_squish()
+
     if(source %in% c("Alaska DEC",
-                           "California DPH",
-                           "EPA AEGL",
-                           "Mass. Drinking Water Standards",
-                           "OSHA Air contaminants",
-                           "OW Drinking Water Standards",
-                           "Pennsylvania DEP MCLs",
-                           "USGS HBSL",
-                           "WHO IPCS",
-                           "ATSDR MRLs",
-                           "Cal OEHHA",
-                           "Chiu",
-                           "COSMOS",
-                           "DOD ERED",
-                           "DOE Wildlife Benchmarks",
-                           "DOE Protective Action Criteria",
-                           "IRIS",
-                           "EPA OPP",
-                           "Pennsylvania DEP ToxValues",
-                           "EnviroTox_v2",
-                           "HEAST")) {
-      if(contains(n2,";")) {
-        start = gregexpr(";",n2)[[1]][1]
-        n3 = str_trim(substr(n2,1,start-1))
-        string = paste0(source," [",n2,"] [",n3,"]")
-        #cat(string,"\n")
-        n2 = n3
+                     "California DPH",
+                     "EPA AEGL",
+                     "Mass. Drinking Water Standards",
+                     "OSHA Air contaminants",
+                     "OW Drinking Water Standards",
+                     "Pennsylvania DEP MCLs",
+                     "USGS HBSL",
+                     "WHO IPCS",
+                     "ATSDR MRLs",
+                     "Cal OEHHA",
+                     "Chiu",
+                     "COSMOS",
+                     "DOD ERED",
+                     "DOE Wildlife Benchmarks",
+                     "DOE Protective Action Criteria",
+                     "IRIS",
+                     "EPA OPP",
+                     "Pennsylvania DEP ToxValues",
+                     "EnviroTox_v2",
+                     "HEAST")) {
+      # Only take first name stem before ";"
+      if(grepl(";", n2)) {
+        n2 = sub(';.*', '', n2)
       }
-      if(contains(n2," (")) {
-        start = gregexpr(" \\(",n2)[[1]][1]
-        n3 = str_trim(substr(n2,1,start-1))
-        string = paste0(source," [",n2,"] [",n3,"]")
-        #cat(string,"\n")
-        n2 = n3
+      # Remove trailing abbreviation (ex. "DI(2-ETHYLHEXYL)PHTHALATE (DEHP)" to "DI(2-ETHYLHEXYL)PHTHALATE")
+      if(grepl(" \\(", n2)) {
+        n2 = sub(' \\(.*', '', n2)
       }
     }
     n2 = clean.last.character(n2)
     if(verbose) cat("1>>> ",n0,n1,n2,"\n")
-    if(is.na(n0)) browser()
-    if(n2!=n0) {
-      row[1,1] = n0
-      row[1,2] = n1
-      row[1,3] = n2
-      ccheck = rbind(ccheck,row)
-      res0[is.element(res0[,"name"],n0),"name"] = n2
-      name.OK = F
-    }
-    if(i%%1000==0) cat(" chemcheck name: finished ",i," out of ",length(nlist),"\n")
+    return(paste(n0, n1, n2, sep="||"))
   }
+
+  res0 = res0 %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(name_check = chem.check.name(in_name=name,
+                                               source=source,
+                                               verbose=verbose)) %>%
+    dplyr::ungroup() %>%
+    tidyr::separate(name_check,
+                    into=c("n0", "n1", "n2"),
+                    sep="\\|\\|")
+
+  ccheck_name = res0 %>%
+    dplyr::filter(n2 != n0) %>%
+    dplyr::select(n0, n1, n2) %>%
+    dplyr::mutate(cs = NA)
+
+  if(nrow(ccheck_name)) {
+    name.OK = FALSE
+  }
+
+  # Set name as cleaned n2, remove intermediates
+  res0 = res0 %>%
+    dplyr::select(-name, -n0, -n1) %>%
+    dplyr::rename(name = n2)
+
   cat("\n>>> Deal with CASRN\n")
-  nlist = sort(unique(res0$casrn))
-  for(i in 1:length(nlist)) {
-    n0 = nlist[i]
+  chem.check.casrn <- function(in_cas, verbose){
+    n0 = in_cas
     if(!is.na(n0)) {
       n1 = iconv(n0,from="UTF-8",to="ASCII//TRANSLIT")
-      n2 = stri_escape_unicode(n1)
-      n2 = fix.casrn(n2)
+      n2 = stri_escape_unicode(n1) %>%
+        fix.casrn()
       cs = cas_checkSum(n2)
       if(is.na(cs)) cs = 0
       if(verbose) cat("2>>> ",n0,n1,n2,cs,"\n")
-      if(n2!=n0) {
-        res0[is.element(res0$casrn,n0),"casrn"] = n2
-        row[1,1] = n0
-        row[1,2] = n1
-        row[1,3] = n2
-        row[1,4] = cs
-        ccheck = rbind(ccheck,row)
-        casrn.OK = F
-      }
-      if(!cs) {
-        row[1,1] = n0
-        row[1,2] = n1
-        row[1,3] = NA
-        row[1,4] = cs
-        ccheck = rbind(ccheck,row)
-        checksum.OK = F
-        cat("bad checksum:",n0,n1,"\n")
-      }
+      return(paste(n0, n1, n2, cs, sep="||"))
+    } else {
+      return(paste(NA, NA, NA, NA, sep="||"))
     }
-    if(i%%1000==0) cat(" chemcheck casrn: finished ",i," out of ",length(nlist),"\n")
   }
-  ccheck = unique(ccheck)
-  indir = paste0(toxval.config()$datapath,"chemcheck/")
-  if(is.null(source)) file = paste0(indir,"chemcheck no source.xlsx")
-  else file = paste0(indir,"chemcheck ",source,".xlsx")
-  if(!is.null(ccheck)) if(nrow(ccheck)>0) openxlsx::write.xlsx(ccheck,file)
 
-  if(!name.OK) cat("Some names fixed\n")
-  else cat("All names OK\n")
-  if(!casrn.OK) cat("Some casrn fixed\n")
-  else cat("All casrn OK\n")
-  if(!checksum.OK) cat("Some casrn have bad checksums\n")
-  else cat("All checksums OK\n")
+  res0 <- res0 %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(cas_check = chem.check.casrn(in_cas=casrn,
+                                               verbose=verbose)) %>%
+    dplyr::ungroup() %>%
+    tidyr::separate(cas_check,
+                    into=c("n0", "n1", "n2", "cs"),
+                    sep="\\|\\|")
+
+  ccheck_cas = res0 %>%
+    dplyr::filter(n2 != n0) %>%
+    dplyr::select(n0, n1, n2, cs)
+
+  if(nrow(ccheck_cas)) {
+    casrn.OK = FALSE
+    if(any(ccheck_cas$cs == 0)){
+      checksum.OK = FALSE
+      cat("bad checksum present\n")
+    }
+  }
+
+  # Set name as cleaned n2, remove intermediates
+  res0 = res0 %>%
+    dplyr::select(-casrn, -n0, -n1, -cs) %>%
+    dplyr::rename(casrn = n2)
+
+  # Prep check export
+  ccheck = rbind(ccheck_name,
+                 ccheck_cas) %>%
+    dplyr::rename(original=n0,
+                  escaped=n1,
+                  cleaned=n2,
+                  checksum=cs) %>%
+    distinct()
+
+  indir = paste0(toxval.config()$datapath,"chemcheck/")
+  if(is.null(source)) {
+    file = paste0(indir,"chemcheck no source.xlsx")
+  } else {
+    file = paste0(indir,"chemcheck ",source,".xlsx")
+  }
+  if(!is.null(ccheck)) if(nrow(ccheck)>0) writexl::write_xlsx(ccheck,file)
+
+  if(!name.OK) { cat("Some names fixed\n") } else { cat("All names OK\n") }
+  if(!casrn.OK) { cat("Some casrn fixed\n") } else { cat("All casrn OK\n") }
+  if(!checksum.OK) { cat("Some casrn have bad checksums\n") } else { cat("All checksums OK\n") }
   return(list(res0=res0,name.OK=name.OK,casrn.OK=casrn.OK,checksum.OK=checksum.OK))
 }

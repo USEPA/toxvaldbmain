@@ -161,14 +161,17 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
 
   # Rejoin res
   res <- rbind(res1,res2) %>%
-    dplyr::rowwise() %>%
-    # Fix casrn
-    dplyr::mutate(casrn = fix.casrn(casrn)) %>%
-    dplyr::ungroup() %>%
+    # dplyr::rowwise() %>%
+    # # Fix casrn
+    # dplyr::mutate(casrn = fix.casrn(casrn)) %>%
+    # dplyr::ungroup() %>%
     dplyr::mutate(quality = paste("Control type:",quality),
                   study_duration_class = "chronic") %>%
     # Remove excess whitespace
     dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
+
+  # Remove intermediates
+  rm(res1, res2, ECOTOX, dict)
   # Final filtering
   res = res %>%
     # Filter toxval_numeric not NA and greater than 0
@@ -186,6 +189,16 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   # Curate chemicals to toxval_source source_chemical table
   res = source_chemical.ecotox(toxval.db,source.db,res,source,chem.check.halt=FALSE,
                                casrn.col="casrn",name.col="name",verbose=FALSE)
+
+  chem_map = source_chemical.ecotox(toxval.db,
+                                    source.db,
+                                    res %>%
+                                      dplyr::select(casrn, name, dtxsid) %>%
+                                      dplyr::distinct(),
+                                    source,
+                                    chem.check.halt=FALSE,
+                                    casrn.col="casrn",name.col="name",verbose=FALSE)
+
 
   cat("set the source_hash\n")
   # Vectorized approach to source_hash generation
