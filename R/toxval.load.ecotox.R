@@ -187,8 +187,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res <- fill.toxval.defaults(toxval.db,res)
 
   # Curate chemicals to toxval_source source_chemical table
-  res = source_chemical.ecotox(toxval.db,source.db,res,source,chem.check.halt=FALSE,
-                               casrn.col="casrn",name.col="name",verbose=FALSE)
+  # res = source_chemical.ecotox(toxval.db,source.db,res,source,chem.check.halt=FALSE,
+  #                              casrn.col="casrn",name.col="name",verbose=FALSE)
 
   chem_map = source_chemical.ecotox(toxval.db,
                                     source.db,
@@ -199,6 +199,15 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
                                     chem.check.halt=FALSE,
                                     casrn.col="casrn",name.col="name",verbose=FALSE)
 
+  res <- res %>%
+    left_join(chem_map %>%
+                dplyr::select(-chemical_index),
+              by = c("dtxsid", "name", "casrn"))
+
+  if(any(is.na(res$chemical_id))){
+    cat("Error joining chemical_id back to ECOTOX res...\n")
+    browser()
+  }
 
   cat("set the source_hash\n")
   # Vectorized approach to source_hash generation
