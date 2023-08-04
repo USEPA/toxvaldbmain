@@ -34,6 +34,13 @@ toxval.load.postprocess <- function(toxval.db,
     toxval.load.source_chemical(toxval.db,source.db,source=source,verbose=TRUE, remove_null_dtxsid=remove_null_dtxsid)
   }
 
+  # Check if any data left after NULL DTXSID removal
+  n_check = runQuery(paste0("SELECT count(*) as n FROM toxval where source = '", source,"'"), toxval.db)
+  if(!n_check$n){
+    message("No rows to postprocess...returning...")
+    return()
+  }
+
   #####################################################################
   cat("fill chemical by source\n")
   #####################################################################
