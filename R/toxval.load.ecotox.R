@@ -203,6 +203,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
     left_join(chem_map %>%
                 dplyr::select(-chemical_index),
               by = c("dtxsid", "name", "casrn"))
+  # Remove intermediate
+  rm(chem_map)
 
   if(any(is.na(res$chemical_id))){
     cat("Error joining chemical_id back to ECOTOX res...\n")
@@ -226,7 +228,9 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c(non_hash_cols, "chemical_index","common_name","latin_name","ecotox_group")
+  cremove = c(non_hash_cols, "chemical_index","common_name","latin_name","ecotox_group",
+              # Temporarily remove study_duration_qualifier field until discussion
+              "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
