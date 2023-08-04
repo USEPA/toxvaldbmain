@@ -6,35 +6,30 @@
 #' @param source The source to be used
 #' @param verbose If TRUE, print out extra diagnostic messages
 #-------------------------------------------------------------------------------------
-fill.chemical.by.source <- function(toxval.db, source, verbose=T) {
+fill.chemical.by.source <- function(toxval.db, source, verbose=TRUE) {
   printCurrentFunction(paste(toxval.db,":", source))
 
   #runQuery(paste0("delete from chemical where dtxsid in (select dtxsid from source_chemical where source = '",source,"')"),toxval.db)
-  res = runQuery(paste0("select dtxsid,casrn,name from source_chemical where source = '",source,"'") ,toxval.db)
-  res = res[!is.element(res$dtxsid,"-"),]
+  res = runQuery(paste0("select dtxsid,casrn,name from source_chemical where source = '",source,
+                        "' and dtxsid != '-'") ,toxval.db)
   cat("Rows in source_chemical:",nrow(res),"\n")
-  res = unique(res)
+  res = distinct(res)
   cat("Unique rows in source_chemical:",nrow(res),"\n")
   x = unique(res$dtxsid)
   cat("Unique dtxsid values:",length(x),"\n")
-  res = res[order(res$dtxsid),]
-  res2 = res
-  res2 = res2[!is.na(res2$dtxsid),]
-  if(!nrow(res2)){
-    message("No curated DTXSID values available for source to add to 'chemicals' tables")
-    return()
-  }
-  res2$duplicate <- 0
-  for(i in 2:nrow(res2)) {
-    if(res2[i,"dtxsid"]==res2[i-1,"dtxsid"]) {
-      res2[i,"duplicate"] <- 1
-    }
-    name = res2[i,"name"]
+
+  # Filter out NA and duplicate values (only keeps first in duplicate set)
+  res2 = res %>%
+    dplyr::arrange(dtxsid) %>%
+    dplyr::filter(!is.na(dtxsid),
+                  !duplicated(dtxsid))
+  # Fix names
+  for(i in  seq_len(nrow(res2))) {
+    name = res2$name[i]
     if(!validUTF8(name)) name = "invalid name"
     name2 = name
-    tryCatch({
-       name2 = stri_escape_unicode(stri_enc_toutf8(name))
-    }, warning = function(w) {
+    name2 = tryCatch({
+       stri_escape_unicode(stri_enc_toutf8(name))
     }, error = function(e) {
       cat("Error messge: ",paste0(e, collapse=" | "), "\n")
       cat("bad name\n  ",name,"\n  ",name2,"\n")
@@ -43,7 +38,6 @@ fill.chemical.by.source <- function(toxval.db, source, verbose=T) {
     res2[i,"name"] = name2
   }
 
-  res2 = res2[res2$duplicate==0,]
   dlist = runQuery("select distinct dtxsid from chemical",toxval.db)
   # Only add new dtxsid entries
   res2 = res2[!res2$dtxsid %in% dlist$dtxsid,]

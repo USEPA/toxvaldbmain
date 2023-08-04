@@ -13,7 +13,7 @@ fix.generation.by.source <- function(toxval.db, source) {
   full_dict$field <- "generation"
   colnames <- c("term_final","term_original","field")
 
-  for(i in 1:nrow(full_dict)) {
+  for(i in seq_len(nrow(full_dict))) {
     original <- full_dict[i,2]
     final <- full_dict[i,1]
     field <- full_dict[i,3]

@@ -7,10 +7,13 @@
 #' @export
 #-------------------------------------------------------------------------------------
 fix.trim_spaces <- function(res) {
-  printCurrentFunction()
-  x=sapply(res,class)
-  y=x[x=="character"]
-  clist = names(y)
-  for(col in clist) res[,col] = str_trim(res[,col],side="both")
-  return(res)
+  # printCurrentFunction()
+  # x=sapply(res,class)
+  # y=x[x=="character"]
+  # clist = names(y)
+  # for(col in clist) res[,col] = str_trim(res[,col],side="both")
+  # return(res)
+
+  res <- res %>%
+    dplyr::mutate(dplyr::across(where(is.character), ~stringr::str_squish(.)))
 }

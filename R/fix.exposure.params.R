@@ -46,7 +46,7 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL) {
       }
       else {
         missing = rbind(missing,temp1)
-        cat("found missing exposure_tour, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form.xlsx\nand add to the dictionary\n")
+        cat("found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form.xlsx\nand add to the dictionary\n")
         #browser()
       }
     }

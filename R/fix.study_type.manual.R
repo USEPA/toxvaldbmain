@@ -8,19 +8,24 @@ fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-07-26"){
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",sys.date,".xlsx")
   print(file)
-  mat = read.xlsx(file)
+  mat = readxl::read_xlsx(file)
   mat = mat[mat$dtxsid!='NODTXSID',]
   mat = mat[!is.na(mat$dtxsid),]
   mat = fix.trim_spaces(mat)
 
-  slist = sort(unique(mat$source))
-
-  if(!is.null(source)) slist = source
+  if(!is.null(source)){
+    slist = source
+  } else {
+    slist = sort(unique(mat$source))
+  }
   for(source in slist) {
-    temp0 = mat[is.element(mat$source,source),c("dtxsid","source","study_type_corrected","source_hash")]
-    temp0 = unique(temp0)
+    temp0 = mat %>%
+      dplyr::select(dtxsid, source_name=source, study_type_corrected, source_hash) %>%
+      dplyr::filter(source_name == source) %>%
+      distinct()
+
     cat(source,nrow(temp0),"\n")
-    temp0$key = paste(temp0$dtxsid,temp0$source,temp0$study_type_corrected,temp0$source_hash)
+    temp0$key = paste(temp0$dtxsid,temp0$source_name,temp0$study_type_corrected,temp0$source_hash)
     temp = unique(temp0[,c("source_hash","study_type_corrected")])
     names(temp) = c("source_hash","study_type")
 
@@ -82,13 +87,38 @@ fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-07-26"){
     cat("==============================================\n")
     cat(source,n1,n2,n3," [n1 is new records, n2 is old records, n3 is number of records to be updated]\n")
     cat("==============================================\n")
-    for(i in 1:nrow(temp3)) {
-      hk = temp3[i,"source_hash"]
-      st = temp3[i,"study_type"]
-      query = paste0("update toxval set study_type='",st,"' where source_hash='",hk,"'")
-      #print(query)
-      runQuery(query,toxval.db)
-      if(i%%100==0) cat("finished",i,"out of",nrow(temp3),"\n")
+    # for(i in 1:nrow(temp3)) {
+    #   hk = temp3[i,"source_hash"]
+    #   st = temp3[i,"study_type"]
+    #   query = paste0("update toxval set study_type='",st,"' where source_hash='",hk,"'")
+    #   #print(query)
+    #   runQuery(query,toxval.db)
+    #   if(i%%100==0) cat("finished",i,"out of",nrow(temp3),"\n")
+    # }
+
+    # Prepare for batched updates
+    # Batch update
+    # https://www.mssqltips.com/sqlservertip/5829/update-statement-performance-in-sql-server/
+    batch_size <- 500
+    startPosition <- 1
+    endPosition <- nrow(temp3)# runQuery(paste0("SELECT max(id) from documents"), db=db) %>% .[[1]]
+    incrementPosition <- batch_size
+
+    while(startPosition <= endPosition){
+      message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())
+
+      updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
+                           "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type",
+                           " WHERE a.source_hash in ('",
+                           paste0(temp3$source_hash[startPosition:incrementPosition], collapse="', '"), "')")
+
+      runUpdate(table="toxval",
+                updateQuery = updateQuery,
+                updated_df = temp3 %>% select(source_hash, study_type),
+                db=toxval.db)
+
+      startPosition <- startPosition + batch_size
+      incrementPosition <- startPosition + batch_size - 1
     }
 
     # check = runQuery(paste0("select dtxsid,source,study_type,source_hash from toxval where dtxsid!='NODTXSID' and source='",source,
