@@ -199,7 +199,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
                                     chem.check.halt=FALSE,
                                     casrn.col="casrn",name.col="name",verbose=FALSE)
 
-  res0 <- res %>%
+  res <- res %>%
     left_join(chem_map %>%
                 dplyr::select(-chemical_index),
               by = c("dtxsid", "name", "casrn"))
