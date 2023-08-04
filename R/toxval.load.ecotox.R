@@ -313,8 +313,11 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res$subsource <- "EPA ORD"
   res$source_url <- "https://cfpub.epa.gov/ecotox/"
   res$details_text = paste(source,"Details")
+  cat("Inserting into toxval...(", format(Sys.time(),usetz = TRUE),")\n")
   runInsertTable(res, "toxval", toxval.db, verbose)
+  cat("Inserting into record_source...(", format(Sys.time(),usetz = TRUE),")\n")
   runInsertTable(refs, "record_source", toxval.db, verbose)
+  cat("Finished inserting into record_source...(", format(Sys.time(),usetz = TRUE),")\n")
   print(dim(res))
   #####################################################################
   cat("do the post processing\n")
