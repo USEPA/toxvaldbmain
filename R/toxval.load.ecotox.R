@@ -319,6 +319,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   runInsertTable(refs, "record_source", toxval.db, verbose)
   cat("Finished inserting into record_source...(", format(Sys.time(),usetz = TRUE),")\n")
   print(dim(res))
+  # Get rid of unneeded intermediates
+  rm(res, refs)
   #####################################################################
   cat("do the post processing\n")
   #####################################################################

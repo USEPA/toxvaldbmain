@@ -5,6 +5,7 @@
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param source The source to be fixed. If source=NULL, fix all sources
 #' @param fill.toxval_fix If TRUE (default) read the dictionaries into the toxval_fix table
+#' @import magrittr
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
