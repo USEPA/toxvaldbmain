@@ -50,7 +50,7 @@ source_chemical.ecotox <- function(toxval.db,
     browser()
   }
   chems$chemical_index = paste(chems$raw_casrn,chems$raw_name)
-   chems$casrn = chems$cleaned_casrn
+  chems$casrn = chems$cleaned_casrn
   chems$name = chems$cleaned_name
   cat("add the chemical_id to res\n")
   res$chemical_id = NA

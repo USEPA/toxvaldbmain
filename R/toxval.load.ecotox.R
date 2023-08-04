@@ -171,7 +171,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
     dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
 
   # Remove intermediates
-  rm(res1, res2, ECOTOX, dict)
+  rm(res1, res2, ECOTOX)
   # Final filtering
   res = res %>%
     # Filter toxval_numeric not NA and greater than 0
@@ -199,7 +199,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
                                     chem.check.halt=FALSE,
                                     casrn.col="casrn",name.col="name",verbose=FALSE)
 
-  res <- res %>%
+  res0 <- res %>%
     left_join(chem_map %>%
                 dplyr::select(-chemical_index),
               by = c("dtxsid", "name", "casrn"))
@@ -228,7 +228,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c(non_hash_cols, "chemical_index","common_name","latin_name","ecotox_group",
+  cremove = c("chemical_index","common_name","latin_name","ecotox_group",
               # Temporarily remove study_duration_qualifier field until discussion
               "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
@@ -315,11 +315,12 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
   res$details_text = paste(source,"Details")
 
   # Batch upload to ensure it works
-  chunk <- 10000
+  chunk <- 20000
   n <- nrow(res)
   r  <- rep(1:ceiling(n/chunk),each=chunk)[1:n]
   d_res <- split(res,r)
   d_refs <- split(refs, r)
+  rm(res, refs)
 
   for(i in seq_len(length(d_res))){
     cat("(a) Uploading to toxval ", i, " of ", length(d_res), "(chunk size: ", chunk, ") (", format(Sys.time(),usetz = TRUE),")\n")
@@ -328,10 +329,8 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.d
     runInsertTable(d_refs[[i]], "record_source", toxval.db, verbose)
   }
   cat("Finished inserting into toxval and record_source...(", format(Sys.time(),usetz = TRUE),")\n")
-
-  print(dim(res))
   # Get rid of unneeded intermediates
-  rm(res, refs)
+  rm(d_res, d_refs)
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
