@@ -13,19 +13,19 @@ clean.toxval.by.source <- function(toxval.db,source) {
   if(count > 0){
     # Small sources
     if(count <= 100000){
-      cat("...Deleting from toxval_notes...")
+      cat("...Deleting from toxval_notes...\n")
       runQuery(paste0("delete from toxval_notes where toxval_id in (select toxval_id from toxval where source='",source,"')"),toxval.db)
-      cat("...Deleting from toxval_qc_notes...")
+      cat("...Deleting from toxval_qc_notes...\n")
       runQuery(paste0("delete from toxval_qc_notes where toxval_id in (select toxval_id from toxval where source='",source,"')"),toxval.db)
-      cat("...Deleting from record_source...")
+      cat("...Deleting from record_source...\n")
       runQuery(paste0("delete from record_source where toxval_id in (select toxval_id from toxval where source='",source,"')"),toxval.db)
-      cat("...Deleting from toxval_uf")
+      cat("...Deleting from toxval_uf\n")
       runQuery(paste0("delete from toxval_uf where toxval_id in (select toxval_id from toxval where source='",source,"')"),toxval.db)
       runQuery(paste0("delete from toxval_uf where parent_id in (select toxval_id from toxval where source='",source,"')"),toxval.db)
-      cat("...Deleting from toxval_relationship...")
+      cat("...Deleting from toxval_relationship...\n")
       runQuery(paste0("delete from toxval_relationship where toxval_id_1 in (select toxval_id from toxval where source='",source,"')"),toxval.db)
       runQuery(paste0("delete from toxval_relationship where toxval_id_2 in (select toxval_id from toxval where source='",source,"')"),toxval.db)
-      cat("...Deleting from toxval...")
+      cat("...Deleting from toxval...\n")
       runQuery(paste0("delete from toxval where source='",source,"'"),toxval.db)
     } else {
       del_list <- list(toxval_notes = "toxval_id",
