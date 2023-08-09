@@ -84,6 +84,7 @@ toxval.load.all <- function(toxval.db,
       toxval.load.toxrefdb2.1(toxval.db,source.db,log)
       # toxval.load.ecotox(toxval.db,source.db,log)
       # toxval.load.echa_iuclid(toxval.db,source.db,log)
+      toxval.load.epa_ow_npdwr(toxval.db, source.db, log)
       toxval.load.epa_ow_nrwqc_alc(toxval.db,source.db,log)
     }
   }
