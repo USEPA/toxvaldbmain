@@ -16,7 +16,7 @@ source_chemical.ecotox <- function(toxval.db,
                                    casrn.col="casrn",
                                    name.col="name",
                                    verbose=F) {
-  printCurrentFunction(paste0(db,"\n",source))
+  printCurrentFunction(paste0(source.db,"\n",source))
   #if(!exists("DSSTOX")) load.dsstox()
 
   #####################################################################
@@ -29,16 +29,16 @@ source_chemical.ecotox <- function(toxval.db,
   #####################################################################
   cat("Build the chemical table\n")
   #####################################################################
-  chems = cbind(res$dtxsid,res[,c(casrn.col,name.col)],result$res0[,c(casrn.col,name.col)])
+  chems = cbind(res$dtxsid,res[,c(casrn.col,name.col)], result$res0[,c(casrn.col,name.col)])
   names(chems) = c("dtxsid","raw_casrn","raw_name","cleaned_casrn","cleaned_name")
-  chems = unique(chems)
+  chems = distinct(chems)
   chems$source = source
 
   prefix = runQuery(paste0("select chemprefix from chemical_source_index where source='",source,"'"),source.db)[1,1]
   ilist = seq(from=1,to=nrow(chems))
   chems$chemical_id = "-"
   for(i in 1:nrow(chems)) {
-    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name","cleaned_casrn","cleaned_name")],collapse=""),algo="xxhash64", serialize = FALSE))
+    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name")],collapse=""),algo="xxhash64", serialize = FALSE))
   }
   # check for duplicates
   x = chems$chemical_id
@@ -50,7 +50,7 @@ source_chemical.ecotox <- function(toxval.db,
     browser()
   }
   chems$chemical_index = paste(chems$raw_casrn,chems$raw_name)
-   chems$casrn = chems$cleaned_casrn
+  chems$casrn = chems$cleaned_casrn
   chems$name = chems$cleaned_name
   cat("add the chemical_id to res\n")
   res$chemical_id = NA

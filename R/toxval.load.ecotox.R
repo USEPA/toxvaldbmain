@@ -7,7 +7,10 @@
 #' @param do.load If TRUE, load the data from the input file and put into a global variable
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="2023-05-03") {
+toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.date="2023-08-01") {
+  ##############################################################################
+  ### Start of standard import.source logic
+  ##############################################################################
   printCurrentFunction(toxval.db)
   source <- "ECOTOX"
   source_table = "direct_load"
@@ -18,7 +21,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -35,7 +38,7 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  if(!exists("ECOTOX")) do.load=T
+  if(!exists("ECOTOX")) do.load=TRUE
   if(do.load) {
     cat("load ECOTOX data\n")
     file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX ",sys.date,".RData")
@@ -43,209 +46,191 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
     print(file)
     load(file=file)
     print(dim(ECOTOX))
-    ECOTOX <- unique(ECOTOX)
+    ECOTOX <- distinct(ECOTOX)
     print(dim(ECOTOX))
     ECOTOX <<- ECOTOX
-    dict = unique(ECOTOX[,c("species_scientific_name","species_common_name","species_group","habitat")])
+    dict = distinct(ECOTOX[,c("species_scientific_name","species_common_name","species_group","habitat")])
     file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX_dictionary_",sys.date,".xlsx")
     write.xlsx(dict,file)
   }
   res = ECOTOX
-  nlist = c( "dsstox_substance_id","dsstox_casrn","dsstox_pref_nm",
-  "species_number","species_common_name","species_scientific_name","habitat","organism_lifestage","species_group",
-  "effect",
-  "endpoint","conc1_type_std","conc1_units_std","conc1_units_author",
-  "conc1_author","conc1_mean_std","conc1_author",
-  "conc1_author","conc1_mean_op","conc1_mean","conc1_min_op","conc1_min","conc1_max_op","conc1_max",
-  "conc1_units_std","conc1_mean_std",
-  "observed_duration_units_std","observed_duration_std",
-  "exposure_group","exposure_type","media_type",
-  "source","author","title","publication_year","reference_number",
-  "effect_measurement")
 
-  res = res[,nlist]
-  nlist = c( "dtxsid","casrn","name",
-             "species_id","common_name","latin_name","habitat","lifestage","ecotox_group",
-             "study_type",
-             "toxval_type","toxval_subtype","toxval_units","toxval_units2",
-             "toxval_numeric_qualifier","toxval_numeric","toxval_numeric2",
-             "conc1_author","conc1_mean_op","conc1_mean","conc1_min_op","conc1_min","conc1_max_op","conc1_max",
-             "conc1_units_std","conc1_mean_std",
-             "study_duration_units","study_duration_value",
-             "exposure_route","exposure_method","media",
-             "long_ref","author","title","year","pmid",
-             "effect_measurement")
+  rename_list <- c(
+    dtxsid = "dsstox_substance_id",
+    casrn = "dsstox_casrn",
+    name = "dsstox_pref_nm",
+    species_id = "species_number",
+    common_name = "species_common_name",
+    latin_name = "species_scientific_name",
+    habitat = "habitat",
+    lifestage = "organism_lifestage",
+    ecotox_group = "species_group",
+    study_type = "effect",
+    toxval_type = "endpoint",
+    conc1_author = "conc1_author",
+    conc1_units_author = "conc1_units_author",
+    conc1_mean_op = "conc1_mean_op",
+    conc1_mean = "conc1_mean",
+    conc1_min_op = "conc1_min_op",
+    conc1_min = "conc1_min",
+    conc1_max_op = "conc1_max_op",
+    conc1_max = "conc1_max",
+    conc1_units_std = "conc1_units_std",
+    conc1_mean_std = "conc1_mean_std",
+    exposure_route = "exposure_group",
+    exposure_method = "exposure_type",
+    media = "media_type",
+    long_ref = "source",
+    author = "author",
+    title = "title",
+    year = "publication_year",
+    pmid = "reference_number",
+    observed_duration_std="observed_duration_std",
+    observed_duration_units_std="observed_duration_units_std",
+    observ_duration_mean_op="observ_duration_mean_op",
+    observ_duration_mean="observ_duration_mean",
+    observ_duration_min_op="observ_duration_min_op",
+    observ_duration_min="observ_duration_min",
+    observ_duration_max_op="observ_duration_max_op",
+    observ_duration_max="observ_duration_max",
+    observ_duration_unit="observ_duration_unit",
+    observ_duration_unit_desc="observ_duration_unit_desc",
+    effect_measurement = "effect_measurement",
+    quality = "control_type"
+  )
 
-  names(res) = nlist
+  res <- res %>%
+    dplyr::rename(dplyr::all_of(rename_list)) %>%
+    dplyr::select(dplyr::all_of(names(rename_list))) %>%
+    dplyr::mutate(species_original = common_name,
+                  exposure_method = stringr::str_squish(exposure_method),
+                  toxval_type = toxval_type %>%
+                    gsub("\\/|\\*","", .) %>%
+                    gsub("--", "-", .),
+                  exposure_route = dplyr::case_when(
+                    exposure_route == "ENV" ~ "environmental",
+                    exposure_route == "MULTIPLE" ~ "multiple",
+                    exposure_route == "IN VITRO" ~ "in vitro",
+                    exposure_route == "ORAL" ~ "oral",
+                    exposure_route == "INJECT" ~ "injection",
+                    exposure_route == "TOP" ~ "dermal",
+                    exposure_route == "AQUA" ~ "aquatic",
+                    exposure_route == "UNK" ~ "unknown",
+                    TRUE ~ exposure_route
+                  ),
+                  long_ref = paste(long_ref, author, title, year),
+                  critical_effect = paste(study_type, effect_measurement)) %>%
+    # Replace NA values ("NA", "NR", "")
+    dplyr::mutate(dplyr::across(where(is.character), na_if, "NA"),
+                  dplyr::across(where(is.character), na_if, "NR"),
+                  dplyr::across(where(is.character), na_if, "")) %>%
+    # Remove effect_measurement field
+    dplyr::select(-effect_measurement)
+
+  # Programmatically set toxval_numeric, units, and qualifier from conc1_* fields
+  res <- ecotox.select.toxval.numeric(in_data = res) %>%
+    dplyr::mutate(
+      #Get rid of wacko characters (seem to mean auto or AI generated)
+      toxval_units = toxval_units %>%
+        # Starts with match to remove
+        gsub("^AI |^ae |^ai ", "", .) %>%
+        stringr::str_squish())
+  # Fill in toxval_numeric_qualifier
+  res$toxval_numeric_qualifier[is.na(res$toxval_numeric_qualifier) |
+                                 res$toxval_numeric_qualifier == ""] <- "-"
+
+  # Programmatically set study_duration, units, and qualifier from observ* fields
+  res <- ecotox.select.study.duration(in_data = res)
+  res$study_duration_units[res$study_duration_units %in% c("d", "Day(s)")] = "days"
+  res$study_duration_value[is.na(res$study_duration_value)] <- -999
+  res$study_duration_qualifier[is.na(res$study_duration_qualifier)] <- "-"
   res$source = source
-  res[res=="NA"] = NA
-  res[res=="NR"] = NA
-  res[res==""] = NA
-  res$toxval_numeric_qualifier = "="
 
-  cat("fix the toxval_numeric ranges\n")
-  x = res$conc1_author
-  x = str_replace_all(x,"NR","")
-  x = str_replace_all(x,"/","")
-  xq = x
-  xq[] = "="
-  hits = grep("-",x)
-  if(length(hits)>0) {
-    for(i in 1:length(hits)) x[hits[i]] = str_split(x[hits[i]],"-")[[1]][1]
-    qlist = c("<=",">=","<",">","~","ca ")
-    for(ql in qlist) {
-      cat("  ",ql,"\n")
-      ql2 = ql
-      if(ql=="ca ") ql2 = "~"
-      qhits = grep(ql,x)
-      for(i in 1:length(qhits)) {
-        x[qhits[i]] = str_replace(x[qhits[i]],ql,"")
-        xq[qhits[i]] = ql2
-      }
-    }
-  }
-  res$toxval_numeric_qualifier = xq
-  res1 = res[!is.na(res$toxval_numeric),]
-  cat(nrow(res),"\n")
-  res = res[!is.na(res$toxval_type),]
-  cat(nrow(res),"\n")
+  # Fix toxval_type, numeric, and units for type "LT*"
+  res1 <- res[!grepl("^LT", res$toxval_type),]
+  res2 <- res[grepl("^LT", res$toxval_type),]
 
-  res[is.element(res$study_duration_units,"d"),"study_duration_units"] = "days"
-  x = res$toxval_type
-  x = str_replace_all(x,"/","")
-  x = str_replace_all(x,"\\*","")
-  res$toxval_type = x
+  res2 <- res2 %>%
+    dplyr::mutate(toxval_type = paste0(toxval_type,
+                                       "@",
+                                       toxval_numeric_qualifier, " ",
+                                       signif(toxval_numeric, digits=4), " ",
+                                       toxval_units),
+                  toxval_numeric = study_duration_value,
+                  toxval_units = study_duration_units)
 
-  x = res$study_duration_value
-  x = str_replace_all(x,"/","")
-  x = str_replace_all(x,"~","")
-  x = str_replace_all(x,"\\*","")
-  x = str_replace_all(x,">=","")
-  x = str_replace_all(x,"<=","")
-  x = str_replace_all(x,">","")
-  x = str_replace_all(x,"<","")
-  x = str_replace_all(x," ","")
-  res$study_duration_value = as.numeric(x)
+  # Rejoin res
+  res <- rbind(res1,res2) %>%
+    # dplyr::rowwise() %>%
+    # # Fix casrn
+    # dplyr::mutate(casrn = fix.casrn(casrn)) %>%
+    # dplyr::ungroup() %>%
+    dplyr::mutate(quality = paste("Control type:",quality),
+                  study_duration_class = "chronic") %>%
+    # Remove excess whitespace
+    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
 
-  x = res$exposure_route
-  x = str_replace_all(x,"ENV","environmental")
-  x = str_replace_all(x,"MULTIPLE","multiple")
-  x = str_replace_all(x,"IN VITRO","in vitro")
-  x = str_replace_all(x,"ORAL","oral")
-  x = str_replace_all(x,"INJECT","injection")
-  x = str_replace_all(x,"TOP","dermal")
-  x = str_replace_all(x,"AQUA","aquatic")
-  x = str_replace_all(x,"UNK","unknown")
-  res$exposure_route = x
-
-  res$long_ref = paste(res$long_ref,res$author,res$title,res$year)
-  res$critical_effect = paste(res$study_type, res$effect_measurement)
-  res[is.na(res$toxval_units),"toxval_units"] = res[is.na(res$toxval_units),"toxval_units2"]
-  res[is.na(res$toxval_numeric),"toxval_numeric"] = res[is.na(res$toxval_numeric),"toxval_numeric2"]
-
-  res = subset(res,select = -c(effect_measurement,
-                               conc1_author,conc1_mean_op,conc1_mean,conc1_min_op,conc1_min,conc1_max_op,conc1_max,
-                               conc1_units_std,conc1_mean_std,toxval_units2,toxval_numeric2))
-
-  # cat("set the key\n")
-  # res$key = NA
-  # for (i in 1:nrow(res)){
-  #   row <- res[i,]
-  #   res[i,"key"] = digest(paste0(row,collapse=""), serialize = FALSE)
-  #   if(i%%10000==0) cat(i," out of ",nrow(res),"\n")
-  # }
-  # res = subset(res,select = -c(key))
-  res = unique(res)
-  print(dim(res))
-
-  cat("set the source_hash\n")
-  res$source_hash = NA
-  for (i in 1:nrow(res)){
-    row <- res[i,]
-    res[i,"source_hash"] = digest(paste0(row,collapse=""), serialize = FALSE)
-    if(i%%1000==0) cat(i," out of ",nrow(res),"\n")
-  }
-
-  res = source_chemical.ecotox(toxval.db,source.db,res,source,chem.check.halt=FALSE,
-                               casrn.col="casrn",name.col="name",verbose=F)
-
-  tt.list <- res$toxval_type
-  tt.list <- gsub("(^[a-zA-Z]+)([0-9]*)(.*)","\\1",tt.list)
-
-  res1 <- res[tt.list!="LT",]
-  res2 <- res[tt.list=="LT",]
-
-  dose.units <- res2$toxval_units
-  time.value <- res2$study_duration_value
-  dose.value <- res2$toxval_numeric
-  dose.value <- gsub("NR",NA, dose.value)
-  dose.qualifier <- as.data.frame(str_extract_all(dose.value, "[^0-9.E+-]+", simplify = TRUE))[,1]
-  dose.value <- gsub("[^0-9.E+-]+", "", dose.value)
-  time.units <- res2$study_duration_units
-  type <- res2$toxval_type
-
-  for(i in 1:length(dose.value)) {
-    if(!is.na(as.numeric(dose.value[i]))) {
-      dose.value[i] <- signif(as.numeric(dose.value[i]),digits=4)
-    }
-  }
-  new.type <- paste0(type,"@",dose.qualifier," ",dose.value," ",dose.units)
-  res3 <- res2
-  res3$toxval_type <- new.type
-  res3$toxval_numeric <- time.value
-  res3$toxval_units <- time.units
-  res <- rbind(res1,res3)
-  x <- res[,"casrn"]
-  for(i in 1:length(x)) x[i] <- fix.casrn(x[i])
-  res[,"casrn"] <- x
-
-  res <- res[!is.na(res[,"toxval_numeric"]),]
-  res$quality <- paste("Control type:",res$quality)
-  res <- res[!is.na(res$toxval_numeric),]
-  res <- res[res$toxval_numeric>=0,]
-  res$toxval_numeric_qualifier[which(is.na(res$toxval_numeric_qualifier)|res$toxval_numeric_qualifier == "")] <- "-"
-  res$exposure_method <- res$media
+  # Remove intermediates
+  rm(res1, res2, ECOTOX)
+  # Final filtering
+  res = res %>%
+    # Filter toxval_numeric not NA and greater than 0
+    dplyr::filter(!is.na(toxval_numeric),
+                  toxval_numeric >= 0,
+                  # Filter out NA toxval_type
+                  !is.na(toxval_type)) %>%
+    dplyr::distinct()
 
   #####################################################################
   cat("add other columns to res\n")
   #####################################################################
-  res$source <- source
-  #Get rid of wacko characters
-  do.fix.units <- T
-  if(do.fix.units) {
-    res$toxval_units <- str_replace_all(res$toxval_units,"AI ","")
-    res$toxval_units <- str_replace_all(res$toxval_units,"ae ","")
-    res$toxval_units <- str_replace_all(res$toxval_units,"ai ","")
-  }
-  res$toxval_type <- str_replace_all(res$toxval_type,fixed("*"),"")
-  res$toxval_type <- str_replace_all(res$toxval_type,fixed("/"),"")
-  res$study_type <- str_replace_all(res$study_type,fixed("~"),"")
-  res$study_duration_value <- str_replace_all(res$study_duration_value,fixed("~"),"")
-  res$study_duration_value <- str_replace_all(res$study_duration_value,fixed(">"),"")
-  res$study_duration_value <- str_replace_all(res$study_duration_value,fixed("<"),"")
-  res$study_duration_value <- str_replace_all(res$study_duration_value,fixed("="),"")
-  res$study_duration_value <- str_replace_all(res$study_duration_value,fixed("NR"),"-999")
-  res$study_duration_value <- as.numeric(res$study_duration_value)
-  res$study_duration_value[is.na(res$study_duration_value)] <- -999
-  res$study_duration_units <- str_replace_all(res$study_duration_units,"Day(s)","Day")
-  res$study_duration_class <- "chronic"
-  res <- unique(res)
-  res$subsource <- "EPA ORD"
-  res$source_url <- "https://cfpub.epa.gov/ecotox/"
-  res$details_text <- "ECOTOX Details"
-  res$datestamp <- Sys.time()
-  res$datestamp <- as.character(res$datestamp)
-  res[,"species_original"] <- tolower(res[,"common_name"])
   res <- fill.toxval.defaults(toxval.db,res)
-  res <- generate.originals(toxval.db,res)
-  print(dim(res))
-  res <- unique(res)
-  print(dim(res))
+
+  # Curate chemicals to toxval_source source_chemical table
+  # res = source_chemical.ecotox(toxval.db,source.db,res,source,chem.check.halt=FALSE,
+  #                              casrn.col="casrn",name.col="name",verbose=FALSE)
+
+  chem_map = source_chemical.ecotox(toxval.db,
+                                    source.db,
+                                    res %>%
+                                      dplyr::select(casrn, name, dtxsid) %>%
+                                      dplyr::distinct(),
+                                    source,
+                                    chem.check.halt=FALSE,
+                                    casrn.col="casrn",name.col="name",verbose=FALSE)
+
+  res <- res %>%
+    left_join(chem_map %>%
+                dplyr::select(-chemical_index),
+              by = c("dtxsid", "name", "casrn"))
+  # Remove intermediate
+  rm(chem_map)
+
+  if(any(is.na(res$chemical_id))){
+    cat("Error joining chemical_id back to ECOTOX res...\n")
+    browser()
+  }
+
+  cat("set the source_hash\n")
+  # Vectorized approach to source_hash generation
+  non_hash_cols <- toxval.config()$non_hash_cols
+  res = res %>%
+    tidyr::unite(hash_col, all_of(sort(names(.)[!names(.) %in% non_hash_cols])), sep="", remove = FALSE) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(source_hash = digest(hash_col, serialize = FALSE)) %>%
+    dplyr::ungroup() %>%
+    select(-hash_col)
+
+  ##############################################################################
+  ### Start of standard toxval.load logic
+  ##############################################################################
 
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c("chemical_index","common_name","latin_name","ecotox_group")
+  cremove = c("chemical_index","common_name","latin_name","ecotox_group",
+              # Temporarily remove study_duration_qualifier field until discussion
+              "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -254,7 +239,6 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   cols1 = runQuery("desc record_source",toxval.db)[,1]
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
-  colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
@@ -269,26 +253,31 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = unique(res)
+  res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
-  res = res[!is.na(res$toxval_numeric),]
-  res = res[res$toxval_numeric>0,]
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
-  res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(dim(res))
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
+  if(!class(res$toxval_numeric) == "numeric"){
+    res$toxval_numeric = as.numeric(res$toxval_numeric)
+  }
+  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
-  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  res = unique(res)
-  res = res[,!is.element(names(res),c("casrn","name"))]
-  print(dim(res))
+  # Remove excess whitespace
+  res = res %>%
+    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish)) %>%
+    dplyr::select(-name, -casrn) %>%
+    dplyr::distinct()
+  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
   #####################################################################
   count = runQuery("select count(*) from toxval",toxval.db)[1,1]
-  if(count==0) tid0 = 1
-  else tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  if(count==0){
+    tid0 = 1
+  } else {
+    tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  }
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
@@ -317,30 +306,45 @@ toxval.load.ecotox <- function(toxval.db,source.db,log=F,do.load=F,sys.date="202
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = unique(res)
-  refs = unique(refs)
+  res = distinct(res)
+  refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$subsource <- "EPA ORD"
   res$source_url <- "https://cfpub.epa.gov/ecotox/"
   res$details_text = paste(source,"Details")
-  runInsertTable(res, "toxval", toxval.db, verbose)
-  runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(dim(res))
+
+  # Batch upload to ensure it works
+  chunk <- 20000
+  n <- nrow(res)
+  r  <- rep(1:ceiling(n/chunk),each=chunk)[1:n]
+  d_res <- split(res,r)
+  d_refs <- split(refs, r)
+  rm(res, refs)
+
+  for(i in seq_len(length(d_res))){
+    cat("(a) Uploading to toxval ", i, " of ", length(d_res), "(chunk size: ", chunk, ") (", format(Sys.time(),usetz = TRUE),")\n")
+    runInsertTable(d_res[[i]], "toxval", toxval.db, verbose)
+    cat("(b) Uploading to record_source ", i, " of ", length(d_res), "(chunk size: ", chunk, ") (", format(Sys.time(),usetz = TRUE),")\n")
+    runInsertTable(d_refs[[i]], "record_source", toxval.db, verbose)
+  }
+  cat("Finished inserting into toxval and record_source...(", format(Sys.time(),usetz = TRUE),")\n")
+  # Get rid of unneeded intermediates
+  rm(d_res, d_refs)
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE)
 
   if(log) {
     #####################################################################
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    logr::log_close()
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))

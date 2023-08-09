@@ -7,36 +7,46 @@
 #-------------------------------------------------------------------------------------
 fix.non_ascii.v2 <- function(df,source){
   printCurrentFunction(source)
-  non_ascii_check = ""
+  non_ascii_check = rep(NA, ncol(df))
   #check for non ascii characters
-  for (i in 1:ncol(df)){
-    non_ascii_check[i] <- any(grepl("NON_ASCII", iconv(df[,names(df)[i]], "UTF-8", "ASCII", sub="NON_ASCII")))
+  for (i in seq_len(ncol(df))){
+    non_ascii_check[i] <- any(grepl("NON_ASCII", iconv(df[[names(df)[i]]], "UTF-8", "ASCII", sub="NON_ASCII")))
     #cat("Dataframe Column having non_ascii characters :", i, "\n")
     #print( non_ascii_check[i] )
   }
-  clist = names(df)[non_ascii_check==T]
+  clist = names(df)[non_ascii_check==TRUE]
   if(length(clist)>0) {
-    file = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/unicode map.xlsx")
-    map = openxlsx::read.xlsx(file)
-    map$unicode = toupper(map$unicode)
-    x = map$unicode
-
-    rownames(map) = map$unicode
-    row = as.data.frame(matrix(nrow=1,ncol=2))
-    res = NULL
-    names(row) = c("raw","converted")
-    missing = NA
+    # file = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/unicode map.xlsx")
+    # map = readxl::read_xlsx(file) %>%
+    #   dplyr::select(unicode, replacement)
+    #
+    # rownames(map) = map$unicode
+    # row = data.frame(matrix(nrow=1,ncol=2))
+    # res = NULL
+    # names(row) = c("raw","converted")
+    # missing = NA
     for(col in clist) {
-      non_ascii_find = list(grep("NON_ASCII", iconv(df[,col], "UTF-8", "ASCII", sub="NON_ASCII")))[[1]]
-      for(i in 1:length(non_ascii_find)) {
+      non_ascii_find = unique(df[[col]])[grep("NON_ASCII",
+                                 iconv(unique(df[[col]]), "UTF-8", "ASCII", sub="NON_ASCII"))]
+      unicode_find <- df %>%
+        dplyr::select(!!col) %>%
+        dplyr::distinct() %>%
+        dplyr::mutate(uni_check = stringi::stri_escape_unicode(!!rlang::sym(col))) %>%
+        dplyr::filter(!!rlang::sym(col) != uni_check) %>%
+        dplyr::select(!!col) %>% unlist %>% unname()
+
+      non_ascii_find <- unique(c(non_ascii_find, unicode_find))
+
+      for(i in non_ascii_find) {
         tryCatch({
-          n0 = df[non_ascii_find[i],col]
+          n0 = i
           n1 = iconv(n0,from="UTF-8",to="ASCII//TRANSLIT")
           n2 = str_trim(stri_escape_unicode(n1))
-          row[1,"raw"] = n0
-          row[1,"converted"] = n1
-          res = rbind(res,row)
-          df[non_ascii_find[i],col] = n1[1]
+          # row[1,"raw"] = n0
+          # row[1,"converted"] = n1
+          # res = rbind(res,row)
+          # Replace all instances
+          df[[col]][df[[col]] == n0] = n2
         }, warning = function(w) {
           cat("fix.non_ascii.v2 WARNING:",n1,"\n")
           browser()
@@ -46,12 +56,12 @@ fix.non_ascii.v2 <- function(df,source){
         })
       }
     }
-    missing = sort(unique(missing))
-    if(length(missing)>0) {
-      print(missing)
-      file = paste0(toxval.config()$datapath,"chemcheck/non_ascii ",source,".xlsx")
-      openxlsx::write.xlsx(missing,file)
-    }
+    # missing = sort(unique(missing))
+    # if(length(missing)>0) {
+    #   print(missing)
+    #   file = paste0(toxval.config()$datapath,"chemcheck/non_ascii ",source,".xlsx")
+    #   writexl::write_xlsx(missing,file)
+    # }
   }
 
   return(df)
