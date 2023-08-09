@@ -4,8 +4,9 @@
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxvaldb,source.db,log=FALSE) {
+toxval.load.generic <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = SOURCE_NAME
   source_table = "source_"
   verbose = log
@@ -32,7 +33,14 @@ toxval.load.generic <- function(toxvaldb,source.db,log=FALSE) {
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  query = paste0("select * from ",source_table)
+  # Whether to remove records with NULL DTXSID values
+  if(!remove_null_dtxsid){
+    query = paste0("select * from ",source_table)
+  } else {
+    query = paste0("select * from ",source_table, " ",
+                   # Filter out records without curated chemical information
+                   "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
+  }
   res = runQuery(query,source.db,TRUE,FALSE)
   res = res[,!names(res)%in%toxval.config()$non_hash_cols]
   res$source = source
@@ -136,7 +144,7 @@ toxval.load.generic <- function(toxvaldb,source.db,log=FALSE) {
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE)
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################

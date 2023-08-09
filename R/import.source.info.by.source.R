@@ -9,12 +9,15 @@ import.source.info.by.source <- function(toxval.db, source=NULL) {
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/source_info 2023-02-15.xlsx")
   print(file)
-  mat =openxlsx::read.xlsx(file)
+  mat = readxl::read_xlsx(file) %>% # openxlsx::read.xlsx(file)
+    filter(!retired == 1)
   cols = runQuery("desc source_info",toxval.db)[,1]
   mat = mat[, names(mat) %in% cols]
 
   slist = source
-  if(is.null(source)) slist = runQuery("select distinct source from toxval", toxval.db)[,1]
+  if(is.null(source)) {
+    slist = runQuery("select distinct source from toxval", toxval.db)$source
+  }
   for(source in slist) {
     cat(source,"\n")
     if(!source %in% mat$source) {
@@ -22,7 +25,7 @@ import.source.info.by.source <- function(toxval.db, source=NULL) {
       cat("add to file:",file,"\n")
       browser()
     }
-    runInsert(paste0("delete from source_info where source='",source,"'"),toxval.db)
+    runInsert(paste0("delete from source_info where source='",source,"'"), toxval.db)
     mat1 = mat[mat$source %in% source,]
     runInsertTable(mat1,"source_info",toxval.db,do.halt=T,verbose=T)
   }
