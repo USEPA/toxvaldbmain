@@ -1,14 +1,14 @@
 #--------------------------------------------------------------------------------------
 #
-#' Generic structure for laoding to toxval from toxval_source
+#' Loading EPA OW NRWQC-ALC to toxval from toxval_source
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = SOURCE_NAME
-  source_table = "source_"
+toxval.load.epa_ow_nrwqc_alc <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "EPA OW NRWQC-ALC"
+  source_table = "source_epa_ow_nrwqc_alc"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -42,7 +42,9 @@ toxval.load.generic <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsi
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in%
+              toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                              c("chemical_id")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -50,10 +52,10 @@ toxval.load.generic <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsi
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
-  cremove = c("","","","")
+  cremove = c("table_title","priority_pollutant","notes","")
   res = res[ , !(names(res) %in% cremove)]
-
+  res <- res %>%
+    dplyr::rename(year = publication_year)
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
