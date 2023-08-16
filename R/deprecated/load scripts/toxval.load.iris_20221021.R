@@ -4,7 +4,6 @@
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
-#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.iris = function(toxval.db,source.db, log=F){
   printCurrentFunction(toxval.db)

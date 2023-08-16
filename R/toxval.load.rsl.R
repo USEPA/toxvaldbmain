@@ -4,8 +4,9 @@
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
+toxval.load.rsl <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   printCurrentFunction(toxval.db)
   source <- "RSL"
   source_table = "source_rsl"
@@ -141,7 +142,7 @@ toxval.load.rsl <- function(toxval.db, source.db,log=FALSE){
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE)
+  toxval.load.postprocess(toxval.db=toxval.db,source.db=source.db,source=source, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################
