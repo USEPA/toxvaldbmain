@@ -27,10 +27,19 @@ toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=
     cat("------------------------------------------------------\n")
     cat("pull data from the source database\n")
     runQuery(paste0("delete from source_chemical where source='",source,"'"),toxval.db)
+
+    # Perform direct table transfer between databases
     if(remove_null_dtxsid){
-      chems = runQuery(paste0("select * from source_chemical where source='",source,"' and dtxsid is not null"),source.db)
+      runQuery(paste0("INSERT INTO ", toxval.db,
+                      ".source_chemical SELECT * FROM ",source.db,
+                      ".source_chemical WHERE source = '",source,
+                      "' and dtxsid is not null"))
+      # chems = runQuery(paste0("select * from source_chemical where source='",source,"' and dtxsid is not null"),source.db)
     } else {
-      chems = runQuery(paste0("select * from source_chemical where source='",source,"'"),source.db)
+      runQuery(paste0("INSERT INTO ", toxval.db,
+                      ".source_chemical SELECT * FROM ",source.db,
+                      ".source_chemical WHERE source = '",source))
+      # chems = runQuery(paste0("select * from source_chemical where source='",source,"'"),source.db)
     }
     # if(source=="IUCLID_iuclid_developmentaltoxicityteratogenicity") {
     #   chems[is.na(chems$casrn),"dtxsid"] = "NODTXSID"
@@ -38,10 +47,10 @@ toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=
     #   chems[is.na(chems$casrn),"casrn"] = "-"
     # }
     # chems = fix.non_ascii.v2(chems,source)
-    nlist = names(chems)
-    nlist = nlist[!is.element(nlist,c("parent_chemical_id","chemical_id_rehash_orig"))]
-    chems = chems[,nlist]
-    runInsertTable(chems, "source_chemical", toxval.db)
+    # nlist = names(chems)
+    # nlist = nlist[!is.element(nlist,c("parent_chemical_id","chemical_id_rehash_orig"))]
+    # chems = chems[,nlist]
+    # runInsertTable(chems, "source_chemical", toxval.db)
 
     if(remove_null_dtxsid){
       # Remove toxval records with a chemical_id not present in source_chemical

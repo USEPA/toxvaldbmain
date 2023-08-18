@@ -65,8 +65,11 @@ clean.toxval.by.source <- function(toxval.db,source) {
         message("Dropping temp_copy table at: ", Sys.time())
         runQuery("DROP TABLE temp_copy", toxval.db)
       }
+      message("Deleting from toxval table at: ", Sys.time())
       runQuery(paste0("delete from toxval where toxval_id in (", toString(toxval_id_ls),")"), toxval.db)
     }
   }
+  message("Deleting from source_chemical table at: ", Sys.time())
   runQuery(paste0("delete from source_chemical where source='",source,"'"),toxval.db)
+  message("Done clearing source at: ", Sys.time())
 }
