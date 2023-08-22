@@ -4,12 +4,13 @@
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param source The source to be fixed. If source=NULL, fix all sources
 #' @param fill.toxval_fix If TRUE (default) read the dictionaries into the toxval_fix table
+#' @param dict.date The dated version of the dictionary to use
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL) {
+fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dict.date="2023-08-21") {
   printCurrentFunction(toxval.db)
-  file = paste0(toxval.config()$datapath,"dictionary/study_duration_params.xlsx")
+  file = paste0(toxval.config()$datapath,"dictionary/study_duration_params"," ",dict.date,".xlsx")
   dict = read.xlsx(file)
   dict$index1 = paste(dict[,1],dict[,2],dict[,3])
   dict$index2 = paste(dict[,4],dict[,5],dict[,6])
@@ -41,7 +42,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL) {
       }
       else {
         missing = rbind(missing,temp1)
-        cat("found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params.xlsx\nand add to the dictionary\n")
+        cat("found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params",dict.date,".xlsx\nand add to the dictionary\n")
       }
     }
   }
