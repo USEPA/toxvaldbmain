@@ -6,7 +6,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.epa_ow_opp_alb <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "EPA OW OPP-ALB"
   source_table = "source_epa_ow_opp_alb"
   verbose = log
