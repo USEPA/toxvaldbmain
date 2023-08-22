@@ -1,12 +1,13 @@
 #-------------------------------------------------------------------------------------
 #' Fix the study_type using manual curation
 #' @param toxval.db The version of toxval in which the data is altered.
+#' @param dict.date The dated version of the dictionary to use
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-08-21"){
+fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
   printCurrentFunction(toxval.db)
-  file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",sys.date,".xlsx")
+  file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",dict.date,".xlsx")
   print(file)
   mat = readxl::read_xlsx(file)
   mat = mat[mat$dtxsid!='NODTXSID',]
@@ -73,7 +74,7 @@ fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-08-21"){
       if(nrow(replacements)){
         replacements$fixed = 0
         replacements = replacements[is.element(replacements$source_hash,missing),]
-        file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",sys.date,".csv")
+        file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",dict.date,".csv")
         write.csv(replacements,file,row.names=F)
         #browser()
       }
