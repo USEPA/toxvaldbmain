@@ -4,7 +4,7 @@
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-08-16"){
+fix.study_type.manual = function(toxval.db,source=NULL,sys.date="2023-08-21"){
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",sys.date,".xlsx")
   print(file)
