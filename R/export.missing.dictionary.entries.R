@@ -28,8 +28,8 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
         res = rbind(res,res0)
       }
     }
-    message("Pausing here to check for empty/unhandled entries...")
-    browser()
+    # message("Pausing here to check for empty/unhandled entries...")
+    # browser()
     if(!is.null(res)) {
       nmiss = nrow(res)
       res.all = rbind(res.all,res)
