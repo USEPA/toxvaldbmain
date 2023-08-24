@@ -18,10 +18,9 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
     for(field in flist) {
       field0 = paste0(field,"_original")
       tlist = runQuery(paste0("select term_original from toxval_fix where field='",field,"'"),toxval.db)[,1]
-      res0 = unique(runQuery(paste0("select source,",field0," from toxval where source='",source,"'"),toxval.db))
-      names(res0) = c("source","term_original")
+      res0 = runQuery(paste0("select distinct source,",field0," as term_original from toxval where source='",source,"'"),toxval.db)
       n0 = nrow(res0)
-      res0 = res0[!is.element(res0[,2],tlist),]
+      res0 = res0[!res0$term_original %in% tlist,]
       n1 = nrow(res0)
       cat(source,field0,n0,n1,"\n")
       if(nrow(res0)>0) {
@@ -29,6 +28,8 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
         res = rbind(res,res0)
       }
     }
+    message("Pausing here to check for empty/unhandled entries...")
+    browser()
     if(!is.null(res)) {
       nmiss = nrow(res)
       res.all = rbind(res.all,res)

@@ -19,7 +19,7 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     runInsert("delete from toxval_fix",toxval.db)
 
     filenames <- list.files(path = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/"), pattern="_5.xlsx", full.names = T)
-    full_dict <- lapply(filenames, function(x) read.xlsx(x ,colNames = T)) %T>% {
+    full_dict <- lapply(filenames, function(x) read.xlsx(x, colNames = T)) %T>% {
       names(.) <- gsub("_5.xlsx", "", basename(filenames))
     }
     field <- names(full_dict)
