@@ -30,9 +30,12 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
     temp = unique(temp0[,c("source_hash","study_type_corrected")])
     names(temp) = c("source_hash","study_type")
 
-    temp.old = runQuery(paste0("select source_hash,study_type from toxval where dtxsid!='NODTXSID' and source='",source,
-                            "' and toxval_type in (select toxval_type from toxval_type_dictionary where toxval_type_supercategory in ('Point of Departure','Lethality Effect Level','Toxicity Value'))
-                            and human_eco='human health'"),toxval.db)
+    temp.old = runQuery(paste0("select source_hash, study_type from toxval where dtxsid != 'NODTXSID' and source = '",source,
+                            "' and toxval_type in (select toxval_type from toxval_type_dictionary ",
+                            "where toxval_type_supercategory in ('Point of Departure', 'Lethality Effect Level', 'Toxicity Value')) ",
+                            "and human_eco = 'human health' ",
+                            # Filter out those that already have a study_type present
+                            "and study_type = '-'"),toxval.db)
 
     shlist = unique(temp0$source_hash)
     shlist.db = unique(temp.old$source_hash)
@@ -71,9 +74,10 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
                     and b.human_eco='human health'
                     and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level')")
       replacements = runQuery(query,toxval.db,T,F)
+      replacements$fixed = 0
+      # Filter to entries from missing source_hash vector
+      replacements = replacements[is.element(replacements$source_hash,missing),]
       if(nrow(replacements)){
-        replacements$fixed = 0
-        replacements = replacements[is.element(replacements$source_hash,missing),]
         file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",dict.date,".csv")
         write.csv(replacements,file,row.names=F)
         #browser()
