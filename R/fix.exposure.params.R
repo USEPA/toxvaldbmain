@@ -8,7 +8,7 @@
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.date="2023-08-21") {
+fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.date="2023-08-23") {
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/exposure_route_method_form"," ",dict.date,".xlsx")
   dict = read.xlsx(file)

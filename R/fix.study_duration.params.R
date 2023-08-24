@@ -8,7 +8,7 @@
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dict.date="2023-08-21") {
+fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dict.date="2023-08-23") {
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_duration_params"," ",dict.date,".xlsx")
   dict = read.xlsx(file)
