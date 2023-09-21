@@ -15,7 +15,7 @@ source_chemical.extra <- function(toxval.db,
                                    casrn.col="casrn",
                                    name.col="name",
                                    verbose=F) {
-  printCurrentFunction(paste0(db,"\n",source))
+  printCurrentFunction(paste0(toxval.db,"\n",source))
   if(!exists("DSSTOX")) load.dsstox()
 
   #####################################################################

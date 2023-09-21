@@ -8,11 +8,11 @@
 toxval.load.genetox.all <- function(toxval.db, source.db,sys.date="2021-09-10", verbose=FALSE) {
   printCurrentFunction(toxval.db)
 
-  runQuery("delete from genetox_details",db)
+  runQuery("delete from genetox_details", toxval.db)
   file <- paste0(toxval.config()$datapath,"genetox/dataprep/combined_genetox_standard_",sys.date,".xlsx")
   mat = read.xlsx(file)
   x1 = names(mat)
-  x2 = runQuery("desc genetox_details",db)[,1]
+  x2 = runQuery("desc genetox_details", toxval.db)[,1]
   x3 = x1[!is.element(x1,x2)]
   print(x3)
   mat = mat[!is.na(mat[,"casrn"]),]
@@ -24,7 +24,7 @@ toxval.load.genetox.all <- function(toxval.db, source.db,sys.date="2021-09-10", 
   res2 = res2[,n3]
   runInsertTable(res2, "genetox_details", toxval.db,verbose)
 
-  runQuery("delete from genetox_summary",db)
+  runQuery("delete from genetox_summary", toxval.db)
   file <- paste0(toxval.config()$datapath,"genetox/dataprep/genetox_summary_",sys.date,".xlsx")
   mat = read.xlsx(file)
   mat = mat[!is.na(mat[,"casrn"]),]

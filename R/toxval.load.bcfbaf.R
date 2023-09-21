@@ -64,7 +64,7 @@ toxval.load.bcfbaf <- function(toxval.db, source.db, verbose=F) {
   #   res[i,"bcfbaf_uuid"] <- digest(paste0(row,collapse=""), serialize = FALSE)
   #   res[i,"qa_level"] <- -1
   # }
-  runQuery("delete from bcfbaf",db)
+  runQuery("delete from bcfbaf", toxval.db)
   # for(i in 1:nrow(res)) res[i,"bcfbaf_uuid"] <- UUIDgenerate()
   runInsertTable(res2, "bcfbaf", toxval.db,verbose)
 }
