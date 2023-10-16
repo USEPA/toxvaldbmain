@@ -22,29 +22,41 @@ source_chemical.extra <- function(toxval.db,
   cat("Do the chemical checking\n")
   #####################################################################
   res = res %>%
-    tidyr::unite(col="chemical_index", all_of(casrn.col), all_of(name.col), sep=" ", remove=FALSE) %>%
-    # Replace unicode in raw values (database constraint for utf8 strings)
-    dplyr::mutate(dplyr::across(all_of(c(casrn.col, name.col)),
-                                # Replace zero width space unicode
-                                ~gsub("\u200b|\u00a0", "", .)),
-                  dplyr::across(all_of(c(casrn.col, name.col)),
-                                # Replace prime symbol/apostrophe unicode
-                                ~gsub("\u2019|\u00b4", "'", .)),
-                    dplyr::across(all_of(c(casrn.col, name.col)),
-                                  # Replace soft hyphen
-                                  ~gsub("\u00ad", "-", .)),
-                  dplyr::across(all_of(c(casrn.col, name.col)),
-                                # Replace Registered symbol
-                                ~gsub("\u00ae", "R", .)),
-                  dplyr::across(all_of(c(casrn.col, name.col)),
-                                # Replace micro greek symbol
-                                ~gsub("\u00b5", "u", .)),
-                  dplyr::across(all_of(c(casrn.col, name.col)),
-                                # Replace small a with circumflex (â)
-                                ~gsub("\u00e2", "a", .)),
-                  dplyr::across(all_of(c(casrn.col, name.col)),
-                                # Replace dagger (†) unicode (typically a footnote symbol)
-                                ~gsub("\u2020", "+", .)))
+    tidyr::unite(col="chemical_index", all_of(casrn.col), all_of(name.col), sep=" ", remove=FALSE)
+    # dplyr::mutate(dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace zero width space unicode
+    #                             ~gsub("\u200b|\u00a0", "", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace prime symbol/apostrophe unicode
+    #                             ~gsub("\u2019|\u00b4", "'", .)),
+    #                 dplyr::across(all_of(c(casrn.col, name.col)),
+    #                               # Replace soft hyphen
+    #                               ~gsub("\u00ad", "-", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace Registered symbol
+    #                             ~gsub("\u00ae", "R", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace micro greek symbol
+    #                             ~gsub("\u00b5", "u", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace small a with circumflex (â)
+    #                             ~gsub("\u00e2", "a", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace dagger (†) unicode (typically a footnote symbol)
+    #                             ~gsub("\u2020", "+", .)))
+
+  # non-ascii encoding fixes (just like from toxval import "source_prep_and_load.R"
+  # Apply to all character cols
+  for(col_n in names(res)[sapply(res, is.character)]){
+    res = res %>%
+      dplyr::mutate(!!col_n := !!rlang::sym(col_n) %>%
+                      enc2native() %>%
+                      iconv(from="latin1",to="UTF-8") %>%
+                      iconv(from="LATIN1",to="UTF-8") %>%
+                      iconv(from="LATIN2",to="UTF-8") %>%
+                      iconv(from="latin-9",to="UTF-8") %>%
+                      enc2utf8())
+  }
 
   # gsub("\u2019", "'", .) %>%
   result = chem.check.v2(res,verbose=verbose,source)

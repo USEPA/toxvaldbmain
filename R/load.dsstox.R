@@ -11,6 +11,7 @@ load.dsstox <- function(reprocess = FALSE) {
     if(!reprocess){
       file = paste0(toxval.config()$datapath,"/DSSTox/DSSTox_",sys.date,"_processed.RData")
       load(file)
+      DSSTOX <<- DSSTOX
       return()
     }
     # Load file and reprocess
