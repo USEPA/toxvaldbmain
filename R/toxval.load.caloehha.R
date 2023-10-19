@@ -66,12 +66,9 @@ toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   cat("Convert multiple date formats present in year field to the corresponding year value,
       then change the data type from character to integer \n ")
   ###########################################################
-  date_fix = excel_numeric_to_date(as.numeric(as.character(res[grep("[0-9]{5}", res$year),'year'])), date_system = "modern")
-  date_fix = format(date_fix, format = "%Y")
-
-  res[grep("[0-9]{5}", res$year),'year'] = date_fix
-  res[grep("[a-zA-Z]+", res$year),'year'] = gsub(".*\\,\\s+(\\d{4})", "\\1", grep("[a-zA-Z]+", res$year,value= T))
-  res[which(res$year == "-"), "year"] = NA
+  res$year <- ifelse(grepl("^\\d{1,2}/\\d{1,2}/\\d{4}$", res$year),
+                     sub("\\d{1,2}/\\d{1,2}/(\\d{4})", "\\1", res$year),
+                     res$year)
   res$year = as.integer(res$year)
 
   res = res[,(names(res) %in% c("source_hash","casrn","name","toxval_type","toxval_subtype","toxval_numeric","toxval_units","species_original","critical_effect",
