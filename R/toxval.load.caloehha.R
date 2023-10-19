@@ -9,9 +9,6 @@
 toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "Cal OEHHA"
   source_table = "source_caloehha"
-  #testing
-  log=FALSE
-  remove_null_dtxsid = TRUE
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -56,14 +53,14 @@ toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   browser()
   cremove = c("target_organ","severity")
 
-
+  # fix for critical_effect to incorporate target_organ and severity to reflect
+  # the current format in toxval for this source
   res = res %>%
     dplyr::mutate(critical_effect = paste(res$critical_effect, "|", res$target_organ, "|", str_to_title(res$severity))
     )
   res = res %>%
     dplyr::mutate(critical_effect = ifelse(res$critical_effect == "- | - | -", "-", res$critical_effect)
     )
-  #res$critical_effect <- paste(res$critical_effect, " | ", res$severity)
   res = res[ , !(names(res) %in% cremove)]
   ##########################################################
   cat("Convert multiple date formats present in year field to the corresponding year value,
