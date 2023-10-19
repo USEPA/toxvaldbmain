@@ -51,24 +51,28 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                        'woe_characterization',
                        'iris_revision_history',
                        'archived',
-                       'principal_study',
+                       # 'principal_study',
                        'uncertainty_factor',
                        'modifying_factor',
                        'study_confidence',
                        'data_confidence',
-                       'overall_confidence',
+                       # 'overall_confidence',
                        'dose_type')
   # Rename non-toxval columns
   res <- res %>%
     dplyr::rename(exposure_route=route,
                   study_type = assessment_type,
                   long_ref = study_reference,
-                  risk_assessment_class = risk_assessment_duration) %>%
-    select(-dplyr::any_of(non_toxval_cols)) %>%
+                  risk_assessment_class = risk_assessment_duration,
+                  quality = overall_confidence) %>%
+    tidyr::unite(col="study_type", study_type, principal_study, sep=" - ") %>%
     # Combine endpoint and critical_effect
     tidyr::unite(col="critical_effect", endpoint, critical_effect, sep=": ") %>%
     dplyr::mutate(critical_effect = critical_effect %>%
-                    gsub("-: ", "", .)) %>%
+                    gsub("-: ", "", .),
+                  study_type = study_type %>%
+                    gsub(" - -", "", .)) %>%
+    select(-dplyr::any_of(non_toxval_cols)) %>%
     dplyr::filter(toxval_numeric != "-")
 
   res$source = source
