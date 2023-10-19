@@ -1,10 +1,10 @@
 #--------------------------------------------------------------------------------------
-#
-#' Generic structure for laoding to toxval from toxval_source
-#' @param toxval.db The database version to use
-#' @param source.db The source database
+#' Load new_caloehha from toxval_source to toxval
+#' @param toxval.db The version of toxval into which the tables are loaded.
+#' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
+#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "Cal OEHHA"
@@ -179,9 +179,7 @@ toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
   res$subsource_url = "-"
-  res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
