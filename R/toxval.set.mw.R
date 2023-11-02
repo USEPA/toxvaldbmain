@@ -19,7 +19,7 @@ toxval.set.mw <- function(toxval.db, source=NULL){
     dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0"),toxval.db)[,1]
 
     # Test of API is up and running
-    api_test <- httr::GET("https://api-ccte.epa.gov/") %>%
+    api_test <- httr::GET("https://api-ccte.epa.gov/docs/chemical.html") %>%
       httr::content()
 
     # Use bulk DTXSID CCTE Chemicals API pull (limit 200 per call)

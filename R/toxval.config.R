@@ -30,7 +30,7 @@ library(magrittr)
 #' @export
 #--------------------------------------------------------------------------------------
 toxval.config <- function() {
-  toxval.db <- "res_toxval_v92"
+  toxval.db <- "res_toxval_v95"
   dsstox.db <- "ro_prod_dsstox"
   source.db <- "res_toxval_source_v5"
 

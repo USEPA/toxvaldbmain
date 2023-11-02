@@ -168,6 +168,11 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res$source_url = "https://www.epa.gov/iris"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
+  # fills dtxsid column before runInsertTable
+  query = paste0("select chemical_id, dtxsid from source_chemical")
+  chem_dtxsid = runQuery(query,source.db,TRUE,FALSE)
+  res <- merge(res, chem_dtxsid, by.x="chemical_id", by.y="chemical_id",
+               all.x=TRUE)
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
