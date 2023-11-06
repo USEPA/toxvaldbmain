@@ -1,14 +1,12 @@
 #-----------------------------------------------------------------------------------
 #' Set the study_group field
-#' series of xlsx files
 #'
 #' @param toxval.db Database version
 #' @param source The source to be updated
-#' #' @return for each source writes an Excel file with the name
-#'  ../export/export_by_source_{data}/toxval_all_{toxval.db}_{source}.xlsx
-#'
+#' @param reset Whether or not to set entire study_group field to "-" before logic, default F
+#' @export
 #-----------------------------------------------------------------------------------
-fix.study_group <- function(toxval.db, source=NULL,reset=F) {
+fix.study_group <- function(toxval.db, source=NULL, reset=F) {
   printCurrentFunction(toxval.db)
 
   if(reset) runQuery("update toxval set study_group='-'",toxval.db)
@@ -32,7 +30,7 @@ fix.study_group <- function(toxval.db, source=NULL,reset=F) {
       temp = runQuery(query,toxval.db)
       temp$key = NA
       temp$study_group = NA
-      gtemp = subset(temp, select = -c(toxval_id) )
+      gtemp = subset(temp, select = -c(toxval_id))
       for(i in 1:nrow(gtemp)) temp[i,"key"] = digest(paste0(gtemp[i,],collapse=""), serialize = FALSE)
       hlist = unique(temp$key)
       for(i in 1:length(hlist)) {
