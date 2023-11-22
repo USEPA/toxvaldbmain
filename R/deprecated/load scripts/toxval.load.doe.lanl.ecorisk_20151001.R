@@ -1,14 +1,18 @@
-#--------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------
 #' Load the DOE LANL ECORISK data data from toxval_source to toxval
 #'
-#' @param toxval.db The database version to use
-#' @param source.db The source database
+#' @param toxval.db The version of toxval into which the tables are loaded.
+#' @param source.db The version of toxval_source from which the tables are loaded.
 #' @param log If TRUE, send output to a log file
-#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
-#--------------------------------------------------------------------------------------
-toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+#' @export
+#-------------------------------------------------------------------------------------
+toxval.load.doe.lanl.ecorisk <- function(toxval.db,source.db,log=F) {
   printCurrentFunction(toxval.db)
-  source = "DOE LANL ECORISK"
+
+  #####################################################################
+  cat("start output log, log files for each source can be accessed from output_log folder\n")
+  #####################################################################
+  source <- "DOE LANL ECORISK"
   source_table = "source_doe_lanl_ecorisk"
   verbose = log
   #####################################################################
@@ -16,7 +20,7 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = logr::log_open(con1)
+    con1 = log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -34,26 +38,27 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  # Whether to remove records with NULL DTXSID values
-  if(!remove_null_dtxsid){
-    query = paste0("select * from ",source_table)
-  } else {
-    query = paste0("select * from ",source_table, " ",
-                   # Filter out records without curated chemical information
-                   "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
-  }
-  res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  query = paste0("select * from ",source_table)
+  res = runQuery(query,source.db,T,F)
+  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
+  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
-
+  print(dim(res))
   #####################################################################
-  cat("Add code to deal with specific issues for this source\n")
+  cat("Add the code from the original version from Aswani\n")
   #####################################################################
   nlist = c("casrn","source_hash","name","chemical_id","document_name","source","qc_status",
             "medium","species","toxval_numeric","toxval_units","toxval_type")
-  res = res %>% dplyr::select(one_of(nlist))
+  res = res[,nlist]
+  nlist = c("casrn","source_hash","name","chemical_id","document_name","source","qc_status",
+            "media","species","toxval_numeric","toxval_units","toxval_type")
+  names(res) = nlist
+  #res = generate.originals(toxval.db,res)
+
+  res <-  res
+  res$species <-  gsub("(.*)(\\([^\\(].*)", "\\1", res$species)
+  res$species = str_trim(res$species)
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -80,29 +85,25 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = dplyr::distinct(res)
+  res = unique(res)
+  res = res[!is.na(res$toxval_numeric),]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
+  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
+  print(dim(res))
   res=fix.non_ascii.v2(res,source)
-  # Remove excess whitespace
-  res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
-  res = res[, !names(res) %in% c("casrn","name")]
-  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
+  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
+  res = unique(res)
+  res = res[,!is.element(names(res),c("casrn","name"))]
+  print(dim(res))
 
   #####################################################################
   cat("add toxval_id to res\n")
   #####################################################################
   count = runQuery("select count(*) from toxval",toxval.db)[1,1]
-  if(count==0) {
-    tid0 = 1
-  } else {
-    tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
-  }
+  if(count==0) tid0 = 1
+  else tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
@@ -126,39 +127,38 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   refs$record_source_type = "website"
   refs$record_source_note = "to be cleaned up"
   refs$record_source_level = "primary (risk assessment values)"
-  print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
+  print(dim(res))
 
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = dplyr::distinct(res)
-  refs = dplyr::distinct(refs)
-  res$datestamp <- Sys.Date()
-  res$source_table <- source_table
-  res$source_url <- "https://rais.ornl.gov/documents/ECO_BENCH_LANL.pdf"
-  res$subsource_url <- "-"
-  res$details_text <- paste(source,"Details")
+  res = unique(res)
+  refs = unique(refs)
+  res$datestamp = Sys.Date()
+  res$source_table = source_table
+  res$source_url = "https://rais.ornl.gov/documents/ECO_BENCH_LANL.pdf"
+  res$subsource_url = "-"
+  res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
-  print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
+  print(dim(res))
 
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
+  toxval.load.postprocess(toxval.db,source.db,source)
 
   if(log) {
     #####################################################################
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    logr::log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
+    log_close()
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))
@@ -166,13 +166,4 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
-
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 }
