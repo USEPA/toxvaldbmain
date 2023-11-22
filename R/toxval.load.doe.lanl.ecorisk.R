@@ -51,9 +51,9 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  nlist = c("casrn","source_hash","name","chemical_id","document_name","source","qc_status",
-            "medium","species","toxval_numeric","toxval_units","toxval_type")
-  res = res %>% dplyr::select(one_of(nlist))
+  
+  # NOTE: Previous source-specific issues either moved to import script
+  # or sections below
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -62,10 +62,19 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
+  colnames(res)[which(names(res) == "molecular_weight_(mw)")] = "mw"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
+  
+  # Remove unnecessary columns ("columns to be dealt with)
+  res = res %>% dplyr::select(!nlist)
+  
+  nlist = names(res)
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,cols)]
+  
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
