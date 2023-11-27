@@ -50,12 +50,12 @@ toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("target_organ","severity", "human_data")
-
+  cremove = c("target_organ","severity", "human_data", "study_duration_qualifier", "species")
+  res$species_original = res$species
   res = res[ , !(names(res) %in% cremove)]
   ##########################################################
-  cat("Convert multiple date formats present in year field to the corresponding year value,
-      then change the data type from character to integer \n ")
+  # cat("Convert multiple date formats present in year field to the corresponding year value,
+  #     then change the data type from character to integer \n ")
   ###########################################################
   # res = res[,(names(res) %in% c("source_hash","casrn","name","toxval_type","toxval_subtype","toxval_numeric","toxval_units","species_original","critical_effect",
   #                               "risk_assessment_class","year","exposure_route","study_type","study_duration_class","study_duration_value", "study_duration_units",
