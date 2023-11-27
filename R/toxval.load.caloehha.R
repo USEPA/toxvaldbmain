@@ -50,63 +50,37 @@ toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
-  cremove = c("target_organ","severity")
+  cremove = c("target_organ","severity", "human_data")
 
-  # fix for critical_effect to incorporate target_organ and severity to reflect
-  # the current format in toxval for this source
-  res = res %>%
-    dplyr::mutate(critical_effect = paste(res$critical_effect, "|", res$target_organ, "|", str_to_title(res$severity))
-    )
-  res = res %>%
-    dplyr::mutate(critical_effect = ifelse(res$critical_effect == "- | - | -", "-", res$critical_effect)
-    )
   res = res[ , !(names(res) %in% cremove)]
   ##########################################################
   cat("Convert multiple date formats present in year field to the corresponding year value,
       then change the data type from character to integer \n ")
   ###########################################################
-  res$year <- ifelse(grepl("^\\d{1,2}/\\d{1,2}/\\d{4}$", res$year),
-                     sub("\\d{1,2}/\\d{1,2}/(\\d{4})", "\\1", res$year),
-                     res$year)
-  res$year = as.integer(res$year)
-
-  res = res[,(names(res) %in% c("source_hash","casrn","name","toxval_type","toxval_subtype","toxval_numeric","toxval_units","species_original","critical_effect",
-                                "risk_assessment_class","year","exposure_route","study_type","study_duration_class","study_duration_value", "study_duration_units",
-                                "record_url","toxval_type_original","toxval_subtype_original","toxval_numeric_original","toxval_units_original","critical_effect_original",
-                                "year_original","exposure_route_original","study_type_original","study_duration_value_original","study_duration_class_original",
-                                "study_duration_units_original","document_name","chemical_id"))]
-  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  res = res[!is.na(res[,"casrn"]),]
-  res[is.element(res$species_original,"Human"),"species_original"] = "-"
+  # res = res[,(names(res) %in% c("source_hash","casrn","name","toxval_type","toxval_subtype","toxval_numeric","toxval_units","species_original","critical_effect",
+  #                               "risk_assessment_class","year","exposure_route","study_type","study_duration_class","study_duration_value", "study_duration_units",
+  #                               "record_url","toxval_type_original","toxval_subtype_original","toxval_numeric_original","toxval_units_original","critical_effect_original",
+  #                               "year_original","exposure_route_original","study_type_original","study_duration_value_original","study_duration_class_original",
+  #                               "study_duration_units_original","document_name","chemical_id"))]
+  # res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
+  # res = res[!is.na(res[,"casrn"]),]
+  # res[is.element(res$species_original,"Human"),"species_original"] = "-"
 
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  res$source = source
   res$human_ra = "Y"
   res$target_species = "Human"
-  res$species_original = "-"
   res$human_eco = "human health"
   res$subsource = "California DPH"
   res$details_text = "Cal OEHHA Details"
   res$source_url = "https://oehha.ca.gov/chemicals"
-  res$toxval_numeric_qualifier = "="
-  res = res[!is.na(res[,"casrn"]),]
-  res = fill.toxval.defaults(toxval.db,res)
-
-  res = unique(res)
-  #res = res[res$toxval_numeric != "-999",]
-  #res = unique(res)
-  res$toxval_numeric_original = res$toxval_numeric
-
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
   cols1 = runQuery("desc record_source",toxval.db)[,1]
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
-  colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
@@ -128,7 +102,7 @@ toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
+  # if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
