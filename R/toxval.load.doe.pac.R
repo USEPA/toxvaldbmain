@@ -51,18 +51,12 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
   res = res %>%
-    # Filter entries without casrn
-    tidyr::drop_na(casrn) %>%
-
     # Add columns as necessary
     dplyr::mutate(
       source_url = "https://www.energy.gov/ehss/protective-action-criteria-pac-aegls-erpgs-teels",
       human_eco = "human health",
       subsource = "DOE EHSS",
-      toxval_type = toupper(res$toxval_type),
-      toxval_subtype = toxval_type,
-      risk_assessment_class = "acute",
-      toxval_numeric_original = res$toxval_numeric
+      risk_assessment_class = "acute"
     ) %>%
 
     # Fill default values
@@ -71,11 +65,6 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
     # Filter out duplicate rows
     dplyr::distinct()
 
-  # Update source hash column
-  x=seq(from=1,to=nrow(res))
-  y = paste0(res$source_hash,"_",x)
-  res$source_hash = y
-
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -83,7 +72,6 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
-  colnames(res)[which(names(res) == "molecular_weight_(mw)")] = "mw"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
@@ -113,7 +101,6 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -153,13 +140,13 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$url <- "https://edms3.energy.gov/pac/TeelDocs"
-  refs$document_name = "Revision_29A_Table2.pdf"
-  refs$record_source_type = "government document"
-  refs$record_source_note = "All data is on a single pdf"
-  refs$record_source_level = "primary (risk assessment values)"
-  refs$long_ref = "Table 2: Protective Action Criteria (PAC) Rev. 29a based on applicable 60-minute AEGLs, ERPGs, or TEELs"
-  refs$title = "Table 2: Protective Action Criteria (PAC) Rev. 29a based on applicable 60-minute AEGLs, ERPGs, or TEELs"
+  # Changes commented out for now until replacement values determined
+  # refs$url <- "https://edms3.energy.gov/pac/TeelDocs"
+  # refs$document_name = "Revision_29A_Table2.pdf"
+  # refs$record_source_type = "government document"
+  # refs$record_source_note = "All data is on a single pdf"
+  # refs$record_source_level = "primary (risk assessment values)"
+  # refs$title = "Table 2: Protective Action Criteria (PAC) Rev. 29a based on applicable 60-minute AEGLs, ERPGs, or TEELs"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
