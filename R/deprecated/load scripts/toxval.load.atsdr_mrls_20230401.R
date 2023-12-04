@@ -43,48 +43,20 @@ toxval.load.atsdr_mrls <- function(toxval.db,source.db, log=FALSE, remove_null_d
   }
 
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
-
-  #####################################################################
-  cat("Add code to deal with specific issues for this source\n")
-  #####################################################################
-  cremove = c('route', 'duration', 'total_factors', 'endpoint', 'status',
-              'cover_date', 'cas_number', 'doc_status', 'doc_cover_date',
-              'study_duration_qualifier')
-  res = res[ , !(names(res) %in% cremove)]
-
-  #####################################################################
-  cat("find columns in res that do not map to toxval or record_source\n")
-  #####################################################################
-  cols1 = runQuery("desc record_source",toxval.db)[,1]
-  cols2 = runQuery("desc toxval",toxval.db)[,1]
-  cols = unique(c(cols1,cols2))
-  colnames(res)[which(names(res) == "species")] = "species_original"
-  res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
-  if(length(nlist)>0) {
-    cat("columns to be dealt with\n")
-    print(nlist)
-    browser()
-  }
-  print(dim(res))
-
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
+  res$study_type[res$study_type == "Acute"] = "acute"
+  res$study_type[res$study_type == "Intermediate"] = "short-term"
+  res$study_type[res$study_type == "Chronic"] = "chronic"
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data: ", toString(dim(res))))
   res = fix.non_ascii.v2(res,source)
@@ -106,11 +78,11 @@ toxval.load.atsdr_mrls <- function(toxval.db,source.db, log=FALSE, remove_null_d
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
 
-  # #####################################################################
-  # cat("pull out toxval_uf to uf\n")
-  # #####################################################################
-  # uf = res[,c("toxval_id","total_factors")]
-  # uf$uf_type = "total"
+  #####################################################################
+  cat("pull out toxval_uf to uf\n")
+  #####################################################################
+  uf = res[,c("toxval_id","total_factors")]
+  uf$uf_type = "total"
 
   #####################################################################
   cat("pull out record source to refs\n")
