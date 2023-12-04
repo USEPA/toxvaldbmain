@@ -51,7 +51,7 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  
+
   # NOTE: Previous source-specific issues either moved to import script
   # or sections below
 
@@ -62,19 +62,18 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
-  colnames(res)[which(names(res) == "molecular_weight_(mw)")] = "mw"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
-  
+
   # Remove unnecessary columns ("columns to be dealt with)
   res = res %>% dplyr::select(!nlist)
-  
+
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
-  
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -92,7 +91,6 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -144,7 +142,7 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   refs = dplyr::distinct(refs)
   res$datestamp <- Sys.Date()
   res$source_table <- source_table
-  res$source_url <- "https://rais.ornl.gov/documents/ECO_BENCH_LANL.pdf"
+  res$source_url = "https://www.intellusnm.com/documents/documents.cfm"
   res$subsource_url <- "-"
   res$details_text <- paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
