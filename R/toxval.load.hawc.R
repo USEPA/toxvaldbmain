@@ -5,7 +5,7 @@
 #' @param log If TRUE, send output to a log file
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.hawc <- function(toxval.db, source.db,log=F){
+toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   printCurrentFunction(toxval.db)
   source <- "HAWC Project"
   source_table = "source_hawc"
@@ -33,13 +33,19 @@ toxval.load.hawc <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  query = paste0("select * from ",source_table)
-  res = runQuery(query,source.db,T,F)
-  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
-  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
+  # Whether to remove records with NULL DTXSID values
+  if(!remove_null_dtxsid){
+    query = paste0("select * from ",source_table)
+  } else {
+    query = paste0("select * from ",source_table, " ",
+                   # Filter out records without curated chemical information
+                   "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
+  }
+  res = runQuery(query,source.db,TRUE,FALSE)
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(dim(res))
+  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
@@ -175,8 +181,11 @@ toxval.load.hawc <- function(toxval.db, source.db,log=F){
   cat("add toxval_id to res\n")
   #####################################################################
   count = runQuery("select count(*) from toxval",toxval.db)[1,1]
-  if(count==0) tid0 = 1
-  else tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  if(count==0) {
+    tid0 = 1
+  } else {
+    tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  }
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
@@ -200,7 +209,7 @@ toxval.load.hawc <- function(toxval.db, source.db,log=F){
   refs$record_source_type = "website"
   refs$record_source_note = "to be cleaned up"
   refs$record_source_level = "primary (risk assessment values)"
-  print(dim(res))
+  print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
   cat("load res and refs to the database\n")
@@ -221,23 +230,17 @@ toxval.load.hawc <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source)
-
-  # runQuery("update toxval set details_text='HAWC Project Details' where source='HAWC'",toxval.db)
-  # runQuery("update toxval set source='HAWC Project' where source='HAWC'",toxval.db)
-  # runQuery("update record_source set source='HAWC Project' where source='HAWC'",toxval.db)
-  # runQuery("update source_chemical set source='HAWC Project' where source='HAWC'",toxval.db)
-  export.all.by.source(toxval.db, source="HAWC Project")
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    logr::log_close()
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))
@@ -245,4 +248,5 @@ toxval.load.hawc <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("finish\n")
   #####################################################################
+  return(0)
 }
