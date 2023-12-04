@@ -51,13 +51,9 @@ toxval.load.gestis.dnel <- function(toxval.db,source.db, log=FALSE, remove_null_
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
   res = res %>%
-    # Filter entries without casrn
-    tidyr::drop_na(casrn) %>%
-
     # Add columns as necessary
     dplyr::mutate(
       human_eco = "human health",
-      toxval_subtype = toxval_type,
       toxval_numeric_original = res$toxval_numeric,
     ) %>%
 
@@ -66,11 +62,6 @@ toxval.load.gestis.dnel <- function(toxval.db,source.db, log=FALSE, remove_null_
 
     # Filter out duplicate rows
     dplyr::distinct()
-
-  # Update source hash column
-  x=seq(from=1,to=nrow(res))
-  y = paste0(res$source_hash,"_",x)
-  res$source_hash = y
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -104,7 +95,6 @@ toxval.load.gestis.dnel <- function(toxval.db,source.db, log=FALSE, remove_null_
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
