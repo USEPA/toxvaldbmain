@@ -41,8 +41,6 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
                    # Filter out records without curated chemical information
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
-  source.db = 'res_toxval_source_v5'
-  toxval.db = 'res_toxval_v95'
   res = runQuery(query,source.db,TRUE,FALSE)
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
   res$source = source
@@ -59,8 +57,6 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
               "specification_url", "ins_matches", "functional_class", "allergenicity", "residues_url", "treatment_level", "tolerable_intake", "comments",
               "toxval_units_comments", "study_duration_qualifier", "specification")
   res = res[ , !(names(res) %in% cremove)]
-
-
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
