@@ -48,12 +48,13 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
-  cat("Add the code from the original version from Aswani\n")
+  # Old code and no longer necessary
+  # cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  unique(res$study_type)
-  res$study_type <- tolower(res$study_type)
-  para_vals <- grep("\\(",res$study_type)
-  res[para_vals, "study_type"] <- gsub("(.*)(\\s+\\(.*)","\\1",res[para_vals, "study_type"])
+  # unique(res$study_type)
+  # res$study_type <- tolower(res$study_type)
+  # para_vals <- grep("\\(",res$study_type)
+  # res[para_vals, "study_type"] <- gsub("(.*)(\\s+\\(.*)","\\1",res[para_vals, "study_type"])
   # ##### fix exposure_route
   # unique(res$exposure_route)
   # res$exposure_route <- tolower(res$exposure_route)
