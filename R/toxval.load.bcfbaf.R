@@ -5,7 +5,7 @@
 #' @param verbose If TRUE, print out extra diagnostic messages
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.bcfbaf <- function(toxval.db, source.db, verbose=F) {
+toxval.load.bcfbaf <- function(toxval.db, source.db, verbose=FALSE) {
   printCurrentFunction(toxval.db)
 
   name.list <- c(

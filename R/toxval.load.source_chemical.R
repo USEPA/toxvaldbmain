@@ -71,6 +71,18 @@ toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=
       }
     }
 
+    # Set DTXSID in toxval table based on source_chemical matches on chemical_id
+    src_chem_ids = runQuery(paste0("SELECT chemical_id FROM toxval WHERE source = '", source,"'"),
+                            db = toxval.db)
+    # Only update if there are any chemical_id records to use (if removed NULL dtxsid values)
+    if(nrow(src_chem_ids)){
+      updateQuery = paste0("UPDATE toxval a INNER JOIN source_chemical b ",
+                           "ON (a.chemical_id = b.chemical_id) SET a.dtxsid = b.dtxsid ",
+                           "WHERE a.chemical_id in ('",
+                           paste0(src_chem_ids$chemical_id, collapse = "', '")
+                           ,"')")
+      runQuery(updateQuery, db=toxval.db)
+    }
     ############################################################################
     ### Old Provisional chemical curation code no longer in use, but archived here for now
     ############################################################################

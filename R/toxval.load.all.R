@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
 #' Load and process all information into ToxValDB. The entire process can be run with
-#' one command: toxval.load.all(toxval.db=...,source.db=..., do.all=T)
+#' one command: toxval.load.all(toxval.db=...,source.db=..., do.all=TRUE)
 #' It can also be run in stages, but needs to be run in the order of the do.X parameters
 #' listed here. If any earlier step is run, all of the subsequent steps need to be rerun.
 #'
@@ -17,12 +17,12 @@
 #'
 toxval.load.all <- function(toxval.db,
                             source.db,
-                            log=F,
-                            do.init=F,
-                            do.reset=F,
-                            do.load=F,
-                            do.post=F,
-                            do.extra=F) {
+                            log=FALSE,
+                            do.init=FALSE,
+                            do.reset=FALSE,
+                            do.load=FALSE,
+                            do.post=FALSE,
+                            do.extra=FALSE) {
   printCurrentFunction(toxval.db)
 
   if(do.init)  {
@@ -42,7 +42,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.usgs_hbsl(toxval.db,source.db,log)
     toxval.load.who_ipcs(toxval.db,source.db,log)
 
-    doit=T
+    doit=TRUE
     if(doit) {
       toxval.load.atsdr.pfas.2021(toxval.db,source.db,log)
       toxval.load.atsdr_mrls(toxval.db, source.db, log)
@@ -91,14 +91,14 @@ toxval.load.all <- function(toxval.db,
   }
   if(do.post) {
     fix.study_type.manual(toxval.db,source=NULL)
-    fix.risk_assessment_class.by.source(toxval.db,restart=T)
+    fix.risk_assessment_class.by.source(toxval.db,restart=TRUE)
     load.dsstox()
   }
   if(do.extra) {
-    toxval.load.bcfbaf(toxval.db, source.db, verbose=F)
+    toxval.load.bcfbaf(toxval.db, source.db, verbose=FALSE)
     toxval.load.cancer(toxval.db,source.db)
     toxval.load.genetox.all(toxval.db, source.db,sys.date="2021-09-10", verbose=FALSE)
-    toxval.load.skin.eye(toxval.db,source.db,verbose=F)
+    toxval.load.skin.eye(toxval.db,source.db,verbose=FALSE)
   }
 }
 
