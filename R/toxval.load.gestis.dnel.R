@@ -76,7 +76,7 @@ toxval.load.gestis.dnel <- function(toxval.db,source.db, log=FALSE, remove_null_
   nlist = nlist[!is.element(nlist,cols)]
 
   # Remove unnecessary columns ("columns to be dealt with)
-  res = res %>% dplyr::select(!nlist)
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
