@@ -5,7 +5,7 @@
 #' @param log If TRUE, send output to a log file
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.dod <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.dod <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "DOD"
   source_table = "source_dod_meg"
   verbose = log
@@ -42,10 +42,9 @@ toxval.load.dod <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TR
   }
   res = runQuery(query,source.db,TRUE,FALSE)
 
-  res = readxl::read_xlsx("import_dod_meg_source_output.xlsx")
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
-  res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
@@ -68,7 +67,7 @@ toxval.load.dod <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TR
   nlist = nlist[!is.element(nlist,cols)]
 
   # Remove unnecessary columns ("columns to be dealt with)
-  res = res %>% dplyr::select(!nlist)
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
@@ -131,11 +130,9 @@ toxval.load.dod <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TR
   refs$record_source_level = "primary (risk assessment values)"
 
   # Add extra columns as specified in previous load script
-  refs$long_ref <- "U.S. Army Public Health Command (2013) TG 230 Military Exposure Guidelines Table. Army Public Health Center."
   refs$title <- "TG 230 Military Exposure Guidelines Table"
   refs$author <- "U.S. Army Public Health Command"
   refs$url <- "https://phc.amedd.army.mil/Pages/Library.aspx?queries[series]=PHC+Technical+Guide"
-  refs$year <- "2013"
   refs$document_name <- "TG230MilitaryExposureGuidelines.xls"
 
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
