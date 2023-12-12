@@ -5,7 +5,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.epa_aegl <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.epa_aegl <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "EPA AEGL"
   source_table = "source_epa_aegl"
   verbose = log
@@ -41,7 +41,8 @@ toxval.load.epa_aegl <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
