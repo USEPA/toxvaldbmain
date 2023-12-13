@@ -42,7 +42,8 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -50,10 +51,9 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
   cremove = c("who_jecfa_chemical_id","synonyms","previous_years","tox_monograph_url", "jecfa_number", "tox_monograph", "cas_number", "adi",
               "meeting", "flavis_number", "mrl_code", "mrl_comment", "fema_number", "specs_code", "addendum_url", "chemical_url", "coe_number",
-              "residues", "residues_intake", "chemical_names", "ins", "intake", "report", "report_url", "addendum", "webpage_name", "evaluation_year",
+              "residues", "chemical_names", "ins", "intake", "report", "report_url", "addendum", "webpage_name", "evaluation_year",
               "specification_url", "ins_matches", "functional_class", "allergenicity", "residues_url", "treatment_level", "tolerable_intake", "comments",
               "toxval_units_comments", "study_duration_qualifier", "specification")
   res = res[ , !(names(res) %in% cremove)]
@@ -83,8 +83,13 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
 
-  # After setting toxval_numeric_original, take only the number after the hyphen
-  res$toxval_numeric <- str_extract(res$toxval_numeric, "(?<=-)[0-9]+(?:\\.[0-9]+)?$")
+  # Select minimum, non-zero toxval_numeric from range values
+  res = res %>%
+    dplyr::mutate(toxval_numeric = toxval_numeric %>%
+                    # Remove zero range
+                    gsub("0-", "", .) %>%
+                    # Select minimum from ranges
+                    sub('-.*', '', .))
 
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -129,6 +134,7 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   refs$record_source_type = "-"
   refs$record_source_note = "-"
   refs$record_source_level = "-"
+  refs$url = "https://apps.who.int/food-additives-contaminants-jecfa-database/"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
