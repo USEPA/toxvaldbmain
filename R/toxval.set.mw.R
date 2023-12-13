@@ -17,7 +17,10 @@ toxval.set.mw <- function(toxval.db, source=NULL){
     runQuery(paste0("update toxval set mw=-1 where mw is null and source='",source,"'"),toxval.db)
     # Pull list of DTXSID values as a vector
     dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0"),toxval.db)[,1]
-
+    # Check if any dtxsid values returned
+    if(!length(dlist) | is.na(dlist)){
+      return("No mapped dtxsid values to use to set mw...returning...")
+    }
     # Test of API is up and running
     api_test <- httr::GET("https://api-ccte.epa.gov/docs/chemical.html") %>%
       httr::content()
