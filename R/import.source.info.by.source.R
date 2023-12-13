@@ -1,13 +1,13 @@
 #--------------------------------------------------------------------------------------
 #' Load Source Info for each source into toxval
-#' The information is in the file ~/dictionary/source_info 2023-02-15.xlsx
+#' The information is in the file ~/dictionary/source_info 2023-11-30.xlsx
 #' @param toxval.db The version of toxval into which the source info is loaded.
 #' @param source The specific source to be loaded, If NULL, load for all sources
 #' @export
 #--------------------------------------------------------------------------------------
 import.source.info.by.source <- function(toxval.db, source=NULL) {
   printCurrentFunction(toxval.db)
-  file = paste0(toxval.config()$datapath,"dictionary/source_info 2023-02-15.xlsx")
+  file = paste0(toxval.config()$datapath,"dictionary/source_info 2023-11-30.xlsx")
   print(file)
   mat = readxl::read_xlsx(file) %>% # openxlsx::read.xlsx(file)
     filter(!retired == 1)
