@@ -42,7 +42,8 @@ toxval.load.chiu <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=T
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -66,7 +67,7 @@ toxval.load.chiu <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=T
   nlist = nlist[!is.element(nlist,cols)]
 
   # Remove columns related to uncertainty factor ("columns to be dealt with")
-  res = res %>% dplyr::select(!nlist)
+  res = res %>% dplyr::select(!all_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
