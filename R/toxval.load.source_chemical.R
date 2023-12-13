@@ -39,7 +39,7 @@ toxval.load.source_chemical <- function(toxval.db,source.db,source=NULL,verbose=
     } else {
       runQuery(paste0("INSERT INTO ", toxval.db,
                       ".source_chemical SELECT * FROM ",source.db,
-                      ".source_chemical WHERE source = '",source),
+                      ".source_chemical WHERE source = '",source, "'"),
                db=toxval.db)
       # chems = runQuery(paste0("select * from source_chemical where source='",source,"'"),source.db)
     }
