@@ -42,7 +42,8 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -51,13 +52,8 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
   res = res %>%
-    # Add columns as needed
-    dplyr::mutate(
-      source_url = url
-    ) %>%
-
-    # Filter out duplicate rows
-    dplyr::distinct()
+    # Add source_url column for record source table
+    dplyr::mutate(source_url = url)
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -72,7 +68,7 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   nlist = nlist[!is.element(nlist,cols)]
 
   # Remove unnecessary columns ("columns to be dealt with)
-  res = res %>% dplyr::select(!nlist)
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
