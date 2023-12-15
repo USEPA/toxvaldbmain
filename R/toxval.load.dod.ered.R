@@ -5,7 +5,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.dod.ered <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "DOD ERED"
   source_table = "source_dod_ered"
   verbose = log
@@ -128,6 +128,7 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   refs$record_source_type = "website"
   refs$record_source_note = "to be cleaned up"
   refs$record_source_level = "primary (risk assessment values)"
+  refs$url = res$source_url
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
@@ -137,7 +138,6 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://ered.el.erdc.dren.mil/"
   res$subsource_url = "-"
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
