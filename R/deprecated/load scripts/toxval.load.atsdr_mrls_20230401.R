@@ -1,17 +1,16 @@
 #--------------------------------------------------------------------------------------
-#' Load IRIS source from toxval_source to toxval
+#' Load the ATSDR MRLs data from toxval_source to toxval
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
-#' @export
 #--------------------------------------------------------------------------------------
-toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  printCurrentFunction(toxval.db)
-  source <- "IRIS"
-  source_table = "source_iris"
+toxval.load.atsdr_mrls <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   verbose = log
+  printCurrentFunction(toxval.db)
+  source <- "ATSDR MRLs"
+  source_table = "source_atsdr_mrls"
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
@@ -46,75 +45,26 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = runQuery(query,source.db,TRUE,FALSE)
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
-
-  non_toxval_cols <- c('iris_chemical_id',
-                       'woe_characterization',
-                       'iris_revision_history',
-                       'archived',
-                       # 'principal_study',
-                       'uncertainty_factor',
-                       'modifying_factor',
-                       'study_confidence',
-                       'data_confidence',
-                       # 'overall_confidence',
-                       'dose_type',
-                       "endpoint", "principal_study", "study_duration_qualifier")
-  # Rename non-toxval columns
-  res <- res %>%
-    dplyr::rename(long_ref = study_reference,
-                  # risk_assessment_class = risk_assessment_duration,
-                  quality = overall_confidence) %>%
-    select(-dplyr::any_of(non_toxval_cols)) %>%
-    dplyr::filter(toxval_numeric != "-")
-
   res$source = source
   res$details_text = paste(source,"Details")
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
-
-  #####################################################################
-  cat("Add the code from the original version from Aswani\n")
-  #####################################################################
-  cremove = c("uf_composite", "confidence", "extrapolation_method", "class")
-  res = res[ , !(names(res) %in% cremove)]
-
-  #####################################################################
-  cat("find columns in res that do not map to toxval or record_source\n")
-  #####################################################################
-  cols1 = runQuery("desc record_source",toxval.db)[,1]
-  cols2 = runQuery("desc toxval",toxval.db)[,1]
-  cols = unique(c(cols1,cols2))
-  colnames(res)[which(names(res) == "species")] = "species_original"
-  res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
-  if(length(nlist)>0) {
-    cat("columns to be dealt with\n")
-    print(nlist)
-    browser()
-  }
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
-
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
+  res$study_type[res$study_type == "Acute"] = "acute"
+  res$study_type[res$study_type == "Intermediate"] = "short-term"
+  res$study_type[res$study_type == "Chronic"] = "chronic"
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data: ", toString(dim(res))))
-  res=fix.non_ascii.v2(res,source)
+  res = fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
     dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
   res = distinct(res)
   res = res[,!is.element(names(res),c("casrn","name"))]
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
@@ -127,7 +77,12 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   }
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
+
+  #####################################################################
+  cat("pull out toxval_uf to uf\n")
+  #####################################################################
+  uf = res[,c("toxval_id","total_factors")]
+  uf$uf_type = "total"
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -140,15 +95,13 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   nlist = names(res)
   remove = nlist[!is.element(nlist,cols)]
   res = res[ , !(names(res) %in% c(remove))]
-  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "-"
-  refs$record_source_note = "-"
-  refs$record_source_level = "-"
-  print(dim(res))
+  refs$record_source_type = "website"
+  refs$record_source_note = "to be cleaned up"
+  refs$record_source_level = "primary (risk assessment values)"
 
   #####################################################################
   cat("load res and refs to the database\n")
@@ -157,7 +110,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://www.epa.gov/iris"
+  res$source_url = "https://www.atsdr.cdc.gov/mrls/index.html"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
@@ -169,7 +122,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source, remove_null_dtxsid)
+  toxval.load.postprocess(toxval.db,source.db,source, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################
@@ -177,9 +130,9 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
     #####################################################################
     closeAllConnections()
     logr::log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))
