@@ -3,8 +3,9 @@
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
-#--------------------------------------------------------------------------------------
-toxval.load.fda_cedi <- function(toxval.db, source.db,log=F){
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
+#' #--------------------------------------------------------------------------------------
+toxval.load.fda_cedi <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   printCurrentFunction(toxval.db)
   source <- "FDA CEDI"
   source_table = "source_fda_cedi"
@@ -31,17 +32,28 @@ toxval.load.fda_cedi <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  query = paste0("select * from ",source_table)
-  res = runQuery(query,source.db,T,F)
-  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
+  # Whether to remove records with NULL DTXSID values
+  if(!remove_null_dtxsid){
+    query = paste0("select * from ",source_table)
+  } else {
+    query = paste0("select * from ",source_table, " ",
+                   # Filter out records without curated chemical information
+                   "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
+  }
+  res = runQuery(query,source.db,TRUE,FALSE)
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(dim(res))
+  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
-  cat("Add the code from the original version from Aswani\n")
+  cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  #browser()
+  browser()
+  cremove = c("cas_reg__no__(or_other_id)","substance","calculation/update_date","reg",
+              "risk_assessment", "study_duration_qualifier")
+  res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -51,9 +63,8 @@ toxval.load.fda_cedi <- function(toxval.db, source.db,log=F){
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","parent_chemical_id"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -62,33 +73,32 @@ toxval.load.fda_cedi <- function(toxval.db, source.db,log=F){
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = unique(res)
-  res = res[!is.na(res$toxval_numeric),]
-  res = res[res$toxval_numeric>0,]
+  res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(dim(res))
+  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
-  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  res = unique(res)
-  res = res[,!is.element(names(res),c("casrn","name"))]
-  print(dim(res))
+  # Remove excess whitespace
+  res = res %>%
+    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
+  res = distinct(res)
+  res = res[, !names(res) %in% c("casrn","name")]
+  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
   #####################################################################
   count = runQuery("select count(*) from toxval",toxval.db)[1,1]
-  if(count==0) tid0 = 1
-  else tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  if(count==0) {
+    tid0 = 1
+  } else {
+    tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  }
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
@@ -112,13 +122,13 @@ toxval.load.fda_cedi <- function(toxval.db, source.db,log=F){
   refs$record_source_type = "website"
   refs$record_source_note = "to be cleaned up"
   refs$record_source_level = "primary (risk assessment values)"
-  print(dim(res))
+  print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = unique(res)
-  refs = unique(refs)
+  res = distinct(res)
+  refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "https://www.accessdata.fda.gov/scripts/sda/sdNavigation.cfm?sd=edisrev"
@@ -127,13 +137,14 @@ toxval.load.fda_cedi <- function(toxval.db, source.db,log=F){
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
+  print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(dim(res))
+  print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
 
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source)
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################
