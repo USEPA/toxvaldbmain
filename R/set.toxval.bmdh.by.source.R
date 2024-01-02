@@ -38,14 +38,33 @@ set.toxval.bmdh.by.source <- function(toxval.db, source=NULL){
       dplyr::rename(bmdh_value=toxval_numeric, bmdh_units=toxval_units)
     # ==========================END TO BE UPDATED===============================
 
-    # Delete toxval_bmdh entries that will be replaced
-    # Use both source and source_hash to account for source_hash values of "-"
-    runQuery(query = paste0("DELETE FROM toxval_bmdh WHERE toxval_id in (",
-                            toString(bmdh_data$toxval_id),
-                            ") AND source = '", curr_source, "'"),
-             db = toxval.db)
+    # Optimize row deletion strategy for number of entries that must be deleted
+    if (nrow(bmdh_data) <= 200000) {
+      # For smaller tables, delete/replace toxval_bmdh entries normally
+      runQuery(query = paste0("DELETE FROM toxval_bmdh WHERE toxval_id in (",
+                              toString(bmdh_data$toxval_id),
+                              ") AND source = '", curr_source, "'"),
+               db = toxval.db)
+    } else {
+      # Create temporary table
+      runQuery(paste0("CREATE TABLE bmdh_temp_copy LIKE toxval_bmdh"), toxval.db)
 
-    # Send data to toxval_bmdh
+      # Only copy over information that will be retained
+      runQuery(paste0("INSERT INTO bmdh_temp_copy SELECT * FROM toxval_bmdh WHERE toxval_id ",
+                      " not in (", toString(bmdh_data$toxval_id), ") AND source = '",
+                      curr_source, "'"), toxval.db)
+
+      # Empty previous table
+      runQuery("TRUNCATE TABLE toxval_bmdh", toxval.db)
+
+      # Repopulate table with data that won't be replaced
+      runQuery(paste0("INSERT INTO toxval_bmdh SELECT * FROM bmdh_temp_copy"), toxval.db)
+
+      # Delete temp table
+      runQuery("DROP TABLE bmdh_temp_copy", toxval.db)
+    }
+
+    # Send new data to toxval_bmdh
     runInsertTable(bmdh_data, "toxval_bmdh", toxval.db)
 
     cat(paste0("--- Finished with source ", curr_source, "\n"))
