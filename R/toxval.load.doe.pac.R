@@ -78,7 +78,7 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   nlist = nlist[!is.element(nlist,cols)]
 
   # Remove unnecessary columns ("columns to be dealt with)
-  res = res %>% dplyr::select(!nlist)
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
@@ -99,7 +99,6 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cat("Generic steps \n")
   #####################################################################
   res = dplyr::distinct(res)
-  res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
@@ -141,12 +140,12 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cat("add extra columns to refs\n")
   #####################################################################
   # Changes commented out for now until replacement values determined
-  # refs$url <- "https://edms3.energy.gov/pac/TeelDocs"
+  refs$url <- res$source_url
   # refs$document_name = "Revision_29A_Table2.pdf"
-  # refs$record_source_type = "government document"
-  # refs$record_source_note = "All data is on a single pdf"
-  # refs$record_source_level = "primary (risk assessment values)"
-  # refs$title = "Table 2: Protective Action Criteria (PAC) Rev. 29a based on applicable 60-minute AEGLs, ERPGs, or TEELs"
+  refs$record_source_type = "government database"
+  refs$record_source_note = "All data is in a single XLSX export"
+  refs$record_source_level = "primary (risk assessment values)"
+  refs$title = "U.S. Department of Energy (DOE) Protective Action Criteria (PAC) Chemical Database"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
