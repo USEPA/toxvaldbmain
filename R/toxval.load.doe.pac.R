@@ -141,6 +141,8 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   # Changes commented out for now until replacement values determined
   refs$url <- res$source_url
+  # Hardcode year for refs because it's a document reference, not the record year
+  refs$year <- "2023"
   # refs$document_name = "Revision_29A_Table2.pdf"
   refs$record_source_type = "government database"
   refs$record_source_note = "All data is in a single XLSX export"
