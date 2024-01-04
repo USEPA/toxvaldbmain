@@ -6,7 +6,7 @@
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.caloehha <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.caloehha <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "Cal OEHHA"
   source_table = "source_caloehha"
   verbose = log
