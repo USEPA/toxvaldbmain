@@ -18,7 +18,7 @@ toxval.set.mw <- function(toxval.db, source=NULL){
     # Pull list of DTXSID values as a vector
     dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0"),toxval.db)[,1]
     # Check if any dtxsid values returned
-    if(!length(dlist) | is.na(dlist)){
+    if(!length(dlist) | all(is.na(dlist))){
       return("No mapped dtxsid values to use to set mw...returning...")
     }
     # Test of API is up and running
