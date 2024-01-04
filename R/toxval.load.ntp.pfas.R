@@ -1,14 +1,14 @@
 #--------------------------------------------------------------------------------------
-#' Load DOE Protective Action Criteria data from toxval_source to toxval
-#' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The source database to use.
+#' Load NTP PFAS data from toxval_source to toxval
+#' Generic structure for laoding to toxval from toxval_source
+#' @param toxval.db The database version to use
+#' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  printCurrentFunction(toxval.db)
-  source = "DOE Protective Action Criteria"
-  source_table = "source_doe_pac"
+toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "NTP PFAS"
+  source_table = "source_ntp_pfas"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -42,7 +42,8 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -51,19 +52,8 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
   res = res %>%
-    # Add columns as necessary
-    dplyr::mutate(
-      source_url = "https://www.energy.gov/ehss/protective-action-criteria-pac-aegls-erpgs-teels",
-      human_eco = "human health",
-      subsource = "DOE EHSS",
-      risk_assessment_class = "acute"
-    ) %>%
-
-    # Fill default values
-    fill.toxval.defaults(toxval.db, .) %>%
-
-    # Filter out duplicate rows
-    dplyr::distinct()
+    # Add source_url column for record source table
+    dplyr::mutate(source_url = url)
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -91,14 +81,11 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = dplyr::distinct(res)
+  res = distinct(res)
+  res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
@@ -106,7 +93,7 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   # Remove excess whitespace
   res = res %>%
     dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = dplyr::distinct(res)
+  res = distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -139,26 +126,20 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  # Changes commented out for now until replacement values determined
-  refs$url <- res$source_url
-  # Hardcode year for refs because it's a document reference, not the record year
-  refs$year <- "2023"
-  # refs$document_name = "Revision_29A_Table2.pdf"
-  refs$record_source_type = "government database"
-  refs$record_source_note = "All data is in a single XLSX export"
-  refs$record_source_level = "primary (risk assessment values)"
-  refs$title = "U.S. Department of Energy (DOE) Protective Action Criteria (PAC) Chemical Database"
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = dplyr::distinct(res)
-  refs = dplyr::distinct(refs)
+  res = distinct(res)
+  refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$subsource_url = "-"
-  res$details_text = paste(source, "Details")
+  res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
