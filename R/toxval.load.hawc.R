@@ -1,8 +1,9 @@
 #--------------------------------------------------------------------------------------
 #' Load HAWC from toxval_source to toxval
-#' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The version of toxval_source from which the tables are loaded.
+#' @param toxval.db The database version to use
+#' @param source.db The source database
 #' @param log If TRUE, send output to a log file
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #' @export
 #--------------------------------------------------------------------------------------
 toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
@@ -10,7 +11,6 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   source <- "HAWC Project"
   source_table = "source_hawc"
   verbose = log
-  #runQuery("update source_chemical set source='HAWC Project' where source='HAWC'",source.db)
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
@@ -51,7 +51,6 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
   cremove = c("assessment","target","noel_original","loel_original","fel_original",
             "endpoint_url_original","study_id","authors_short","full_text_url","study_url_original",
             "experiment_name","experiment_type","chemical_source","guideline_compliance","dosing_regime_id",
@@ -77,23 +76,24 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   }
   print(dim(res))
 
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
   res = unique(res)
-  res = res[!is.na(res$toxval_numeric),]
-  res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(dim(res))
+  res = res[!is.na(res$toxval_numeric),]
+  # res = res[res$toxval_numeric>0,]
+  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
-  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  res = unique(res)
+  # Remove excess whitespace
+  res = res %>%
+    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
+  res = distinct(res)
   res = res[,!is.element(names(res),c("casrn","name"))]
-  print(dim(res))
+  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
@@ -132,8 +132,8 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = unique(res)
-  refs = unique(refs)
+  res = distinct(res)
+  refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "https://hawcproject.org/assessment/public/"
@@ -142,8 +142,9 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
+  print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(dim(res))
+  print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
 
   #####################################################################
   cat("do the post processing\n")
@@ -166,5 +167,4 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
 }
