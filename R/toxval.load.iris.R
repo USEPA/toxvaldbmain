@@ -46,6 +46,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = runQuery(query,source.db,TRUE,FALSE)
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res,toxval.db='res_toxval_v95')
 
   non_toxval_cols <- c('iris_chemical_id',
                        'woe_characterization',
