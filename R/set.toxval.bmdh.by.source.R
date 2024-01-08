@@ -12,7 +12,7 @@ set.toxval.bmdh.by.source <- function(toxval.db, source=NULL){
   if (!table_exists) {
     cat("Creating toxval_bmdh table...\n")
     create_query = paste0("CREATE TABLE toxval_bmdh (",
-                          "toxval_id int NOT NULL, ",
+                          "toxval_id int NOT NULL PRIMARY KEY, ",
                           "source varchar(255), ",
                           "bmdh_value float, ",
                           "bmdh_units varchar(255))")
@@ -43,7 +43,7 @@ set.toxval.bmdh.by.source <- function(toxval.db, source=NULL){
       # For smaller tables, delete/replace toxval_bmdh entries normally
       runQuery(query = paste0("DELETE FROM toxval_bmdh WHERE toxval_id in (",
                               toString(bmdh_data$toxval_id),
-                              ") AND source = '", curr_source, "'"),
+                              ") AND source = '", curr_source, "' ORDER BY toxval_id"),
                db = toxval.db)
     } else {
       # Create temporary table
