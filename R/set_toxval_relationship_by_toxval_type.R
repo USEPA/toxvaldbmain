@@ -7,9 +7,10 @@
 #--------------------------------------------------------------------------------------
 set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   res1 <- res %>%
-    filter(grepl("Sumary", document_type))
+    filter(grepl("Summary", document_type))
   res1$preceding_text <- gsub("\\s*\\(.*", "", res1$toxval_type)
 
+  # Identify and capture ex. NOAEL (HEC) -> NOAEL (ADJ) type relationship
   relationships_adj_hec <- res1 %>%
     group_by(study_reference, preceding_text) %>%
     filter(
@@ -24,6 +25,7 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
     ) %>%
     filter(!is.na(source_hash_1) & !is.na(source_hash_2))
 
+  # Identify and capture ex. NOAEL (ADJ) -> NOAEL type relationship
   relationships_adj_base <- res1 %>%
     group_by(study_reference, preceding_text) %>%
     filter(
@@ -38,20 +40,14 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
     ) %>%
     filter(!is.na(source_hash_1) & !is.na(source_hash_2))
 
+  # Combine relationships before insertion
   all_relationships <- rbind(relationships_adj_hec, relationships_adj_base)
   all_relationships <- all_relationships %>%
     ungroup() %>%
     select(source_hash_1, source_hash_2, relationship)
 
+  # Insert into toxval_relationship
   if(nrow(all_relationships)){
-    insertQuery = paste0("INSERT INTO toxval_relationship (source_hash_1, source_hash_2, relationship) VALUES ('",
-                         all_relationships$source_hash_1,
-                         "', '",
-                         all_relationships$source_hash_2,
-                         "', '",
-                         all_relationships$relationship,
-                         "')"
-                         )
     runInsertTable(mat=all_relationships, table='toxval_relationship', db='res_toxval_v95')
   }
 

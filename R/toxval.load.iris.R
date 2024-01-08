@@ -63,8 +63,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                        "endpoint", "principal_study", "study_duration_qualifier")
   # Rename non-toxval columns
   res <- res %>%
-    dplyr::rename(long_ref = study_reference,
-                  # risk_assessment_class = risk_assessment_duration,
+    dplyr::mutate(long_ref = ifelse(long_ref == "-", study_reference, long_ref)) %>%
+    dplyr::rename(# risk_assessment_class = risk_assessment_duration,
                   quality = overall_confidence) %>%
     select(-dplyr::any_of(non_toxval_cols)) %>%
     dplyr::filter(toxval_numeric != "-")
@@ -76,7 +76,9 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c("uf_composite", "confidence", "extrapolation_method", "class")
+  cremove = c("uf_composite", "confidence", "extrapolation_method", "class",
+              "study_reference", "document_type", "key_finding", "age",
+              "assessment_type", "curator_notes", "risk_assessment_duration")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -96,7 +98,6 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
     browser()
   }
   print(paste0("Dimensions of source data: ", toString(dim(res))))
-
   # examples ...
   # names(res)[names(res) == "source_url"] = "url"
   # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
