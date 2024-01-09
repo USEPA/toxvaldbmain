@@ -46,9 +46,6 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = runQuery(query,source.db,TRUE,FALSE)
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
-  # Set Summary record relationship/hierarchy
-  set_toxval_relationship_by_toxval_type(res=res,
-                                         toxval.db=toxval.db)
 
   non_toxval_cols <- c('iris_chemical_id',
                        'woe_characterization',
@@ -77,7 +74,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
   cremove = c("uf_composite", "confidence", "extrapolation_method", "class",
-              "study_reference", "document_type", "key_finding", "age",
+              "key_finding", "age",
               "assessment_type", "curator_notes", "risk_assessment_duration")
   res = res[ , !(names(res) %in% cremove)]
 
@@ -90,7 +87,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  # Custom ignore "document_type" for later relationship processing
+  nlist = nlist[!is.element(nlist,c("casrn","name", "document_type", "study_reference"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -140,8 +138,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   keep = nlist[is.element(nlist,cols)]
   refs = res[,keep]
   cols = runQuery("desc toxval",toxval.db)[,1]
-  nlist = names(res)
-  remove = nlist[!is.element(nlist,cols)]
+  nlist = names(res)[!names(res) %in% c("document_type", "study_reference")]
+  remove = nlist[!is.element(nlist, cols)]
   res = res[ , !(names(res) %in% c(remove))]
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
@@ -165,9 +163,19 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
-  runInsertTable(res, "toxval", toxval.db, verbose)
+  # Push res except for set_toxval_relationship_by_toxval_type needed columns
+  runInsertTable(res %>%
+                   dplyr::select(-document_type, -study_reference),
+                 "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))
+
+  #####################################################################
+  cat("Set Summary record relationship/hierarchy\n")
+  #####################################################################
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res,
+                                         toxval.db=toxval.db)
 
   #####################################################################
   cat("do the post processing\n")
