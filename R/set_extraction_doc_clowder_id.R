@@ -27,12 +27,11 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
     # Combine results
     res <- bind_rows(res, res0)
   }
+  res <- res %>% dplyr::rename(clowder_doc_id = clowder_id)
   # Query to inner join and update toxval with clowder_id (temp table added/dropped)
   updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                      "ON (a.toxval_id = b.toxval_id) SET a.clowder_id = b.clowder_id")
+                      "ON (a.toxval_id = b.toxval_id) SET a.clowder_doc_id = b.clowder_doc_id")
   message("Pushing updated extraction document Clowder ID values...")
-  message("Stopping function until clowder_id field is added to toxval table...")
-  browser()
   # Run update query
   runUpdate(table="toxval", updateQuery=updateQuery, updated_df=res, db=toxval.db)
 }
