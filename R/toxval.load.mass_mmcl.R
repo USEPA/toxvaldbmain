@@ -51,7 +51,16 @@ toxval.load.mass_mmcl <- function(toxval.db,source.db, log=FALSE, remove_null_dt
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Source-specific issues handled in import script
+  # Select appropriate value for toxval_numeric
+  res = res %>% dplyr::mutate(
+    toxval_numeric = toxval_numeric %>%
+      # Handle ranges (use maximum because ranges only appear in SMCL)
+      gsub("[0-9\\.]+ to|[0-9\\.]+ ?-", "", .) %>%
+      # Grab left-most remaining number
+      stringr::str_match(., "[0-9\\.]+") %>%
+      # Convert to numeric
+      as.numeric(),
+  )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
