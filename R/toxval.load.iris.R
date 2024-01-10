@@ -106,6 +106,11 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
+
+  # Set toxval_numeric from ranges
+  res <- res %>%
+    dplyr::mutate(toxval_numeric = gsub("^(.*?)(?<!e|E)-.*$", "\\1", toxval_numeric, perl = TRUE))
+
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data: ", toString(dim(res))))
