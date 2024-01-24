@@ -6,7 +6,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.cosmos <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "COSMOS"
   source_table = "source_cosmos"
   verbose = log
@@ -42,8 +42,6 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-
-  res = readxl::read_xlsx("import_cosmos_source_output.xlsx")
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
