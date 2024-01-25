@@ -16,7 +16,7 @@ toxval.set.mw <- function(toxval.db, source=NULL){
     cat(source,"\n")
     runQuery(paste0("update toxval set mw=-1 where mw is null and source='",source,"'"),toxval.db)
     # Pull list of DTXSID values as a vector
-    dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0"),toxval.db)[,1]
+    dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0 and dtxsid is not null"),toxval.db)[,1]
     # Check if any dtxsid values returned
     if(!length(dlist) | all(is.na(dlist))){
       return("No mapped dtxsid values to use to set mw...returning...")
@@ -46,8 +46,13 @@ toxval.set.mw <- function(toxval.db, source=NULL){
           body=as.list(mw[[i]])
         ) %>%
           httr::content() %>%
-          dplyr::bind_rows() %>%
-          dplyr::select(dtxsid, mw=averageMass)
+          dplyr::bind_rows()
+        # Edge case of not having averageMass returned
+        if(!"averageMass" %in% names(mw[[i]])) mw[[i]]$averageMass = NA
+        # Select mw field and filter out NA values
+        mw[[i]] = mw[[i]] %>%
+          dplyr::select(dtxsid, mw=averageMass) %>%
+          dplyr::filter(!is.na(mw))
       }
       # Combine all results
       mw = dplyr::bind_rows(mw)
