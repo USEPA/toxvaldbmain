@@ -1,7 +1,9 @@
-# Function to generate general summaries of the ToxValDB for a given release version
+#-------------------------------------------------------------------------------------
+#' Function to generate general summaries of the ToxValDB for a given release version
 #' @param in.toxval.db The version of toxval to summarize
 #' @param compare.toxval.db The version of toxval to compare with the input toxval.db version
 #' @return None. Exported files are generated in a summary folder.
+#-------------------------------------------------------------------------------------
 toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
 
   # Prep vector of toxval versions to summarize
@@ -15,6 +17,29 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
     stop("Input database does not exist on server...")
   }
 
+  check_keywords <- function(database, words_file, outDir){
+    keywords <- stringi::stri_trans_tolower(readLines(words_file))
+
+    field_list <- runQuery(paste0("SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE FROM INFORMATION_SCHEMA. COLUMNS WHERE TABLE_SCHEMA = '",
+                                  database, "'"),
+                           database)
+    print(field_list)
+
+    occurrences <- field_list %>%
+      dplyr::filter(stringr::str_detect(COLUMN_NAME, paste0("\\b", paste(keywords, collapse = "\\b|''b"), "\\b", collapse = "|"))) %>%
+      dplyr::mutate(keyword = stringr::str_extract(COLUMN_NAME, paste(keywords, collapse = "|")))
+      # dplyr::filter(grepl(paste(keywords, collapse = "|"), tolower(COLUMN_NAME))) %>%
+      # dplyr::mutate(keyword = str_extract_all(COLUMN_NAME, paste(keywords, collapse = "|"))) %>%
+      # tidyr::unnest(keyword)
+
+    words_file <- sub("^Repo/|\\.txt$", "", words_file)
+    out_file <- paste(words_file, "_occurrences.xlsx")
+
+    write_xlsx(occurrences, file.path(outDir, out_file))
+  }
+
+
+
   # Loop through input databases
   for(toxval.db in to_summarize){
     message("Summarizing '", toxval.db, "'")
@@ -24,6 +49,12 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
       dir.create(outDir, recursive = TRUE)
       dir.create(file.path(outDir, "DDL"))
     }
+
+    reserved_words_file = paste0(toxval.config()$datapath, "reserved.txt")
+    nonreserved_words_file = paste0(toxval.config()$datapath,"keywords.txt")
+
+    check_keywords(toxval.db, reserved_words_file, outDir)
+    check_keywords(toxval.db, nonreserved_words_file, outDir)
 
     # List of tables, fields, and field types
     field_list <- runQuery(paste0("SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_DEFAULT, IS_NULLABLE, COLUMN_TYPE, COLLATION_NAME, COLUMN_KEY, EXTRA ",
