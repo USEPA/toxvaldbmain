@@ -8,7 +8,7 @@
 #--------------------------------------------------------------------------------------
 toxval.load.penn <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "Pennsylvania DEP ToxValues"
-  source_table = "source_penn"
+  source_table = "source_penn_dep_toxvalues"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
