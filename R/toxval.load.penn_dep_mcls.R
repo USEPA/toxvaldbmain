@@ -1,22 +1,21 @@
 #--------------------------------------------------------------------------------------
-#' Load HAWC from toxval_source to toxval
+#
+#' Load the penn_dep_mcls data  from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
-#' @export
 #--------------------------------------------------------------------------------------
-toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  printCurrentFunction(toxval.db)
-  source <- "HAWC Project"
-  source_table = "source_hawc"
+toxval.load.penn_dep_mcls <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "Pennsylvania DEP MCLs"
+  source_table = "source_penn_dep_mcls"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -25,6 +24,7 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
+
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -51,12 +51,8 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("assessment","target","noel_original","loel_original","fel_original",
-            "endpoint_url_original","study_id","authors_short","full_text_url","study_url_original",
-            "experiment_name","experiment_type","chemical_source","guideline_compliance","dosing_regime_id",
-            "route_of_exposure","exposure_duration_value","exposure_duration_text","doses","endpoint_url",
-            "study_url", "study_duration_qualifier")
-  res = res[ , !(names(res) %in% cremove)]
+
+  # No source-specific issues to address after import
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -69,6 +65,15 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
+
+  # Remove regulated_substance, source_value, study_duration_qualifier
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+
+  nlist = names(res)
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,cols)]
+
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -79,20 +84,17 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = unique(res)
+  res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  res = res[!is.na(res$toxval_numeric),]
-  # res = res[res$toxval_numeric>0,]
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
     dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
   res = distinct(res)
-  res = res[,!is.element(names(res),c("casrn","name"))]
+  res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
@@ -124,9 +126,10 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "website"
-  refs$record_source_note = "to be cleaned up"
-  refs$record_source_level = "primary (risk assessment values)"
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
+  refs$url = res$source_url
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
@@ -136,7 +139,6 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://hawcproject.org/assessment/public/"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
@@ -167,4 +169,13 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("finish\n")
   #####################################################################
+  return(0)
+
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 }
