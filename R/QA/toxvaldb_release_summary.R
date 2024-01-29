@@ -17,28 +17,28 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
     stop("Input database does not exist on server...")
   }
 
+  # Helper function to check if any field names match sql keywords
   check_keywords <- function(database, words_file, outDir){
     keywords <- stringi::stri_trans_tolower(readLines(words_file))
-
     field_list <- runQuery(paste0("SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE FROM INFORMATION_SCHEMA. COLUMNS WHERE TABLE_SCHEMA = '",
                                   database, "'"),
                            database)
-    print(field_list)
 
     occurrences <- field_list %>%
-      dplyr::filter(stringr::str_detect(COLUMN_NAME, paste0("\\b", paste(keywords, collapse = "\\b|''b"), "\\b", collapse = "|"))) %>%
-      dplyr::mutate(keyword = stringr::str_extract(COLUMN_NAME, paste(keywords, collapse = "|")))
-      # dplyr::filter(grepl(paste(keywords, collapse = "|"), tolower(COLUMN_NAME))) %>%
-      # dplyr::mutate(keyword = str_extract_all(COLUMN_NAME, paste(keywords, collapse = "|"))) %>%
-      # tidyr::unnest(keyword)
+      # Check for exact matches
+      filter(tolower(COLUMN_NAME) %in% keywords) %>%
+      mutate(keyword = tolower(COLUMN_NAME))
+
+      # Logic for checking for contained keywords (not exact matches)
+      #mutate(keyword = str_extract_all(stri_trans_tolower(COLUMN_NAME), paste(keywords, collapse="|"))) %>%
+      #unnest(keyword) %>%
+      #filter(!is.na(keyword))
 
     words_file <- sub("^Repo/|\\.txt$", "", words_file)
     out_file <- paste(words_file, "_occurrences.xlsx")
 
     write_xlsx(occurrences, file.path(outDir, out_file))
   }
-
-
 
   # Loop through input databases
   for(toxval.db in to_summarize){
