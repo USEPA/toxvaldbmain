@@ -26,16 +26,16 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
 
     occurrences <- field_list %>%
       # Check for exact matches
-      filter(tolower(COLUMN_NAME) %in% keywords) %>%
-      mutate(keyword = tolower(COLUMN_NAME))
+      dplyr::filter(tolower(COLUMN_NAME) %in% keywords) %>%
+      dplyr::mutate(keyword = tolower(COLUMN_NAME))
 
       # Logic for checking for contained keywords (not exact matches)
-      #mutate(keyword = str_extract_all(stri_trans_tolower(COLUMN_NAME), paste(keywords, collapse="|"))) %>%
-      #unnest(keyword) %>%
-      #filter(!is.na(keyword))
+      #dplyr::mutate(keyword = stringr::str_extract_all(stringi::stri_trans_tolower(COLUMN_NAME), paste(keywords, collapse="|"))) %>%
+      #tidyr::unnest(keyword) %>%
+      #dplyr::filter(!is.na(keyword))
 
-    words_file <- sub("^Repo/|\\.txt$", "", words_file)
-    out_file <- paste(words_file, "_occurrences.xlsx")
+    words_file <- gsub("Repo/|\\.txt", "", words_file)
+    out_file <- paste0(words_file, "_keyword_occurrences.xlsx")
 
     write_xlsx(occurrences, file.path(outDir, out_file))
   }
@@ -51,7 +51,7 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
     }
 
     reserved_words_file = paste0(toxval.config()$datapath, "reserved.txt")
-    nonreserved_words_file = paste0(toxval.config()$datapath,"keywords.txt")
+    nonreserved_words_file = paste0(toxval.config()$datapath,"non_reserved.txt")
 
     check_keywords(toxval.db, reserved_words_file, outDir)
     check_keywords(toxval.db, nonreserved_words_file, outDir)
