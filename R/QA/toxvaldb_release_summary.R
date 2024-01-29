@@ -35,7 +35,7 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
       #dplyr::filter(!is.na(keyword))
 
     words_file <- gsub("Repo/|\\.txt", "", words_file)
-    out_file <- paste0(words_file, "_keyword_occurrences.xlsx")
+    out_file <- paste0(database,"_",words_file,"_keyword_occurrences.xlsx")
 
     write_xlsx(occurrences, file.path(outDir, out_file))
   }
