@@ -6,7 +6,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.ntp.pfas <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "NTP PFAS"
   source_table = "source_ntp_pfas"
   verbose = log
