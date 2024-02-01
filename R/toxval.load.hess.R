@@ -43,7 +43,6 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   }
   res = runQuery(query,source.db,TRUE,FALSE)
 
-  res = readxl::read_excel("import_source_hess_output.xlsx")
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
@@ -140,7 +139,7 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
+  # res$source_url = "https://www.nite.go.jp/en/chem/qsar/hess-e.html"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
