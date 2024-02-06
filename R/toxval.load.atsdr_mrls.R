@@ -51,11 +51,6 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  # Per source catalogue, change "intermediate" study_type to "short_term"
-  res = res %>% dplyr::mutate(
-    study_type = gsub("intermediate", "short-term", study_type)
-  )
-
   # Remove cols that will not be loaded into ToxVal
   cremove = c('route', 'duration', 'mrl', 'total_factors', 'endpoint', 'status',
               'cover_date', 'cas_number', 'doc_status', 'doc_cover_date',
