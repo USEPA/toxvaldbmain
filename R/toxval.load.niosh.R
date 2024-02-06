@@ -53,7 +53,7 @@ toxval.load.niosh <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   #####################################################################
 
   # Remove unnecessary columns
-  res = dplyr::select(res, !c("casrn_details", "toxval_numeric_details"))
+  res = dplyr::select(res, !c("casrn_details", "toxval_numeric_details", "study_duration_qualifier"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
