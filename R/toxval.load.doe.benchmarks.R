@@ -106,61 +106,105 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   #####################################################################
   cat("add record linkages to toxval_relationship\n")
   #####################################################################
-  # Initialize empty tibble in format of toxval_relationship table
-  linkage_tibble = tibble::tibble(
-    toxval_id_1 = numeric(),
-    toxval_id_2 = numeric(),
-    relationship = character()
-  )
 
-  # Build tibble with linkage data
-  for (i in 1:max(res$linkage_id)) {
-    # Filter out entries with different linkage id
-    curr_linkage_tibble = dplyr::filter(res, linkage_id == i)
-    curr_linkage_tibble = dplyr::filter(res, linkage_id == 1)
+  # # Initial approach. Works, but is slower
+  # # Initialize empty tibble in format of toxval_relationship table
+  # linkage_tibble = tibble::tibble(
+  #   toxval_id_1 = numeric(),
+  #   toxval_id_2 = numeric(),
+  #   relationship = character()
+  # )
+  #
+  # # Build tibble with linkage data
+  # for (i in unique(res$linkage_id)) {
+  #   # Filter out entries with different linkage id
+  #   curr_linkage_tibble = dplyr::filter(res, linkage_id == i)
+  #   # curr_linkage_tibble = dplyr::filter(res, linkage_id == 1)
+  #
+  #   # Check for relationships
+  #   test_noael = dplyr::filter(curr_linkage_tibble, toxval_subtype == "Test Species NOAEL")
+  #   test_loael = dplyr::filter(curr_linkage_tibble, toxval_subtype == "Test Species LOAEL")
+  #   endpoint_noael = dplyr::filter(curr_linkage_tibble, grepl("Endpoint Species NOAEL", toxval_subtype))
+  #   endpoint_loael = dplyr::filter(curr_linkage_tibble, grepl("Endpoint Species LOAEL", toxval_subtype))
+  #
+  #   # Check for relationships and add data to linkage_tibble
+  #   # Test NOAEL to Test LOAEL
+  #   if (nrow(test_noael) > 0 & nrow(test_loael) > 0) {
+  #     linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(test_noael$toxval_id[1]),
+  #                                                         toxval_id_2 = as.numeric(test_loael$toxval_id[1]),
+  #                                                         relationship = "Test NOAEL to Test LOAEL")
+  #   }
+  #   # Endpoint NOAEL to Endpoint LOAEL
+  #   if (nrow(endpoint_noael) > 0 & nrow(endpoint_loael) > 0) {
+  #     linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(endpoint_noael$toxval_id[1]),
+  #                                                         toxval_id_2 = as.numeric(endpoint_loael$toxval_id[1]),
+  #                                                         relationship = "Endpoint NOAEL to Endpoint LOAEL")
+  #   }
+  #   # Test NOAEL to Endpoint NOAEL
+  #   if (nrow(test_noael) > 0 & nrow(endpoint_noael) > 0) {
+  #     linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(test_noael$toxval_id[1]),
+  #                                                         toxval_id_2 = as.numeric(endpoint_noael$toxval_id[1]),
+  #                                                         relationship = "Test NOAEL to Endpoint NOAEL")
+  #   }
+  #   # Test LOAEL to Endpoint LOAEL
+  #   if (nrow(test_loael) > 0 & nrow(endpoint_loael) > 0) {
+  #     linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(test_loael$toxval_id[1]),
+  #                                                         toxval_id_2 = as.numeric(endpoint_loael$toxval_id[1]),
+  #                                                         relationship = "Test LOAEL to Endpoint LOAEL")
+  #   }
+  # }
 
-    # Check for relationships
-    test_noael = dplyr::filter(curr_linkage_tibble, toxval_subtype == "Test Species NOAEL")
-    test_loael = dplyr::filter(curr_linkage_tibble, toxval_subtype == "Test Species LOAEL")
-    endpoint_noael = dplyr::filter(curr_linkage_tibble, grepl("Endpoint Species NOAEL", toxval_subtype))
-    endpoint_loael = dplyr::filter(curr_linkage_tibble, grepl("Endpoint Species LOAEL", toxval_subtype))
+  # Faster dplyr/tidyr approach
+  N2L = res %>%
+    dplyr::select(toxval_id, linkage_id, toxval_type, toxval_subtype) %>%
+    dplyr::mutate(toxval_subtype = toxval_subtype %>%
+                    gsub("NOAEL|LOAEL|Species|Food|Water|Piscivore|,", "", .) %>%
+                    stringr::str_squish()) %>%
+    dplyr::group_by(linkage_id, toxval_subtype) %>%
+    dplyr::mutate(toxval_relationship = paste0(toxval_id, collapse = ", "),
+                  relationship = paste(toxval_subtype, "NOAEL", "to", toxval_subtype, "LOAEL", sep = " ") %>%
+                    stringr::str_squish()) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(grepl(",", toxval_relationship)) %>%
+    dplyr::select(toxval_relationship, relationship) %>%
+    dplyr::distinct() %>%
+    tidyr::separate(col="toxval_relationship", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
+    dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
 
-    # Check for relationships and add data to linkage_tibble
-    # Test NOAEL to Test LOAEL
-    if (nrow(test_noael) > 0 & nrow(test_loael) > 0) {
-      linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(test_noael$toxval_id[1]),
-                                                          toxval_id_2 = as.numeric(test_loael$toxval_id[1]),
-                                                          relationship = "Test NOAEL to Test LOAEL")
-    }
-    # Endpoint NOAEL to Endpoint LOAEL
-    if (nrow(endpoint_noael) > 0 & nrow(endpoint_loael) > 0) {
-      linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(endpoint_noael$toxval_id[1]),
-                                                          toxval_id_2 = as.numeric(endpoint_loael$toxval_id[1]),
-                                                          relationship = "Endpoint NOAEL to Endpoint LOAEL")
-    }
-    # Test NOAEL to Endpoint NOAEL
-    if (nrow(test_noael) > 0 & nrow(endpoint_noael) > 0) {
-      linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(test_noael$toxval_id[1]),
-                                                          toxval_id_2 = as.numeric(endpoint_noael$toxval_id[1]),
-                                                          relationship = "Test NOAEL to Endpoint NOAEL")
-    }
-    # Test LOAEL to Endpoint LOAEL
-    if (nrow(test_loael) > 0 & nrow(endpoint_loael) > 0) {
-      linkage_tibble = linkage_tibble %>% tibble::add_row(toxval_id_1 = as.numeric(test_loael$toxval_id[1]),
-                                                          toxval_id_2 = as.numeric(endpoint_loael$toxval_id[1]),
-                                                          relationship = "Test LOAEL to Endpoint LOAEL")
-    }
-  }
+  N2NL2L = res %>%
+    dplyr::select(toxval_id, linkage_id, toxval_type, toxval_subtype) %>%
+    dplyr::mutate(toxval_subtype = toxval_subtype %>%
+                    gsub("NOAEL|LOAEL|Species|Food|Water|Piscivore|,", "", .) %>%
+                    stringr::str_squish()) %>%
+    dplyr::group_by(linkage_id, toxval_type) %>%
+    dplyr::mutate(toxval_relationship = paste0(toxval_id, collapse = ", "),
+                  relationship = paste("Test", toxval_type, "to", "Endpoint", toxval_type, sep = " ") %>%
+                    stringr::str_squish()
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(grepl(",", toxval_relationship)) %>%
+    dplyr::select(toxval_relationship, relationship) %>%
+    dplyr::distinct() %>%
+    tidyr::separate(col="toxval_relationship", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
+    dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
 
-  # Delete earlier entries that should be overwritten
-  runQuery(query = paste0("DELETE FROM toxval_relationship WHERE toxval_id_1 in (",
-                          toString(unique(linkage_tibble$toxval_id_1)),
-                          ") AND toxval_id_2 in (",
-                          unique(toString(linkage_tibble$toxval_id_2)), ")"),
-           db = toxval.db)
+  linkage_tibble2 = dplyr::bind_rows(N2L, N2NL2L)
+
+  # Prove both methods produce the same results
+  # identical(linkage_tibble %>%
+  #             arrange(toxval_id_1, relationship),
+  #           linkage_tibble2 %>%
+  #             arrange(toxval_id_1, relationship))
+
+  # # Delete earlier entries that should be overwritten
+  # runQuery(query = paste0("DELETE FROM toxval_relationship WHERE toxval_id_1 in (",
+  #                         toString(unique(linkage_tibble$toxval_id_1)),
+  #                         ") AND toxval_id_2 in (",
+  #                         unique(toString(linkage_tibble$toxval_id_2)), ")"),
+  #          db = toxval.db)
 
   # Send linkage data to ToxVal
-  runInsertTable(linkage_tibble, "toxval_relationship", toxval.db)
+  runInsertTable(linkage_tibble2, "toxval_relationship", toxval.db)
 
   # Remove linkage_id column from res
   res = res %>% dplyr::select(-linkage_id)
