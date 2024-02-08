@@ -1,5 +1,4 @@
 #--------------------------------------------------------------------------------------
-#
 #' Load NIOSH from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
@@ -53,7 +52,11 @@ toxval.load.niosh <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   #####################################################################
 
   # Remove unnecessary columns
-  res = dplyr::select(res, !c("casrn_details", "toxval_numeric_details", "study_duration_qualifier"))
+  res = dplyr::select(res, !c("substance",
+                              "cas_no_",
+                              "idlh_value_(1994)",
+                              "new/updated_values_(2016-present)",
+                              "study_duration_qualifier"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -132,8 +135,6 @@ toxval.load.niosh <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   res$source_table = source_table
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
