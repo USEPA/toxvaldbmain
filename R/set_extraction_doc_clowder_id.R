@@ -22,7 +22,7 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
     # Loop over all source_tables per source (for IUCLID's multiple source tables)
     for(src in src_tables){
       print(source)
-      res0 = runQuery(paste0("select t.toxval_id,t.source_table, d.clowder_id, t.source, d.document_type, d.url, d.document_name,
+      res0 = runQuery(paste0("select t.toxval_id, d.clowder_id, t.source, d.document_type, d.url, d.document_name,
                            d.title, d.author, d.year, d.doi, d.clowder_metadata ",
                              "FROM ", toxval.db, ".toxval t ",
                              "LEFT JOIN ", source.db, ".documents_records dr ON t.source_hash = dr.source_hash ",
