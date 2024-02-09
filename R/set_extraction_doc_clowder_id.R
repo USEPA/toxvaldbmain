@@ -1,9 +1,9 @@
 #-------------------------------------------------------------------------------------
-#' Insert extraction document clowder_id into toxval field
+#' Inserts clowder document information into record_source table
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param source Name of source to set. Default NULL means set Clowder ID for all sources
-#' @return None. SQL update statements are performed
+#' @return None. SQL insert statement is performed
 #' @export
 set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
   printCurrentFunction(toxval.db)
@@ -17,21 +17,25 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
     message("Pulling source ", which(source == slist), " of ", length(slist))
     # Get source table based on source name from toxval table
     src_tbl = runQuery(paste0("SELECT distinct source_table FROM ", toxval.db, ".toxval WHERE source = '", source, "'"),
-                       toxval.db)[1,]
-    res0 = runQuery(paste0("select t.toxval_id, t.source_hash, d.clowder_id ",
-                           "FROM ", toxval.db, ".toxval t ",
-                           "LEFT JOIN ", source.db, ".documents_records dr ON t.source_hash = dr.source_hash ",
-                           "LEFT JOIN ", source.db, ".documents d ON dr.fk_doc_id = d.id ",
-                           "WHERE d.document_type = 'extraction' and dr.source_table='", src_tbl, "'"),
-                    toxval.db)
-    # Combine results
-    res <- bind_rows(res, res0)
+                       toxval.db)
+    src_tables = unique(src_tbl$source_table)
+    # Loop over all source_tables per source (for IUCLID's multiple source tables)
+    for(src in src_tables){
+      print(source)
+      res0 = runQuery(paste0("select t.toxval_id,t.source_table, d.clowder_id, t.source, d.document_type, d.url, d.document_name,
+                           d.title, d.author, d.year, d.doi, d.clowder_metadata ",
+                             "FROM ", toxval.db, ".toxval t ",
+                             "LEFT JOIN ", source.db, ".documents_records dr ON t.source_hash = dr.source_hash ",
+                             "LEFT JOIN ", source.db, ".documents d ON dr.fk_doc_id = d.id ",
+                             "WHERE dr.source_table ='", src, "'"),
+                      toxval.db)
+      # Combine results
+      res <- bind_rows(res, res0)
+    }
   }
-  res <- res %>% dplyr::rename(clowder_doc_id = clowder_id)
-  # Query to inner join and update toxval with clowder_id (temp table added/dropped)
-  updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                      "ON (a.toxval_id = b.toxval_id) SET a.clowder_doc_id = b.clowder_doc_id")
-  message("Pushing updated extraction document Clowder ID values...")
-  # Run update query
-  runUpdate(table="toxval", updateQuery=updateQuery, updated_df=res, db=toxval.db)
+  res <- res %>% dplyr::rename(clowder_doc_id = clowder_id,
+                               record_source_level = document_type)
+  message("Pushing clowder_doc_id information to record_source...")
+  # Run insert query
+  runInsertTable(mat=res, table='record_source', db=toxval.db)
 }
