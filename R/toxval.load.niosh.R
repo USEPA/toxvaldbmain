@@ -54,8 +54,6 @@ toxval.load.niosh <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   # Remove unnecessary columns
   res = dplyr::select(res, !c("substance",
                               "cas_no_",
-                              "idlh_value_(1994)",
-                              "new/updated_values_(2016-present)",
                               "study_duration_qualifier"))
 
   #####################################################################
