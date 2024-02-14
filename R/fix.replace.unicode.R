@@ -214,7 +214,7 @@ fix.replace.unicode <- function(df) {
     gsub("\u00ce\u00b1", "a", .) %>%
 
     # Handle dashes/bullets
-    gsub("\u2013|\u2014|\u2212|\u2010|\u2012|\u25a0|\u2022|\u2219|\u2666", "-", .) %>%
+    gsub("\u2013|\u2014|\u2212|\u2010|\u2012|\u25a0|\u2022|\u2219|\u2666|\u00af", "-", .) %>%
 
     # Fix quotations and apostrophes
     gsub("\u201c|<U+201C>|\u201d|<U+201D>|\u201e", '"', .) %>%
@@ -224,7 +224,7 @@ fix.replace.unicode <- function(df) {
     gsub("\u00b3|<U+00B3>", "3", .) %>%
     gsub("\u00b9|<U+00B9>", "1", .) %>%
     gsub("\u2070|<U+2070>", "0", .) %>%
-    gsub("\u00b2|<U+00B2>", "2", .) %>%
+    gsub("\u00b2|<U+00B2>|\u2082", "2", .) %>%
     gsub("\u2079|<U+2079>", "9", .) %>%
     gsub("\u2078|<U+2078>", "8", .) %>%
     gsub("\u2074|<U+2074>", "4", .) %>%
@@ -276,6 +276,9 @@ fix.replace.unicode <- function(df) {
     # Fix roman numeral 2
     gsub("\u2161","II", .) %>%
 
+    # Fix numero symbol
+    gsub("\u2116", "No.", .) %>%
+
     # Fix fullwidth latin small letter o
     gsub("\uff4f", "o", .) %>%
 
@@ -290,17 +293,17 @@ fix.replace.unicode <- function(df) {
 
     # Fix miscellaneous letters
     gsub("\u0067", "g", .) %>%
-    gsub("\u00fc", "u", .) %>%
+    gsub("\u00fc|\u00f9|\u00fa", "u", .) %>%
     gsub("\u00a5", "y", .) %>%
     gsub("\u00c2|\u00c3|\u00c4", "A", .) %>%
-    gsub("\u00ba|\u00f6|\u00f8|\u00f3", "o", .) %>%
+    gsub("\u00ba|\u00f6|\u00f8|\u00f3|\u0151", "o", .) %>%
     gsub("\u00d6", "O", .) %>%
     gsub("\u00e9|\u00e8|\u00eb|\u00ea", "e", .) %>%
     gsub("\u00ce", "I", .) %>%
     gsub("\u00e7", "c", .) %>%
     gsub("\u00e2|\u00e4|\u00e1|\u00e0", "a", .) %>%
     gsub("\ufb02", "fl", .) %>%
-    gsub("\u00c9", "E", .) %>%
+    gsub("\u00c9|\u00c8", "E", .) %>%
     gsub("\u00ef|\u00ec|\u00ed", "i", .) %>%
     gsub("\u00dc", "U", .) %>%
     gsub(" \u017e", "z", .) %>%
@@ -317,7 +320,7 @@ fix.replace.unicode <- function(df) {
     gsub("\u2193", "", .) %>%
 
     # Remove unidentified characters
-    gsub("\ufffd|\uf0d4|\ufeff", "", .)
+    gsub("\ufffd|\uf0d4|\ufeff|\uf06d", "", .)
 
   # Identify and print unicode symbols that were not handled
   not_handled = df %>%
