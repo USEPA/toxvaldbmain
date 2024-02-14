@@ -288,10 +288,8 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  # Remove unused columns
-  res = res %>% dplyr::select(-c("chemical_index","common_name","latin_name","ecotox_group",
-                                 # Temporarily remove study_duration_qualifier field until discussion
-                                 "study_duration_qualifier"))
+
+  # Data cleaned in above sections
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -304,6 +302,14 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
+
+  # Remove unused columns ("columns to be dealt with")
+  res = res %>% dplyr::select(!tidyselect::any_of(nlist))
+
+  nlist = names(res)
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,cols)]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
