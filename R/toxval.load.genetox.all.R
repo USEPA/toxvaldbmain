@@ -95,6 +95,7 @@ toxval.load.genetox.all <- function(toxval.db, source.db, sys.date="2021-09-10",
     dplyr::mutate(
       # Clean chemical name
       name = name %>%
+        gsub("unnamed.+", "-", .) %>%
         fix.replace.unicode() %>%
         stringr::str_squish(),
 
