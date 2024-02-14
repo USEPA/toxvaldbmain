@@ -6,10 +6,12 @@
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #' @param sys.date The version of the data to be used
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE, sys.date="2023-08-01"){
+toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE, sys.date="2023-08-01"){
   source = "ECOTOX"
   source_table = "direct_load"
   verbose = log
+  # Whether to load ECOTOX data from stored RData
+  do.load = FALSE
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
@@ -46,6 +48,8 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
     dict = distinct(ECOTOX[,c("species_scientific_name","species_common_name","species_group","habitat")])
     file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX_dictionary_",sys.date,".xlsx")
     write.xlsx(dict,file)
+  } else {
+    res0 <- ECOTOX
   }
 
   # Create column renaming map

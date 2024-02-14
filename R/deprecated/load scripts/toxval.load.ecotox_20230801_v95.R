@@ -5,7 +5,6 @@
 #' @param verbose Whether the loaded rows should be printed to the console.
 #' @param log If TRUE, send output to a log file
 #' @param do.load If TRUE, load the data from the input file and put into a global variable
-#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.ecotox <- function(toxval.db,source.db,log=FALSE,do.load=FALSE,sys.date="2023-08-01") {
   ##############################################################################
