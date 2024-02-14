@@ -97,17 +97,21 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
       TRUE ~ toxval_numeric
     )
   )
-  # Separate BMDL05 ranges into different records
-  bmdl <- res %>%
-    dplyr::filter(toxval_type == 'BMDL10' & grepl("-(?![eE])", toxval_numeric, perl=TRUE)) %>%
+  # Separate toxval_numeric ranges for BMDL10, PTDI, PMTDI
+  ranged <- res %>%
+    dplyr::filter((toxval_type == 'BMDL10' | toxval_type == "PTDI" | toxval_type == "PMTDI") &
+                    grepl("-(?![eE])", toxval_numeric, perl=TRUE)) %>%
     tidyr::separate_rows(toxval_numeric, sep="-") %>%
+    dplyr::group_by(source_hash) %>%
     mutate(
       toxval_subtype = ifelse(toxval_numeric == min(toxval_numeric), "Min. Range", "Max. Range")
-    )
-  if (nrow(bmdl) > 0){
+    ) %>%
+    ungroup()
+  if (nrow(ranged) > 0){
     res <- res %>%
-      dplyr::filter(!(toxval_type %in% "BMDL10" & grepl("-(?![eE])", toxval_numeric, perl=TRUE)))
-    res <- dplyr::bind_rows(res, bmdl)
+      dplyr::filter(!((toxval_type %in% "BMDL10" | toxval_type %in% "PTDI" | toxval_type %in% "PMTDI")
+                      & (grepl("-", toxval_numeric, perl=TRUE))))
+    res <- dplyr::bind_rows(res, ranged)
   }
 
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
@@ -122,11 +126,11 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   # #####################################################################
-  # cat("Set the toxval_relationship for separated bmdl05 toxval_numeric records")
+  # cat("Set the toxval_relationship for separated toxval_numeric range records")
   # #####################################################################
-  # bmdl <- res %>%
-  #   filter(source_hash %in% bmdl$source_hash)
-  # relationship <- bmdl %>%
+  # ranged <- res %>%
+  #   filter(source_hash %in% ranged$source_hash)
+  # relationship <- ranged %>%
   #   select(toxval_id, source_hash) %>%
   #   arrange(source_hash) %>%
   #   mutate(
