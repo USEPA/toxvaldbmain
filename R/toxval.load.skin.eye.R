@@ -5,7 +5,7 @@
 #' @param verbose if TRUE, print diagnostic messages along the way
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.skin.eye <- function(toxval.db, source.db, verbose=F) {
+toxval.load.skin.eye <- function(toxval.db, source.db, verbose=FALSE) {
   printCurrentFunction(toxval.db)
   runQuery("delete from skin_eye",toxval.db)
 
@@ -28,9 +28,14 @@ toxval.load.skin.eye <- function(toxval.db, source.db, verbose=F) {
   dict <- readxl::read_xlsx(file)
 
   # Add record_url information to GHS data
-  url_lookup = dict %>% dplyr::select(tidyselect::all_of(c("Abbreviation", "Source URL"))) %>%
+  url_lookup = dict %>%
+    dplyr::select(tidyr::all_of(c("Abbreviation", "Source URL"))) %>%
     dplyr::rename(source = Abbreviation, record_url = `Source URL`)
-  mat = mat %>% dplyr::select(-record_url) %>% dplyr::left_join(url_lookup, by = "source")
+  # Map by source name
+  mat = mat %>%
+    dplyr::select(-record_url) %>%
+    dplyr::left_join(url_lookup,
+                     by = "source")
 
   # Rename columns
   names(mat) <- c("casrn","name","endpoint","source","score","route","classification","hazard_code",
@@ -51,7 +56,8 @@ toxval.load.skin.eye <- function(toxval.db, source.db, verbose=F) {
     # Perform final cleaning operations
     dplyr::mutate(
       # Fix casrn values
-      casrn = sapply(casrn, FUN=fix.casrn) %>% dplyr::na_if("NOCAS"),
+      casrn = sapply(casrn, FUN=fix.casrn) %>%
+        dplyr::na_if("NOCAS"),
 
       # Remove HTML and other artifacts from name
       name = name %>%
@@ -61,6 +67,7 @@ toxval.load.skin.eye <- function(toxval.db, source.db, verbose=F) {
         gsub("\\\\'n|\\\\n|\\\\r", " ", .) %>%
         gsub("\\\\'", "'", .) %>%
         gsub('\\\\"', '"', .) %>%
+        fix.replace.unicode() %>%
         stringr::str_squish(),
 
       # Clean up result_text formatting
@@ -69,9 +76,10 @@ toxval.load.skin.eye <- function(toxval.db, source.db, verbose=F) {
         stringr::str_squish()
     )
 
-  # Load first set of skin_eye data to ToxVal
+  # Clean name/casrn and set chemical_id in source_chemical table
   mat2 = source_chemical.extra(toxval.db, source.db, mat, "Skin Eye")
   mat2 = subset(mat2,select=-c(casrn,name,chemical_index))
+  # Load first set of skin_eye data to ToxVal
   runInsertTable(mat2, "skin_eye", toxval.db, verbose)
 
   cat("  load eChemPortal data\n")
@@ -141,9 +149,9 @@ toxval.load.skin.eye <- function(toxval.db, source.db, verbose=F) {
   file <- paste0(toxval.config()$datapath,"skin_eye/skin_eye raw.xlsx")
   writexl::write_xlsx(mat,file)
 
-  # Get extra information for "Skin Eye" source
-  mat2 = source_chemical.extra(toxval.db,source.db,mat,"Skin Eye") %>%
-    dplyr::select(-c(casrn,name,chemical_index))
+  # Clean name/casrn and set chemical_id in source_chemical table
+  mat2 = source_chemical.extra(toxval.db, source.db, mat, "Skin Eye") %>%
+    dplyr::select(-c(casrn,name, chemical_index))
 
   # Push skin_eye data to ToxVal
   runInsertTable(mat2, "skin_eye", toxval.db, verbose=verbose)

@@ -191,8 +191,8 @@ fix.replace.unicode <- function(df) {
     gsub("\\\\{1,}'", "'", .) %>%
     gsub('\\\\{1,}"', '"', .) %>%
 
-    # Remove double-dagger symbols
-    gsub("\u2021|<U+2021>", "", .) %>%
+    # Remove dagger and double-dagger symbols
+    gsub("\u2021|<U+2021>|\u2020|<U+2020>", "", .) %>%
 
     # Replace prime symbols
     gsub("\u00b4|<U+00B4>|\u2018|<U+2018>|\u0092|<U+0092>|\u2019|<U+2019>|\u2032", "'", .) %>%
