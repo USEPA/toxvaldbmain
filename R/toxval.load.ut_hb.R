@@ -6,7 +6,7 @@
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.ut_hb <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.ut_hb <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   printCurrentFunction(toxval.db)
   source <- "Uterotrophic Hershberger DB"
   source_table = "direct load"
@@ -155,17 +155,17 @@ toxval.load.ut_hb <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid
       study_duration_units = dplyr::case_when(
         is.na(study_duration_value) ~ as.character(NA),
         TRUE ~ study_duration_units
-      ),
-
-      # Remove inappropriate critical_effect values
-      critical_effect = dplyr::case_when(
-        # Search for terms related to actual critical effects
-        grepl(paste0("androgenic|\\||increase|decrease|significant|conclude|effect|",
-                     "estradiol|response|gain|interaction|weight|deficient"),
-              critical_effect, ignore.case=TRUE) ~ critical_effect,
-        # Return NA if value is not actually critical_effect
-        TRUE ~ as.character(NA)
       )
+      # TODO Await team discussion on how to better clean critical_effect field
+      # # Remove inappropriate critical_effect values
+      # critical_effect_new = dplyr::case_when(
+      #   # Search for terms related to actual critical effects
+      #   grepl(paste0("androgenic|\\||increase|decrease|significant|conclude|effect|",
+      #                "estradiol|response|gain|interaction|weight|deficient"),
+      #         critical_effect, ignore.case=TRUE) ~ critical_effect,
+      #   # Return NA if value is not actually critical_effect
+      #   TRUE ~ as.character(NA)
+      # )
     ) %>%
 
     # Drop entries without toxval cols
@@ -178,6 +178,8 @@ toxval.load.ut_hb <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid
   # Maintained logic from old script - comment out if unnecessary
   cat("set the source_hash\n")
   res$source_hash = NA
+  # Sort res columns before hashing for more consistent hashing
+  res = res[,sort(names(res))]
   for (i in 1:nrow(res)){
     row <- res[i,]
     res[i,"source_hash"] = digest(paste0(row,collapse=""), serialize = FALSE)
@@ -185,7 +187,7 @@ toxval.load.ut_hb <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid
   }
 
   # Clean name/casrn and set chemical_id in source_chemical table
-  res = source_chemical.extra(toxval.db,source.db,res,source,chem.check.halt=FALSE,casrn.col="casrn", name.col="name",verbose=F)
+  res = source_chemical.extra(toxval.db,source.db,res,source,chem.check.halt=FALSE,casrn.col="casrn", name.col="name",verbose=FALSE)
 
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
