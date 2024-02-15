@@ -173,7 +173,8 @@ toxval.load.ut_hb <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
     # Ensure toxval_numeric is greater than 0
     dplyr::filter(toxval_numeric > 0) %>%
     # Drop duplicate entries
-    dplyr::distinct()
+    dplyr::distinct() %>%
+    replace(is.na(.), "-")
 
   # Maintained logic from old script - comment out if unnecessary
   cat("set the source_hash\n")
