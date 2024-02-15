@@ -85,35 +85,6 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-
-  # Deal with toxval_numeric ranges after originals are generated
-  res <- res %>%
-  dplyr::mutate(
-    toxval_numeric = case_when(
-      grepl("-(?![eE])", toxval_numeric, perl=TRUE) & (toxval_type == "LOAEL" | toxval_type == "LOEL") ~
-        sub("-.*", "", toxval_numeric),
-      grepl("-", toxval_numeric, perl=TRUE) & (toxval_type == "NOAEL" | toxval_type == "NOEL") ~
-        sub(".*-", "", toxval_numeric),
-      TRUE ~ toxval_numeric
-    )
-  )
-  # Separate toxval_numeric ranges for BMDL10, PTDI, PMTDI
-  ranged <- res %>%
-    dplyr::filter((toxval_type == 'BMDL10' | toxval_type == "PTDI" | toxval_type == "PMTDI") &
-                    grepl("-(?![eE])", toxval_numeric, perl=TRUE)) %>%
-    tidyr::separate_rows(toxval_numeric, sep="-") %>%
-    dplyr::group_by(source_hash) %>%
-    mutate(
-      toxval_subtype = ifelse(toxval_numeric == min(toxval_numeric), "Min. Range", "Max. Range")
-    ) %>%
-    ungroup()
-  if (nrow(ranged) > 0){
-    res <- res %>%
-      dplyr::filter(!((toxval_type %in% "BMDL10" | toxval_type %in% "PTDI" | toxval_type %in% "PMTDI")
-                      & (grepl("-", toxval_numeric, perl=TRUE))))
-    res <- dplyr::bind_rows(res, ranged)
-  }
-
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
@@ -124,26 +95,6 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   res = distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
-
-  # #####################################################################
-  # cat("Set the toxval_relationship for separated toxval_numeric range records")
-  # #####################################################################
-  # ranged <- res %>%
-  #   filter(source_hash %in% ranged$source_hash)
-  # relationship <- ranged %>%
-  #   select(toxval_id, source_hash) %>%
-  #   arrange(source_hash) %>%
-  #   mutate(
-  #     toxval_id_1 = lag(toxval_id),
-  #     toxval_id_2 = toxval_id,
-  #     relationship = "range"
-  #   ) %>%
-  #   select(toxval_id_1, toxval_id_2, relationship) %>%
-  #   filter(!is.na(toxval_id_1))
-  # # Insert into toxval_relationship
-  # if(nrow(relationship)){
-  #   runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
-  # }
 
   #####################################################################
   cat("add toxval_id to res\n")
@@ -157,6 +108,23 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
+
+  # #####################################################################
+  # cat("Set the toxval_relationship for separated toxval_numeric range records")
+  # #####################################################################
+  upper_range <- res %>%
+    dplyr::filter(toxval_subtype == "Upper Range")
+  lower_range <- res %>%
+    dplyr::filter(toxval_subtype == "Lower Range")
+  relationship <- merge(lower_range, upper_range, by='range_relationship_id', suffixes=c("_1","_2"))
+  relationship <- relationship %>%
+    dplyr::select(toxval_id_1, toxval_id_2) %>%
+    dplyr::mutate(relationship = "range")
+  # Insert range relationships into toxval_relationship table
+  if(nrow(relationship)){
+    runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+  }
+  res <- subset(res, select = -range_relationship_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -219,12 +187,4 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   cat("finish\n")
   #####################################################################
   return(0)
-
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 }
