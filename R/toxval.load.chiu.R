@@ -49,13 +49,6 @@ toxval.load.chiu <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=T
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
-  cat("Add code to deal with specific issues for this source\n")
-  #####################################################################
-
-  # Keep only entries with "BMDL" as toxval_type
-  res = res %>% dplyr::filter(toxval_type=="BMDL")
-
-  #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
   cols1 = runQuery("desc record_source",toxval.db)[,1]
