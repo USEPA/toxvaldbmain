@@ -98,7 +98,6 @@ toxval.load.genetox.all <- function(toxval.db, source.db, sys.date="2021-09-10",
         fix.replace.unicode() %>%
         gsub("unnamed.+", "-", .) %>%
         gsub("List Acronyms", "", .) %>%
-        gsub("D & C", "D&C", .) %>%
         stringr::str_squish(),
 
       # Set appropriate columns to numeric type
