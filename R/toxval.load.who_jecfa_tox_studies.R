@@ -5,7 +5,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.who_jecfa_tox_studies <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "WHO JECFA Tox Studies"
   source_table = "source_who_jecfa_tox_studies"
   verbose = log
@@ -50,7 +50,6 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
   cremove = c("who_jecfa_chemical_id","webpage_name","chemical_names","synonyms",
               "ins","functional_class","ins_matches","jecfa_number","cas_number",
               "evaluation_year","pivotal_study","animal_specie","effect","point_of_departure",
@@ -66,7 +65,7 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name", "range_relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -112,19 +111,21 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db,source.db, log=FALSE, re
   # #####################################################################
   # cat("Set the toxval_relationship for separated toxval_numeric range records")
   # #####################################################################
-  upper_range <- res %>%
-    dplyr::filter(toxval_subtype == "Upper Range")
-  lower_range <- res %>%
-    dplyr::filter(toxval_subtype == "Lower Range")
-  relationship <- merge(lower_range, upper_range, by='range_relationship_id', suffixes=c("_1","_2"))
-  relationship <- relationship %>%
-    dplyr::select(toxval_id_1, toxval_id_2) %>%
-    dplyr::mutate(relationship = "range")
+  relationship = res %>%
+    dplyr::filter(grepl("Range", toxval_subtype)) %>%
+    dplyr::select(toxval_id, range_relationship_id, toxval_subtype) %>%
+    tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_subtype, values_from = toxval_id) %>%
+    dplyr::rename(toxval_id_1 = `Lower Range`,
+                  toxval_id_2 = `Upper Range`) %>%
+    dplyr::mutate(relationship = "toxval_numeric range") %>%
+    dplyr::select(-range_relationship_id)
   # Insert range relationships into toxval_relationship table
   if(nrow(relationship)){
     runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
   }
-  res <- subset(res, select = -range_relationship_id)
+  # Remove range_relationship_id
+  res <- res %>%
+    dplyr::select(-range_relationship_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
