@@ -3,6 +3,7 @@
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source The source to set a qc_category for
+#' @param access_token A personal access token for authentication in Confluence/Jira
 #' @export
 #--------------------------------------------------------------------------------------
 set.qc.category.by.source <- function(toxval.db, source=NULL, access_token){
@@ -12,7 +13,6 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, access_token){
   } else {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   }
-  library(rvest)
   url <- "https://confluence.epa.gov/x/VuCkFg"
 
   access_token <- "MDMwODg0NDA2OTAyOqLv0SzpIbHeggQJJsV5DVV8wMrn"
@@ -25,14 +25,22 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, access_token){
     print('authentication failed')
   }
 
+  # XML approach
+  # content <- content(response, as="text")
+  # doc <- htmlParse(content, asText = TRUE)
+  # table_data <- readHTMLTable(doc, xpath = "//*[@id='main-content']/div[2]/table/tbody/tr[1]/td[1]")
+  # print(table_data[[2]])
+  # stuff2 <- table_data[[2]]
+
+
   tables <- html_nodes(confluence_page, "table")
-  stuff <- tables[[2]]
+  table <- tables[[2]]
   header_row <- html_nodes(stuff, "tr:nth-child(1) th")
   column_names <- html_text(header_row)
 
   table_data <- list()
 
-  data_rows <- html_nodes(stuff, "tr:not(:first-child)")
+  data_rows <- html_nodes(table, "tr:not(:first-child)")
 
   for(i in seq_along(data_rows)) {
     row <- data_rows[[i]]
@@ -42,16 +50,16 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, access_token){
     table_data <- c(table_data, list(row_data))
   }
 
-
   table_df <- as.data.frame(do.call(rbind, table_data), stringsAsFactors = FALSE)
   colnames(table_df) <- column_names
 
   res <- data.frame()
 
   old_qc_category = runQuery("select distinct source, qc_category from toxval",toxval.db)
+  old_qc_category$qc_category[old_qc_category$qc_category == "-"] <- NA
   tables_names <- unique(table_df$`Source Name`)
   valid_sources <- old_qc_category %>%
-    filter(source %in% tables_names)
+    filter(source %in% slist & source %in% tables_names)
 
   for(src in valid_sources$source) {
     source_df <- subset(table_df, `Source Name` == src)
@@ -79,14 +87,20 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, access_token){
       }
     }
     new_stuff <- c(src, qc_category_new)
-    colnames(new_stuff) <- c("source", "qc_category")
     res <- rbind(res, new_stuff)
+  }
+  colnames(res) <- c("source", "qc_category_new")
+  res_merge <- merge(old_qc_category, res, by="source")
+  res_final <- res_merge %>%
+    tidyr::unite(col="qc_category", qc_category, qc_category_new, sep = ", ", na.rm = TRUE) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(qc_category = toString(unique(unlist(strsplit(qc_category,",\\s+")))))
 
-
-    # df %>%
-    #   tidyr::unite(col="qc_category", qc_category, qc_category_new, sep = ", ", na.rm = TRUE) %>%
-    #   dplyr::rowwise() %>%
-    #   dplyr::mutate(qc_category = toString(unique(unlist(strsplit(qc_category,",\\s+")))))
-
+  # Update qc_category in toxval
+  if(nrow(res_final)){
+    updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
+                         "ON (a.source = b.source) SET a.qc_category = b.qc_category")
+    # Run update query
+    runUpdate(table="toxval", updateQuery=updateQuery, updated_df=res_final, db=toxval.db)
   }
 }
