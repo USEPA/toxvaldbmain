@@ -5,6 +5,7 @@
 #' @param source_name Name of source to check (e.g., IRIS)
 #'
 toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
+  # TODO Test more NULL cases and adapt to direct load source types
   # Get source table name from source name
   src_index = runQuery(paste0("SELECT chemprefix, source_table FROM chemical_source_index ",
                             "WHERE source = '", source_name,"'"),
@@ -51,8 +52,8 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
         dplyr::group_by(has_dtxsid) %>%
         dplyr::summarise(n = n()) %>%
         tidyr::pivot_wider(names_from = "has_dtxsid", values_from = "n") %>%
-        dplyr::mutate(curation_perc = round(((`TRUE`-`FALSE`)/`TRUE`) * 100, 3)) %>%
-        tidyr::unite(`FALSE`, `TRUE`, col="missing_curation_frac", sep = "/", na.rm=TRUE)
+        dplyr::mutate(chem_curation_perc = round(((`TRUE`-`FALSE`)/`TRUE`) * 100, 3)) %>%
+        tidyr::unite(`FALSE`, `TRUE`, col="missing_chem_curation_frac", sep = "/", na.rm=TRUE)
   )
 
   # Check uncurated chemicals
@@ -78,7 +79,14 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
 
   # Report how many chemical records missing mappings that have mappings
   out = out %>%
-    dplyr::mutate(has_dtxsid_mapped = length(unique(missing_chems_curated$chemical_id)))
+    dplyr::mutate(n_records_no_chem_map = runQuery(paste0("SELECT count(*) as n FROM ", src_tbl,
+                                                          " WHERE chemical_id IN ('",
+                                                          paste0(unique(chems_to_curate$chemical_id),
+                                                                 collapse = "', '"),
+                                                          "')"),
+                                                   db = source.db) %>%
+                    dplyr::pull(n),
+      has_dtxsid_mapped = length(unique(missing_chems_curated$chemical_id)))
 
   # Check extraction document linkage
   extraction_doc = runQuery(paste0("SELECT * FROM documents_records WHERE ",
