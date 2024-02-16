@@ -6,7 +6,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.chiu <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.chiu <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "Chiu"
   source_table = "source_chiu"
   verbose = log
