@@ -44,17 +44,28 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
                                   "SELECT chemical_id FROM ", src_tbl,
                                   ")"),
                            db=source.db)
+
+  # Summarize chemical curation
+  chem_curation_summ = chem_curation %>%
+    dplyr::mutate(has_dtxsid = !is.na(dtxsid)) %>%
+    dplyr::group_by(has_dtxsid) %>%
+    dplyr::summarise(n = n()) %>%
+    tidyr::pivot_wider(names_from = "has_dtxsid", values_from = "n")
+  # Add missing columns as necessary
+  if(!("TRUE" %in% names(chem_curation_summ))) {
+    chem_curation_summ$`TRUE` = 0
+  }
+  if(!("FALSE" %in% names(chem_curation_summ))) {
+    chem_curation_summ$`FALSE` = 0
+  }
+  chem_curation_summ = chem_curation_summ %>%
+    dplyr::mutate(
+      chem_curation_perc = round(((`TRUE`-`FALSE`)/`TRUE`) * 100, 3)
+    ) %>%
+    tidyr::unite(`FALSE`, `TRUE`, col="missing_chem_curation_frac", sep = "/", na.rm=TRUE)
+
   out = out %>%
-    dplyr::bind_cols(
-      # Summarize chemical curation
-      chem_curation_summ = chem_curation %>%
-        dplyr::mutate(has_dtxsid = !is.na(dtxsid)) %>%
-        dplyr::group_by(has_dtxsid) %>%
-        dplyr::summarise(n = n()) %>%
-        tidyr::pivot_wider(names_from = "has_dtxsid", values_from = "n") %>%
-        dplyr::mutate(chem_curation_perc = round(((`TRUE`-`FALSE`)/`TRUE`) * 100, 3)) %>%
-        tidyr::unite(`FALSE`, `TRUE`, col="missing_chem_curation_frac", sep = "/", na.rm=TRUE)
-  )
+    dplyr::bind_cols(chem_curation_summ)
 
   # Check uncurated chemicals
   chems_to_curate = chem_curation %>%
