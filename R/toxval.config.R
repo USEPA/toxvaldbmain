@@ -18,6 +18,8 @@ library(tibble)
 library(janitor)
 library(textclean)
 library(magrittr)
+library(httr)
+library(rvest)
 #library(logr)
 
 #--------------------------------------------------------------------------------------
