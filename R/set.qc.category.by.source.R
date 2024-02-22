@@ -13,6 +13,8 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, access_token){
   } else {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   }
+  library(httr)
+  library(rvest)
   url <- "https://confluence.epa.gov/x/VuCkFg"
 
   access_token <- "MDMwODg0NDA2OTAyOqLv0SzpIbHeggQJJsV5DVV8wMrn"
@@ -25,17 +27,9 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, access_token){
     print('authentication failed')
   }
 
-  # XML approach
-  # content <- content(response, as="text")
-  # doc <- htmlParse(content, asText = TRUE)
-  # table_data <- readHTMLTable(doc, xpath = "//*[@id='main-content']/div[2]/table/tbody/tr[1]/td[1]")
-  # print(table_data[[2]])
-  # stuff2 <- table_data[[2]]
-
-
   tables <- html_nodes(confluence_page, "table")
   table <- tables[[2]]
-  header_row <- html_nodes(stuff, "tr:nth-child(1) th")
+  header_row <- html_nodes(confluence_page, "tr:nth-child(1) th")
   column_names <- html_text(header_row)
 
   table_data <- list()
