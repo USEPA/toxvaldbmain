@@ -60,9 +60,9 @@ toxval.load.echa_iuclid <- function(toxval.db,source.db,log=F,reset=F) {
     #####################################################################
     oht = str_replace_all(ohtname," ","")
     oht = tolower(oht)
-    source_table = paste0("source_iuclid_iuclid_",oht)
+    source_table = paste0("source_iuclid_",oht)
     subsource = ohtname
-    chem_source = paste0("IUCLID_iuclid_",oht)
+    chem_source = paste0("IUCLID_",oht)
     count = runQuery(paste0("select count(*) from toxval where source='",source,"' and subsource='",subsource,"'"),toxval.db)[1,1]
     if(count>0) {
       runQuery(paste0("delete from toxval_notes where toxval_id in (select toxval_id from toxval where source='",source,"' and subsource='",subsource,"')"),toxval.db)
