@@ -156,6 +156,11 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
 
   # Faster dplyr/tidyr approach
   N2L = res %>%
+    # Expand collapsed linkage_id
+    tidyr::separate_rows(linkage_id, sep = ", ") %>%
+    dplyr::mutate(linkage_id = linkage_id %>%
+                    stringr::str_squish() %>%
+                    as.numeric()) %>%
     dplyr::select(toxval_id, linkage_id, toxval_type, toxval_subtype) %>%
     dplyr::mutate(toxval_subtype = toxval_subtype %>%
                     gsub("NOAEL|LOAEL|Species|Food|Water|Piscivore|,", "", .) %>%
@@ -172,6 +177,11 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
     dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
 
   N2NL2L = res %>%
+    # Expand collapsed linkage_id
+    tidyr::separate_rows(linkage_id, sep = ", ") %>%
+    dplyr::mutate(linkage_id = linkage_id %>%
+                    stringr::str_squish() %>%
+                    as.numeric()) %>%
     dplyr::select(toxval_id, linkage_id, toxval_type, toxval_subtype) %>%
     dplyr::mutate(toxval_subtype = toxval_subtype %>%
                     gsub("NOAEL|LOAEL|Species|Food|Water|Piscivore|,", "", .) %>%
