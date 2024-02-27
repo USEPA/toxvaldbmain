@@ -158,7 +158,6 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     #####################################################################
     cat("Set the toxval_relationship for separated toxval_numeric range records\n")
     #####################################################################
-    res = readxl::read_xlsx("res_toxicitytobirds.xlsx")
     relationship = res %>%
       dplyr::filter(grepl("Range", toxval_subtype),
                     !grepl("NA", range_relationship_id)) %>%
