@@ -130,33 +130,6 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
     dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.))) %>%
     dplyr::select(-relationship_id)
 
-  # ATTEMPT AT DEDUPING
-  # # Build tibble containing relationship linkages (potential for many entries in single group)
-  # relationship_tibble = res %>%
-  #   # Drop data without relationship mapping
-  #   tidyr::drop_na(relationship_id) %>%
-  #   dplyr::filter(relationship_id != "") %>%
-  #
-  #   # Expand collapsed linkage_id
-  #   tidyr::separate_rows(relationship_id, sep = ", ") %>%
-  #   dplyr::mutate(relationship_id = relationship_id %>%
-  #                   stringr::str_squish()) %>%
-  #
-  #   # Get relevant data and group by relationship_id
-  #   dplyr::select(toxval_id, relationship_id) %>%
-  #   dplyr::group_by(relationship_id) %>%
-  #
-  #   # Add linkages between every entry in group
-  #   # Reference: https://stackoverflow.com/questions/67515989/report-all-possible-combinations-of-a-string-separated-vector
-  #   dplyr::reframe(toxval_id = if(n() > 1)
-  #     combn(toxval_id, 2, paste0, collapse = ', ') else toxval_id) %>%
-  #   tidyr::separate(col="toxval_id", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
-  #
-  #   # Prepare tibble for ToxVal
-  #   dplyr::mutate(relationship = "dose group unit conversion") %>%
-  #   dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.))) %>%
-  #   dplyr::select(-relationship_id)
-
   # Send linkage data to ToxVal
   runInsertTable(relationship_tibble, "toxval_relationship", toxval.db)
 
