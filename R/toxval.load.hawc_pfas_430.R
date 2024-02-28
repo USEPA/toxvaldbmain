@@ -115,7 +115,7 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   # Build tibble containing relationship linkages (potential for many entries in single group)
   relationship_tibble = res %>%
     # Get relevant data and group by relationship_id
-    tidyr::drop_na(relationship_id) %>%
+    dplyr::filter(relationship_id != "-") %>%
     dplyr::select(toxval_id, relationship_id) %>%
     dplyr::group_by(relationship_id) %>%
 
