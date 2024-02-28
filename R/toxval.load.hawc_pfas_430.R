@@ -5,7 +5,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.hawc_pfas_430 <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "HAWC PFAS 430"
   source_table = "source_hawc_pfas_430"
   verbose = log
@@ -62,14 +62,14 @@ toxval.load.hawc_pfas_430 <- function(toxval.db,source.db, log=FALSE, remove_nul
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
 
   # Remove unused columns ("columns to be dealt with)
   res = res %>% dplyr::select(!tidyselect::any_of(nlist))
 
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
 
   if(length(nlist)>0) {
@@ -107,6 +107,35 @@ toxval.load.hawc_pfas_430 <- function(toxval.db,source.db, log=FALSE, remove_nul
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
+
+  #####################################################################
+  cat("Set the toxval_relationship for separated dose group unit conversion records\n")
+  #####################################################################
+
+  # Build tibble containing relationship linkages (potential for many entries in single group)
+  relationship_tibble = res %>%
+    # Get relevant data and group by relationship_id
+    dplyr::filter(relationship_id != "-") %>%
+    dplyr::select(toxval_id, relationship_id) %>%
+    dplyr::group_by(relationship_id) %>%
+
+    # Add linkages between every entry in group
+    # Reference: https://stackoverflow.com/questions/67515989/report-all-possible-combinations-of-a-string-separated-vector
+    dplyr::reframe(toxval_id = if(n() > 1)
+      combn(toxval_id, 2, paste0, collapse = ', ') else toxval_id) %>%
+    tidyr::separate(col="toxval_id", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
+
+    # Prepare tibble for ToxVal
+    dplyr::mutate(relationship = "dose group unit conversion") %>%
+    dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.))) %>%
+    dplyr::select(-relationship_id)
+
+  # Send linkage data to ToxVal
+  runInsertTable(relationship_tibble, "toxval_relationship", toxval.db)
+
+  # Remove relationship_id
+  res = res %>%
+    dplyr::select(-relationship_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
