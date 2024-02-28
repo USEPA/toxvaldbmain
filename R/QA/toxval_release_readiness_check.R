@@ -5,6 +5,7 @@
 #' @param source_name Name of source to check (e.g., IRIS)
 #'
 toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
+  message("Generating report for...", source_name)
   # TODO Test more NULL cases and adapt to direct load source types
   # Get source table name from source name
   src_index = runQuery(paste0("SELECT chemprefix, source_table FROM chemical_source_index ",
@@ -14,6 +15,15 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
   # Check if input source_name exists
   if(!length(src_tbl)){
     message("Input source_name '", source_name,"' not found in chemical_source_index table")
+    return()
+  }
+
+  # Check if input databases exist on server
+  tbl_check <- runQuery("SHOW TABLES", source.db) %>%
+    .[. == src_tbl]
+
+  if(!length(tbl_check)){
+    message(source_name, " provided table ", src_tbl, " does not exist...skipping...")
     return()
   }
   # source_hash list
@@ -45,27 +55,22 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
                                   ")"),
                            db=source.db)
 
-  # Summarize chemical curation
+# Summarize chemical curation
   chem_curation_summ = chem_curation %>%
     dplyr::mutate(has_dtxsid = !is.na(dtxsid)) %>%
     dplyr::group_by(has_dtxsid) %>%
     dplyr::summarise(n = n()) %>%
     tidyr::pivot_wider(names_from = "has_dtxsid", values_from = "n")
-  # Add missing columns as necessary
-  if(!("TRUE" %in% names(chem_curation_summ))) {
-    chem_curation_summ$`TRUE` = 0
-  }
-  if(!("FALSE" %in% names(chem_curation_summ))) {
-    chem_curation_summ$`FALSE` = 0
-  }
-  chem_curation_summ = chem_curation_summ %>%
-    dplyr::mutate(
-      chem_curation_perc = round(((`TRUE`-`FALSE`)/`TRUE`) * 100, 3)
-    ) %>%
-    tidyr::unite(`FALSE`, `TRUE`, col="missing_chem_curation_frac", sep = "/", na.rm=TRUE)
 
+  # Fill blank hashing cols
+  chem_curation_summ[, c("TRUE", "FALSE")[!c("TRUE", "FALSE") %in% names(chem_curation_summ)]] <- 0
+  # Append to report
   out = out %>%
-    dplyr::bind_cols(chem_curation_summ)
+    dplyr::bind_cols(
+      chem_curation_summ = chem_curation_summ %>%
+        dplyr::mutate(chem_curation_perc = round(((`TRUE`-`FALSE`)/`TRUE`) * 100, 3)) %>%
+        tidyr::unite(`FALSE`, `TRUE`, col="missing_chem_curation_frac", sep = "/", na.rm=TRUE)
+      )
 
   # Check uncurated chemicals
   chems_to_curate = chem_curation %>%
@@ -79,14 +84,23 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
     .[grepl("DSSTox Files", .)] %>%
     lapply(., function(f){ readxl::read_xlsx(f) %>%
         dplyr::mutate(curation_filename = f)}) %>%
-    dplyr::bind_rows() %>%
-    dplyr::rename(external_id = Extenal_ID, dtxsid = DSSTox_Substance_Id) %>%
-    dplyr::filter(external_id %in% chems_to_curate$chemical_id,
-                  !is.na(dtxsid)) %>%
-    dplyr::select(chemical_id = external_id, dtxsid, name=Substance_Name,
-                  casrn=Substance_CASRN, curation_filename) %>%
-    dplyr::distinct() %>%
-    dplyr::arrange(chemical_id)
+    dplyr::bind_rows()
+
+  if(nrow(missing_chems_curated)){
+    missing_chems_curated = missing_chems_curated %>%
+      dplyr::rename(external_id = Extenal_ID, dtxsid = DSSTox_Substance_Id) %>%
+      dplyr::filter(external_id %in% chems_to_curate$chemical_id,
+                    !is.na(dtxsid)) %>%
+      dplyr::select(chemical_id = external_id, dtxsid, name=Substance_Name,
+                    casrn=Substance_CASRN, curation_filename) %>%
+      dplyr::distinct() %>%
+      dplyr::arrange(chemical_id)
+  } else {
+    # Return blank
+    missing_chems_curated = missing_chems_curated %>%
+      dplyr::mutate(chemical_id = NA) %>%
+      .[0,]
+  }
 
   # Report how many chemical records missing mappings that have mappings
   out = out %>%
