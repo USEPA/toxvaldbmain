@@ -55,8 +55,7 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
                                   ")"),
                            db=source.db)
 
-
-  # Summarize chemical curation
+# Summarize chemical curation
   chem_curation_summ = chem_curation %>%
     dplyr::mutate(has_dtxsid = !is.na(dtxsid)) %>%
     dplyr::group_by(has_dtxsid) %>%
