@@ -160,7 +160,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     #####################################################################
     relationship = res %>%
       dplyr::filter(grepl("Range", toxval_subtype),
-                    !grepl("NA", range_relationship_id)) %>%
+                    !range_relationship_id %in% c("-")) %>%
       tidyr::separate_rows(
         range_relationship_id,
         sep = " \\|::\\| "
