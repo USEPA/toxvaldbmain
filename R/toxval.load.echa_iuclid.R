@@ -18,7 +18,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     "Acute Toxicity Dermal",
     "Acute Toxicity Inhalation",
     # "Acute Toxicity Oral"
-    "Acute Toxicity Other Routes",
+    "Acute Toxicity Other Routes"
     # "Carcinogenicity",
     # "Developmental Toxicity Teratogenicity",
     # "Immunotoxicity",

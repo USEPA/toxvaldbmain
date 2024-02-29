@@ -124,7 +124,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
       query = paste0("update toxval
                         set toxval_units = 'mg/m3', toxval_numeric = toxval_numeric*mw*0.0409
                         where mw>0 and toxval_units like 'ppm%' and exposure_route = 'inhalation' and
-                        huamn_eco='human health' and subsource = '",subsource,"' ")
+                        human_eco='human health' and subsource = '",subsource,"' ")
     runInsert(query,toxval.db)
 
 
