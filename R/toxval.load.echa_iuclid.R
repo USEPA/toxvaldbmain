@@ -11,18 +11,19 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
   source = "ECHA IUCLID"
 
   ohtname.list = c(
-                   "Repeated Dose Toxicity Oral",
-                   "Repeated Dose Toxicity Dermal",
-                   "Repeated Dose Toxicity Inhalation",
-#                   "Repeated Dose Toxicity Other",
-                   "Acute Toxicity Dermal",
-                   "Acute Toxicity Inhalation",
-                   "Acute Toxicity Oral",
-#                   "Acute Toxicity Other Routes",
-                   "Carcinogenicity",
-                   "Developmental Toxicity Teratogenicity",
-                   "Immunotoxicity",
-                   "Neurotoxicity")
+    # "Repeated Dose Toxicity Oral",
+    # "Repeated Dose Toxicity Dermal",
+    # "Repeated Dose Toxicity Inhalation",
+    # "Repeated Dose Toxicity Other",
+    "Acute Toxicity Dermal",
+    "Acute Toxicity Inhalation",
+    # "Acute Toxicity Oral"
+    "Acute Toxicity Other Routes",
+    # "Carcinogenicity",
+    # "Developmental Toxicity Teratogenicity",
+    # "Immunotoxicity",
+    # "Neurotoxicity"
+    )
 
   verbose = log
 
@@ -132,15 +133,18 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     res = res[, !names(res) %in% c("casrn","name")]
     print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
-    # Logic possibly still desired, but commented for now
-    # maxval = max(res$toxval_numeric,na.rm=T)
-    # cutoff = 1E8
-    # bad = res[res$toxval_numeric>cutoff,]
-    # file = paste0(toxval.config()$datapath,"echa_iuclid/bad values ",ohtname," ",Sys.Date(),".xlsx")
-    # write.xlsx(bad,file)
-    # res = res[res$toxval_numeric<cutoff,]
-    # cat("Max toxval_numeric: ",maxval," :",nrow(bad),"\n")
-    # #if(maxval>cutoff) browser()
+    # Flag and filter out impossible toxval_numeric values
+    maxval = max(res$toxval_numeric,na.rm=TRUE)
+    cutoff = 1E8
+    bad = res[res$toxval_numeric>cutoff,]
+    cat("Max toxval_numeric: ",maxval," : Records above threshold - ",nrow(bad),"\n")
+    if(nrow(bad)){
+      file = paste0(toxval.config()$datapath,"echa_iuclid/bad values ",ohtname," ",Sys.Date(),".xlsx")
+      write.xlsx(bad, file)
+      # browser()
+    }
+    # Filter out
+    res = res[res$toxval_numeric<cutoff,]
 
     #####################################################################
     cat("add toxval_id to res\n")
@@ -218,7 +222,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     cat("do the post processing\n")
     #####################################################################
     cat(ohtname,"\n")
-    toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F,chem_source,subsource)
+    toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE,chem_source,subsource)
   }
   if(log) {
     #####################################################################
