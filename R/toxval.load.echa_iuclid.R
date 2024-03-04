@@ -10,21 +10,6 @@
 toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE) {
   source = "ECHA IUCLID"
 
-  ohtname.list = c(
-    # "Repeated Dose Toxicity Oral",
-    # "Repeated Dose Toxicity Dermal",
-    # "Repeated Dose Toxicity Inhalation",
-    # "Repeated Dose Toxicity Other",
-    "Acute Toxicity Dermal",
-    "Acute Toxicity Inhalation",
-    # "Acute Toxicity Oral"
-    "Acute Toxicity Other Routes"
-    # "Carcinogenicity",
-    # "Developmental Toxicity Teratogenicity",
-    # "Immunotoxicity",
-    # "Neurotoxicity"
-    )
-
   verbose = log
 
   #####################################################################
@@ -43,15 +28,64 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
   #####################################################################
   import.source.info.by.source(toxval.db, source)
 
-  for(ohtname in ohtname.list) {
+  # Get list of IUCLID tables in toxval_source
+  iuclid_source_tables = runQuery("SHOW TABLES", source.db) %>%
+    dplyr::filter(grepl("source_iuclid", Tables_in_res_toxval_source_v5),
+                  !grepl("_v94", Tables_in_res_toxval_source_v5)) %>%
+    pull(Tables_in_res_toxval_source_v5)
+
+  # Get list of IUCLID OHTs represented in ToxVal
+  iuclid_toxval_ohts = runQuery("SELECT DISTINCT source_table FROM toxval", toxval.db) %>%
+    dplyr::filter(grepl("iuclid", source_table)) %>%
+    pull(source_table)
+
+  # Create translation dictionary to go from table name to human-readable name
+  name_translator = c("source_iuclid_acutetoxicitydermal"="Acute Toxicity Dermal",
+                      "source_iuclid_acutetoxicityinhalation"="Acute Toxicity Inhalation",
+                      "source_iuclid_acutetoxicityoral"="Acute Toxicity Oral",
+                      "source_iuclid_acutetoxicityotherroutes"="Acute Toxicity Other Routes",
+                      "source_iuclid_carcinogenicity"="Carcinogenicity",
+                      "source_iuclid_repeateddosetoxicitydermal"="Repeated Dose Toxicity Dermal",
+                      "source_iuclid_repeateddosetoxicityinhalation"="Repeated Dose Toxicity Inhalation",
+                      "source_iuclid_repeateddosetoxicityoral"="Repeated Dose Toxicity Oral",
+                      "source_iuclid_repeateddosetoxicityother"="Repeated Dose Toxicity Other",
+                      "source_iuclid_toxicitytoaquaticalgae"="Toxicity To Aquatic Algae",
+                      "source_iuclid_toxicitytoaquaticplant"="Toxicity To Aquatic Plant",
+                      "source_iuclid_toxicitytobirds"="Toxicity To Birds",
+                      "source_iuclid_toxicitytomicroorganisms"="Toxicity To Microorganisms",
+                      "source_iuclid_toxicitytootherabovegroundorganisms"="Toxicity To Other Aboveground Organisms",
+                      "source_iuclid_toxicitytootheraqua"="Toxicity To Other Aquatic Organisms",
+                      "source_iuclid_toxicitytosoilmacroorganismsexceptarthropods"="Toxicity To Soil Macroorganisms Except Arthropods",
+                      "source_iuclid_toxicitytosoilmicroorganisms"="Toxicity To Soil Microorganisms",
+                      "source_iuclid_toxicitytoterrestrialarthropods"="Toxicity To Terrestrial Arthropods",
+                      "source_iuclid_toxicitytoterrestrialplants"="Toxicity To Terrestrial Plants")
+
+  # Load each source
+  for(oht in iuclid_source_tables) {
+    # Check if source has already been loaded
+    if(oht %in% iuclid_toxval_ohts) {
+      # Get load/import dates
+      source_date = as.POSIXct(unique(runQuery(paste0("SELECT create_time FROM ",
+                                                      oht), source.db))$create_time[1])
+      toxval_date = as.POSIXct(unique(runQuery(paste0("SELECT datestamp FROM toxval WHERE source_table='",
+                                           oht, "'"), toxval.db))$datestamp[1])
+
+      # If ToxVal data is newer than source data, skip loading this OHT
+      if(toxval_date > source_date) {
+        next
+      }
+    }
+
+    # Get human-readable name for OHT
+    ohtname = name_translator[[oht]]
+
     #####################################################################
     cat("++++++++++++++++++++++++++++++++++++++++++++++\n")
     cat("OHT:",ohtname,"\n")
     cat("++++++++++++++++++++++++++++++++++++++++++++++\n\n")
     #####################################################################
-    oht = str_replace_all(ohtname," ","")
-    oht = tolower(oht)
-    source_table = paste0("source_iuclid_",oht)
+    source_table = oht
+    oht = gsub("source_iuclid_", "", oht)
     subsource = ohtname
     chem_source = paste0("IUCLID_",oht)
 
