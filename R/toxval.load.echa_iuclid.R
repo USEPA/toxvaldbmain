@@ -113,6 +113,10 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
                      "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
     }
     res = runQuery(query,source.db,TRUE,FALSE)
+    if(!nrow(res)) {
+      cat(oht,"NO ENTRIES! Try querying without removing null dtxsid.\n\n")
+      next
+    }
     res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                                 c("chemical_id", "document_name", "source_hash", "qc_status")]]
     res$source = source
@@ -196,23 +200,30 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     #####################################################################
     cat("Set the toxval_relationship for separated toxval_numeric range records\n")
     #####################################################################
-    relationship = res %>%
+    relationship_initial = res %>%
       dplyr::filter(grepl("Range", toxval_subtype),
-                    !range_relationship_id %in% c("-")) %>%
-      tidyr::separate_rows(
-        range_relationship_id,
-        sep = " \\|::\\| "
-      ) %>%
-      dplyr::select(toxval_id, range_relationship_id, toxval_subtype) %>%
-      tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_subtype, values_from = toxval_id) %>%
-      dplyr::rename(toxval_id_1 = `Lower Range`,
-                    toxval_id_2 = `Upper Range`) %>%
-      dplyr::mutate(relationship = "toxval_numeric range") %>%
-      dplyr::select(-range_relationship_id)
-    # Insert range relationships into toxval_relationship table
-    if(nrow(relationship)){
-      runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+                    !range_relationship_id %in% c("-"))
+
+    # Add check for filtered values
+    if(nrow(relationship_initial)) {
+      relationship = relationship_initial %>%
+        tidyr::separate_rows(
+          range_relationship_id,
+          sep = " \\|::\\| "
+        ) %>%
+          dplyr::select(toxval_id, range_relationship_id, toxval_subtype) %>%
+          tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_subtype, values_from = toxval_id) %>%
+          dplyr::rename(toxval_id_1 = `Lower Range`,
+                        toxval_id_2 = `Upper Range`) %>%
+          dplyr::mutate(relationship = "toxval_numeric range") %>%
+          dplyr::select(-range_relationship_id)
+
+      # Insert range relationships into toxval_relationship table
+      if(nrow(relationship)){
+        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+      }
     }
+
     # Remove range_relationship_id
     res <- res %>%
       dplyr::select(-range_relationship_id)
