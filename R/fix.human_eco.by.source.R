@@ -7,7 +7,7 @@
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource,reset=T){
+fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=TRUE){
   printCurrentFunction(paste(toxval.db,":", source,subsource))
 
   human.list = c("Alaska DEC","ATSDR MRLs",
