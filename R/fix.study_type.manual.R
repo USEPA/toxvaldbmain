@@ -93,8 +93,8 @@ fix.study_type.manual = function(toxval.db,source=NULL, subsource=NULL, dict.dat
         replacements = replacements[is.element(replacements$source_hash,missing),]
         # Check if any missing
         if(nrow(replacements)){
-          file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",subsource," ",dict.date,".csv")
-          %>% stringr::str_squish()
+          file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",subsource," ",dict.date,".csv") %>%
+            stringr::str_squish()
           write.csv(replacements,file,row.names=F)
           #browser()
         }
