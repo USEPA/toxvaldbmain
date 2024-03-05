@@ -1,12 +1,21 @@
 #-------------------------------------------------------------------------------------
 #' Fix the study_type using manual curation
 #' @param toxval.db The version of toxval in which the data is altered.
+#' @param source The source to be fixed
+#' @param subsource The subsource to be fixed
 #' @param dict.date The dated version of the dictionary to use
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
+fix.study_type.manual = function(toxval.db,source=NULL, subsource=NULL, dict.date="2023-08-21"){
   printCurrentFunction(toxval.db)
+
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",dict.date,".xlsx")
   print(file)
   mat = readxl::read_xlsx(file)
@@ -31,7 +40,7 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
     names(temp) = c("source_hash","study_type")
 
     temp.old = runQuery(paste0("select source_hash, study_type from toxval where dtxsid != 'NODTXSID' and source = '",source,
-                            "' and toxval_type in (select toxval_type from toxval_type_dictionary ",
+                            "'",query_addition," and toxval_type in (select toxval_type from toxval_type_dictionary ",
                             "where toxval_type_supercategory in ('Point of Departure', 'Lethality Effect Level', 'Toxicity Value')) ",
                             "and human_eco = 'human health' ",
                             # Filter out those that already have a study_type present
@@ -43,36 +52,39 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
     if(length(missing)>0) {
       cat("Missing source_hash in replacement file:",source," missing ",length(missing)," out of ",length(shlist.db),"\n")
 
-      query = paste0("SELECT
-                    a.dtxsid,a.name,
-                    b.source,
-                    b.risk_assessment_class,
-                    b.toxval_type,
-                    b.toxval_subtype,
-                    b.toxval_units,
-                    b.study_type_original,
-                    b.study_type,
-                    b.study_type as study_type_corrected,
-                    b.study_duration_value,
-                    b.study_duration_units,
-                    d.common_name,
-                    b.generation,
-                    b.exposure_route,
-                    b.exposure_method,
-                    b.critical_effect,
-                    f.long_ref,
-                    f.title,
-                    b.source_hash
-                    FROM
-                    toxval b
-                    INNER JOIN source_chemical a on a.chemical_id=b.chemical_id
-                    LEFT JOIN species d on b.species_id=d.species_id
-                    INNER JOIN record_source f on b.toxval_id=f.toxval_id
-                    INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type
-                    WHERE
-                    b.source='",source,"'
-                    and b.human_eco='human health'
-                    and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level')")
+      query = paste0("SELECT ",
+                    "a.dtxsid,a.name, ",
+                    "b.source, ",
+                    "b.risk_assessment_class, ",
+                    "b.toxval_type, ",
+                    "b.toxval_subtype, ",
+                    "b.toxval_units, ",
+                    "b.study_type_original, ",
+                    "b.study_type, ",
+                    "b.study_type as study_type_corrected, ",
+                    "b.study_duration_value, ",
+                    "b.study_duration_units, ",
+                    "d.common_name, ",
+                    "b.generation, ",
+                    "b.exposure_route, ",
+                    "b.exposure_method, ",
+                    "b.critical_effect, ",
+                    "f.long_ref, ",
+                    "f.title, ",
+                    "b.source_hash ",
+                    "FROM ",
+                    "toxval b ",
+                    "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
+                    "LEFT JOIN species d on b.species_id=d.species_id ",
+                    "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
+                    "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                    "WHERE ",
+                    "b.source='",source,"' ",
+                    "and b.human_eco='human health' ",
+                    "and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level')")
+      if(!is.null(subsource)) {
+        query = paste0(query, " and b.subsource='",subsource,"'")
+      }
       replacements = runQuery(query,toxval.db,T,F)
       # Check if any returned from query
       if(nrow(replacements)){
@@ -81,7 +93,8 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
         replacements = replacements[is.element(replacements$source_hash,missing),]
         # Check if any missing
         if(nrow(replacements)){
-          file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",dict.date,".csv")
+          file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",subsource," ",dict.date,".csv")
+          %>% stringr::str_squish()
           write.csv(replacements,file,row.names=F)
           #browser()
         }
@@ -94,7 +107,7 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
     temp3 = temp[!is.element(temp$code,temp.old$code),]
     n3 = nrow(temp3)
     cat("==============================================\n")
-    cat(source,n1,n2,n3," [n1 is new records, n2 is old records, n3 is number of records to be updated]\n")
+    cat(source,subsource,n1,n2,n3," [n1 is new records, n2 is old records, n3 is number of records to be updated]\n")
     cat("==============================================\n")
     # for(i in 1:nrow(temp3)) {
     #   hk = temp3[i,"source_hash"]

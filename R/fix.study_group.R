@@ -4,31 +4,42 @@
 #'
 #' @param toxval.db Database version
 #' @param source The source to be updated
+#' @param subsource The subsource to be updated (NULL default)
 #' #' @return for each source writes an Excel file with the name
 #'  ../export/export_by_source_{data}/toxval_all_{toxval.db}_{source}.xlsx
 #'
 #-----------------------------------------------------------------------------------
-fix.study_group <- function(toxval.db, source=NULL,reset=F) {
+fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, reset=F) {
   printCurrentFunction(toxval.db)
 
   if(reset) runQuery("update toxval set study_group='-'",toxval.db)
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
   slist = slist[!is.element(slist,c("ECOTOX"))]
+
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   for(source in slist) {
-    sglist = runQuery(paste0("select distinct study_group from toxval where source='",source,"'"),toxval.db)[,1]
+    sglist = runQuery(paste0("select distinct study_group from toxval where source='",source,"'",query_addition),toxval.db)[,1]
     doit = F
     if(is.element("-",sglist)) doit = T
     if(doit) {
       cat(source,"\n")
-      runQuery(paste0("update toxval set study_group='-' where source='",source,"'"),toxval.db)
+      runQuery(paste0("update toxval set study_group='-' where source='",source,"'",query_addition),toxval.db)
 
-      query = paste0("select a.toxval_id,a.dtxsid,c.common_name, a.toxval_units,
-                      a.target_species, a.study_type, a.exposure_route,a.exposure_method,
-                      a.study_duration_value, a.study_duration_units,
-                      a.strain,
-                      b.year, b.long_ref, b.title, b.author
-                      from toxval a, record_source b, species c where a.species_id=c.species_id and a.toxval_id=b.toxval_id and a.source='",source,"'")
+      query = paste0("select a.toxval_id,a.dtxsid,c.common_name, a.toxval_units, ",
+                      "a.target_species, a.study_type, a.exposure_route,a.exposure_method, ",
+                      "a.study_duration_value, a.study_duration_units ",
+                      "a.strain, ",
+                      "b.year, b.long_ref, b.title, b.author ",
+                      "from toxval a, record_source b, species c where a.species_id=c.species_id and a.toxval_id=b.toxval_id and a.source='",source,"'")
+      if(!is.null(subsource)) {
+        query = paste0(query, " and a.subsource='",subsource,"'")
+      }
       temp = runQuery(query,toxval.db)
       temp$key = NA
       temp$study_group = NA
@@ -43,7 +54,7 @@ fix.study_group <- function(toxval.db, source=NULL,reset=F) {
       nr = nrow(temp)
       nsg = length(unique(temp$study_group))
       cat("  nrow:",nr," unique values:",nsg,"\n")
-      query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'")
+      query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'",query_addition)
       runQuery(query,toxval.db)
 
       if(nsg!=nr) {

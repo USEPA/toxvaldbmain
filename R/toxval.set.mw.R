@@ -2,8 +2,9 @@
 #' Set the molecular weight in the toxval table, for use in unit conversions
 #' @param toxval.db The database version to use
 #' @param source The source
+#' @param subsource The subsource
 #--------------------------------------------------------------------------------------
-toxval.set.mw <- function(toxval.db, source=NULL){
+toxval.set.mw <- function(toxval.db, source=NULL, subsource=NULL){
   printCurrentFunction(toxval.db)
   dsstox.db <- toxval.config()$dsstox.db
   if(!is.null(source)) {
@@ -11,12 +12,20 @@ toxval.set.mw <- function(toxval.db, source=NULL){
   } else {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   }
+
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   # Loop through each source
   for(source in slist) {
     cat(source,"\n")
-    runQuery(paste0("update toxval set mw=-1 where mw is null and source='",source,"'"),toxval.db)
+    runQuery(paste0("update toxval set mw=-1 where mw is null and source='",source,"'",query_addition),toxval.db)
     # Pull list of DTXSID values as a vector
-    dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0 and dtxsid is not null"),toxval.db)[,1]
+    dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0 and dtxsid is not null",query_addition),
+                     toxval.db)[,1]
     # Check if any dtxsid values returned
     if(!length(dlist) | all(is.na(dlist))){
       return("No mapped dtxsid values to use to set mw...returning...")
