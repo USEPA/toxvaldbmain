@@ -54,7 +54,8 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   # Remove cols that will not be loaded into ToxVal
   cremove = c('route', 'duration', 'mrl', 'total_factors', 'endpoint', 'status',
               'cover_date', 'cas_number', 'doc_status', 'doc_cover_date',
-              'study_duration_qualifier', 'study_duration_class')
+              'study_duration_qualifier', 'study_duration_class', 'age_original',
+              'origin_document_date', 'curator_notes')
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -66,7 +67,7 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name", "document_type", "study_reference"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -112,8 +113,8 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   keep = nlist[is.element(nlist,cols)]
   refs = res[,keep]
   cols = runQuery("desc toxval",toxval.db)[,1]
-  nlist = names(res)
-  remove = nlist[!is.element(nlist,cols)]
+  nlist = names(res)[!names(res) %in% c("document_type", "study_reference")]
+  remove = nlist[!is.element(nlist, cols)]
   res = res[ , !(names(res) %in% c(remove))]
   print(dim(res))
 
@@ -136,10 +137,19 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
-  runInsertTable(res, "toxval", toxval.db, verbose)
+  runInsertTable(res %>%
+                   dplyr::select(-document_type, -study_reference),
+                 "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
+
+  #####################################################################
+  cat("Set Summary record relationship/hierarchy\n")
+  #####################################################################
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res,
+                                         toxval.db=toxval.db)
 
   #####################################################################
   cat("do the post processing\n")
