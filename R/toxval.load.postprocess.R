@@ -119,7 +119,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix empty cells in record source to hyphen by source\n")
   #####################################################################
-  fix.empty.record_source.by.source(toxval.db, source, subsource)
+  fix.empty.record_source.by.source(toxval.db, source)
 
   #####################################################################
   cat("set toxval defaults globally by source\n")

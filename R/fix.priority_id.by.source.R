@@ -21,7 +21,7 @@ fix.priority_id.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
     cat(source,"\n")
     query = paste0("update toxval set priority_id=-1 where source like '",source,"'",query_addition)
     runQuery(query,toxval.db)
-    pid = runQuery(paste0("select priority_id from source_info where source='",source,"'",query_addition),toxval.db)[1,1]
+    pid = runQuery(paste0("select priority_id from source_info where source='",source,"'"),toxval.db)[1,1]
     query = paste0("update toxval set priority_id=",pid," where source='",source,"'",query_addition)
     runQuery(query,toxval.db)
   }

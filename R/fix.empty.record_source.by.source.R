@@ -2,7 +2,6 @@
 #' Set all empty cells in record_source to '-'
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param source The source to be fixed
-#' @param subsource The subsource to be fixed
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
@@ -29,13 +28,13 @@ fix.empty.record_source.by.source <- function(toxval.db, source=NULL){
     cat(source,"\n")
       for(col in cols) {
       print(col)
-      query <- paste0("update record_source set ",col,"='-' where ",col,"='' and source like '",source,"'",query_addition)
+      query <- paste0("update record_source set ",col,"='-' where ",col,"='' and source like '",source,"'")
       runQuery(query,toxval.db)
-      query <- paste0("update record_source set ",col,"='-' where ",col," is null and source like '",source,"'",query_addition)
+      query <- paste0("update record_source set ",col,"='-' where ",col," is null and source like '",source,"'")
       runQuery(query,toxval.db)
-      query <- paste0("update record_source set ",col,"='-' where ",col,"=' ' and source like '",source,"'",query_addition)
+      query <- paste0("update record_source set ",col,"='-' where ",col,"=' ' and source like '",source,"'")
       runQuery(query,toxval.db)
-      query <- paste0("update record_source set ",col,"='-' where ",col,"='  ' and source like '",source,"'",query_addition)
+      query <- paste0("update record_source set ",col,"='-' where ",col,"='  ' and source like '",source,"'")
       runQuery(query,toxval.db)
      }
   }
