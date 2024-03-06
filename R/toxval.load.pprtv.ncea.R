@@ -178,9 +178,13 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_
                   "UCF.composite"=uf_c)
 
   # Push toxval_uf data
-  toxval_uf <- gather(toxval_uf, "uf_type","uf",4:9)
-  toxval_uf <- toxval_uf[,c("toxval_id","parent_id","uf_type","uf")]
-  toxval_uf <- toxval_uf[!is.na(toxval_uf$uf),]
+  toxval_uf <- toxval_uf %>%
+    tidyr::pivot_longer(cols=-c(toxval_id, chemical_id, parent_id),
+                        names_to = "uf_type", values_to = "uf") %>%
+    dplyr::select(toxval_id, parent_id, uf_type, uf) %>%
+    # Remove NA or blank entries
+    dplyr::filter(!uf %in% c("-", NA))
+
   runInsertTable(toxval_uf,"toxval_uf",toxval.db)
 
   # Push "RFD derived from" relationship data
