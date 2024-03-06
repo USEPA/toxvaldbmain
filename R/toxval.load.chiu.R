@@ -6,7 +6,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.chiu <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.chiu <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "Chiu"
   source_table = "source_chiu"
   verbose = log
@@ -47,12 +47,6 @@ toxval.load.chiu <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxsid=T
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
-
-  #####################################################################
-  cat("Add code to deal with specific issues for this source\n")
-  #####################################################################
-
-  # All source-specific transformations handled in the import script
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

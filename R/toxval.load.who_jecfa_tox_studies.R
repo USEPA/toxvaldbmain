@@ -1,13 +1,13 @@
 #--------------------------------------------------------------------------------------
-#' Load the California DPH data data  from toxval_source to toxval
+#' Load WHO JECFA Tox Studies from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "California DPH"
-  source_table = "source_cal_dph"
+toxval.load.who_jecfa_tox_studies <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "WHO JECFA Tox Studies"
+  source_table = "source_who_jecfa_tox_studies"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -50,7 +50,11 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  # Source-specific transformations completed in import script
+  cremove = c("who_jecfa_chemical_id","webpage_name","chemical_names","synonyms",
+              "ins","functional_class","ins_matches","jecfa_number","cas_number",
+              "evaluation_year","pivotal_study","animal_specie","effect","point_of_departure",
+              "chemical_url","study_duration_qualifier","age_value","age_units","curators_notes")
+  res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -58,18 +62,11 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cols1 = runQuery("desc record_source",toxval.db)[,1]
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
+  colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name", "range_relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
-
-  # Remove columns that are not used in toxval
-  res = res %>% dplyr::select(!dplyr::any_of(nlist))
-
-  nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
-
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -77,12 +74,17 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   }
   print(dim(res))
 
+  # examples ...
+  # names(res)[names(res) == "source_url"] = "url"
+  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
+
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -106,6 +108,25 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   res$toxval_id = tids
   print(dim(res))
 
+  # #####################################################################
+  # cat("Set the toxval_relationship for separated toxval_numeric range records")
+  # #####################################################################
+  relationship = res %>%
+    dplyr::filter(grepl("Range", toxval_subtype)) %>%
+    dplyr::select(toxval_id, range_relationship_id, toxval_subtype) %>%
+    tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_subtype, values_from = toxval_id) %>%
+    dplyr::rename(toxval_id_1 = `Lower Range`,
+                  toxval_id_2 = `Upper Range`) %>%
+    dplyr::mutate(relationship = "toxval_numeric range") %>%
+    dplyr::select(-range_relationship_id)
+  # Insert range relationships into toxval_relationship table
+  if(nrow(relationship)){
+    runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+  }
+  # Remove range_relationship_id
+  res <- res %>%
+    dplyr::select(-range_relationship_id)
+
   #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
@@ -122,9 +143,10 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "website"
-  refs$record_source_note = "to be cleaned up"
-  refs$record_source_level = "primary (risk assessment values)"
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
+  refs$url = "https://apps.who.int/food-additives-contaminants-jecfa-database/"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
@@ -134,6 +156,8 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
+  res$source_url = "https://apps.who.int/food-additives-contaminants-jecfa-database/"
+  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
@@ -164,12 +188,4 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cat("finish\n")
   #####################################################################
   return(0)
-
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 }

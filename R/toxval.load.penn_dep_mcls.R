@@ -1,13 +1,14 @@
 #--------------------------------------------------------------------------------------
-#' Load the California DPH data data  from toxval_source to toxval
+#
+#' Load the penn_dep_mcls data  from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "California DPH"
-  source_table = "source_cal_dph"
+toxval.load.penn_dep_mcls <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "Pennsylvania DEP MCLs"
+  source_table = "source_penn_dep_mcls"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -50,7 +51,8 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  # Source-specific transformations completed in import script
+
+  # No source-specific issues to address after import
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -58,17 +60,19 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   cols1 = runQuery("desc record_source",toxval.db)[,1]
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
+  colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
 
-  # Remove columns that are not used in toxval
+  # Remove regulated_substance, source_value, study_duration_qualifier
   res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
+
 
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -122,9 +126,10 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "website"
-  refs$record_source_note = "to be cleaned up"
-  refs$record_source_level = "primary (risk assessment values)"
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
+  refs$url = res$source_url
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
@@ -134,6 +139,7 @@ toxval.load.cal_dph <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
+  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

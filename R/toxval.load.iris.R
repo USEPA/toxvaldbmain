@@ -66,6 +66,9 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
     select(-dplyr::any_of(non_toxval_cols)) %>%
     dplyr::filter(toxval_numeric != "-")
 
+  # Fill in long_ref where missing
+  res$long_ref[res$long_ref == "-"] = res$study_reference[res$long_ref == "-"]
+
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -76,6 +79,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   cremove = c("uf_composite", "confidence", "extrapolation_method", "class",
               "key_finding", "age",
               "assessment_type", "curator_notes", "risk_assessment_duration")
+
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################

@@ -26,7 +26,7 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
 
     if(is.na(n0)) {
       cat("NA name found...\n")
-      browser()
+      return(n0)
     }
     n1 = n0 %>%
       iconv(.,from="UTF-8",to="ASCII//TRANSLIT")
