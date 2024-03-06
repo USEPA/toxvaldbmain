@@ -114,7 +114,7 @@ toxval.load.ow_dwsha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   cat("Set the toxval_relationship for separated toxval_numeric range records\n")
   #####################################################################
   relationship = res %>%
-    dplyr::filter(!is.na(numeric_relationship_description)) %>%
+    dplyr::filter(!numeric_relationship_id  %in% c("-", NA)) %>%
     dplyr::select(toxval_id, numeric_relationship_id, numeric_relationship_description) %>%
     tidyr::pivot_wider(id_cols = "numeric_relationship_id",
                        names_from = numeric_relationship_description,
