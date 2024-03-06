@@ -58,6 +58,7 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
 
   # Combine relationships before insertion
   all_relationships <- dplyr::bind_rows(relationships_adj_hec, relationships_adj_base, relationship_hec_base)
+
   all_relationships <- all_relationships %>%
     dplyr::ungroup() %>%
     dplyr::select(toxval_id_1, toxval_id_2, relationship)
@@ -66,5 +67,4 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   if(nrow(all_relationships)){
     runInsertTable(mat=all_relationships, table='toxval_relationship', db=toxval.db)
   }
-
 }
