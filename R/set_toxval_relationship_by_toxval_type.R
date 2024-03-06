@@ -7,9 +7,10 @@
 #--------------------------------------------------------------------------------------
 set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   res1 <- res %>%
-    dplyr::filter(grepl("Summary", document_type) | grepl("Toxicological", document_type))
-
-  res1$preceding_text <- gsub("\\s*\\(.*", "", res1$toxval_type)
+    dplyr::filter(grepl("Summary|Toxicological", document_type)) %>%
+    dplyr::mutate(preceding_text = toxval_type %>%
+                    gsub("\\s*\\(.*", "", .)
+                  )
 
   # Identify and capture ex. NOAEL (HEC) -> NOAEL (ADJ) type relationship
   relationships_adj_hec <- res1 %>%
