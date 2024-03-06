@@ -88,7 +88,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
   # Custom ignore "document_type" for later relationship processing
-  nlist = nlist[!is.element(nlist,c("casrn","name", "document_type", "study_reference"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name", "document_type", "study_reference",
+                                    "numeric_relationship_description","numeric_relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -106,28 +107,6 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-
-  # Set toxval_numeric from ranges based on toxval_type
-  res <- res %>%
-    dplyr::mutate(
-      toxval_numeric = case_when(
-        grepl("-(?![eE])", toxval_numeric, perl=TRUE) & toxval_type == "LOAEL" ~
-          sub("-.*", "", toxval_numeric),
-        TRUE ~ toxval_numeric
-      )
-    )
-  # Separate BMDL05 ranges into different records
-  bmdl <- res %>%
-    dplyr::filter(toxval_type == 'BMDL05' & grepl("-(?![eE])", toxval_numeric, perl=TRUE)) %>%
-    tidyr::separate_rows(toxval_numeric, sep="-") %>%
-    mutate(
-      toxval_subtype = ifelse(toxval_numeric == min(toxval_numeric), "Min. Range", "Max. Range")
-    )
-  if (nrow(bmdl) > 0){
-    res <- res %>%
-      dplyr::filter(!(toxval_type %in% "BMDL05" & grepl("-(?![eE])", toxval_numeric, perl=TRUE)))
-    res <- dplyr::bind_rows(res, split_rows)
-  }
 
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -153,25 +132,27 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res$toxval_id = tids
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
-  # #####################################################################
-  # cat("Set the toxval_relationship for separated bmdl05 toxval_numeric records")
-  # #####################################################################
-  # bmdl <- res %>%
-  #   filter(source_hash %in% bmdl$source_hash)
-  # relationship <- bmdl %>%
-  #   select(toxval_id, source_hash) %>%
-  #   arrange(source_hash) %>%
-  #   mutate(
-  #     toxval_id_1 = lag(toxval_id),
-  #     toxval_id_2 = toxval_id,
-  #     relationship = "range"
-  #   ) %>%
-  #   select(toxval_id_1, toxval_id_2, relationship) %>%
-  #   filter(!is.na(toxval_id_1))
-  # # Insert into toxval_relationship
-  # if(nrow(relationship)){
-  #   runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
-  # }
+  #####################################################################
+  cat("Set the toxval_relationship for separated toxval_numeric range records\n")
+  #####################################################################
+  relationship = res %>%
+    dplyr::filter(!numeric_relationship_id  %in% c("-", NA)) %>%
+    dplyr::select(toxval_id, numeric_relationship_id, numeric_relationship_description) %>%
+    tidyr::pivot_wider(id_cols = "numeric_relationship_id",
+                       names_from = numeric_relationship_description,
+                       values_from = toxval_id) %>%
+    dplyr::rename(toxval_id_1 = `Lower Range`,
+                  toxval_id_2 = `Upper Range`) %>%
+    dplyr::mutate(relationship = "toxval_numeric range") %>%
+    dplyr::select(-numeric_relationship_id)
+  # Insert range relationships into toxval_relationship table
+  if(nrow(relationship)){
+    runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+  }
+  # Remove range_relationship_id
+  res <- res %>%
+    dplyr::select(-tidyselect::any_of(c("numeric_relationship_id", "numeric_relationship_description")))
+
   #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
