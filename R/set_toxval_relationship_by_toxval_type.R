@@ -7,9 +7,10 @@
 #--------------------------------------------------------------------------------------
 set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   res1 <- res %>%
-    dplyr::filter(grepl("Summary", document_type))
-
-  res1$preceding_text <- gsub("\\s*\\(.*", "", res1$toxval_type)
+    dplyr::filter(grepl("Summary|Toxicological", document_type)) %>%
+    dplyr::mutate(preceding_text = toxval_type %>%
+                    gsub("\\s*\\(.*", "", .)
+                  )
 
   # Identify and capture ex. NOAEL (HEC) -> NOAEL (ADJ) type relationship
   relationships_adj_hec <- res1 %>%
@@ -41,8 +42,24 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
     ) %>%
     dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2))
 
+  # Identify and capture ex. NOAEL (HEC)/NOAEL (HED) -> NOAEL type relationship
+  relationship_hec_base <- res1 %>%
+    dplyr::group_by(study_reference, study_type, exposure_route, preceding_text) %>%
+    dplyr::filter(
+      any(grepl("\\(HEC\\)|\\(HED\\)", toxval_type)) & any(!grepl("\\(HEC\\)|\\(HED\\)", toxval_type))
+    ) %>%
+    dplyr::summarize(
+      toxval_id_1 = toxval_id[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
+      toxval_id_2 = toxval_id[grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
+      toxval_type_1 = toxval_type[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
+      toxval_type_2 = toxval_type[grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
+      relationship = "derived from"
+    ) %>%
+    dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2) & !(toxval_id_2 %in% relationships_adj_base$toxval_id_2))
+
   # Combine relationships before insertion
-  all_relationships <- dplyr::bind_rows(relationships_adj_hec, relationships_adj_base)
+  all_relationships <- dplyr::bind_rows(relationships_adj_hec, relationships_adj_base, relationship_hec_base)
+
   all_relationships <- all_relationships %>%
     dplyr::ungroup() %>%
     dplyr::select(toxval_id_1, toxval_id_2, relationship)
@@ -51,5 +68,4 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   if(nrow(all_relationships)){
     runInsertTable(mat=all_relationships, table='toxval_relationship', db=toxval.db)
   }
-
 }
