@@ -19,7 +19,7 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
 
   # Helper function to check if any field names match sql keywords
   check_keywords <- function(database, words_file, outDir){
-    keywords <- stringi::stri_trans_tolower(readLines(words_file))
+    keywords <- stringi::stri_trans_tolower(readLines(words_file, warn=FALSE))
     field_list <- runQuery(paste0("SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE FROM INFORMATION_SCHEMA. COLUMNS WHERE TABLE_SCHEMA = '",
                                   database, "'"),
                            database)
@@ -34,10 +34,10 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
       #tidyr::unnest(keyword) %>%
       #dplyr::filter(!is.na(keyword))
 
-    words_file <- gsub("Repo/|\\.txt", "", words_file)
+    words_file <- gsub("Repo/dictionary/|\\.txt", "", words_file)
     out_file <- paste0(database,"_",words_file,"_keyword_occurrences.xlsx")
 
-    write_xlsx(occurrences, file.path(outDir, out_file))
+    writexl::write_xlsx(occurrences, file.path(outDir, out_file))
   }
 
   # Loop through input databases
@@ -50,11 +50,12 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
       dir.create(file.path(outDir, "DDL"))
     }
 
-    reserved_words_file = paste0(toxval.config()$datapath, "reserved.txt")
-    nonreserved_words_file = paste0(toxval.config()$datapath,"non_reserved.txt")
+    reserved_words_file = paste0(toxval.config()$datapath, "dictionary/mysql_reserved_terms.txt")
+    nonreserved_words_file = paste0(toxval.config()$datapath,"dictionary/mysql_non_reserved_terms.txt")
 
-    check_keywords(toxval.db, reserved_words_file, outDir)
-    check_keywords(toxval.db, nonreserved_words_file, outDir)
+    # database, words_file, outDir
+    check_keywords(database=toxval.db, words_file=reserved_words_file, outDir=outDir)
+    check_keywords(database=toxval.db, words_file=nonreserved_words_file, outDir=outDir)
 
     # List of tables, fields, and field types
     field_list <- runQuery(paste0("SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_DEFAULT, IS_NULLABLE, COLUMN_TYPE, COLLATION_NAME, COLUMN_KEY, EXTRA ",
