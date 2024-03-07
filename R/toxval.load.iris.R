@@ -61,11 +61,13 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                        "endpoint", "principal_study", "study_duration_qualifier")
   # Rename non-toxval columns
   res <- res %>%
-    dplyr::rename(long_ref = study_reference,
-                  # risk_assessment_class = risk_assessment_duration,
+    dplyr::rename(# risk_assessment_class = risk_assessment_duration,
                   quality = overall_confidence) %>%
     select(-dplyr::any_of(non_toxval_cols)) %>%
     dplyr::filter(toxval_numeric != "-")
+
+  # Fill in long_ref where missing
+  res$long_ref[res$long_ref == "-"] = res$study_reference[res$long_ref == "-"]
 
   res$source = source
   res$details_text = paste(source,"Details")
@@ -74,7 +76,10 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c("uf_composite", "confidence", "extrapolation_method", "class")
+  cremove = c("uf_composite", "confidence", "extrapolation_method", "class",
+              "key_finding", "age",
+              "assessment_type", "curator_notes", "risk_assessment_duration")
+
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -86,7 +91,9 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  # Custom ignore "document_type" for later relationship processing
+  nlist = nlist[!is.element(nlist,c("casrn","name", "document_type", "study_reference",
+                                    "numeric_relationship_description","numeric_relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -94,7 +101,6 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
     browser()
   }
   print(paste0("Dimensions of source data: ", toString(dim(res))))
-
   # examples ...
   # names(res)[names(res) == "source_url"] = "url"
   # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
@@ -105,6 +111,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
+
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -130,6 +137,27 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
+  cat("Set the toxval_relationship for separated toxval_numeric range records\n")
+  #####################################################################
+  relationship = res %>%
+    dplyr::filter(!numeric_relationship_id  %in% c("-", NA)) %>%
+    dplyr::select(toxval_id, numeric_relationship_id, numeric_relationship_description) %>%
+    tidyr::pivot_wider(id_cols = "numeric_relationship_id",
+                       names_from = numeric_relationship_description,
+                       values_from = toxval_id) %>%
+    dplyr::rename(toxval_id_1 = `Lower Range`,
+                  toxval_id_2 = `Upper Range`) %>%
+    dplyr::mutate(relationship = "toxval_numeric range") %>%
+    dplyr::select(-numeric_relationship_id)
+  # Insert range relationships into toxval_relationship table
+  if(nrow(relationship)){
+    runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+  }
+  # Remove range_relationship_id
+  res <- res %>%
+    dplyr::select(-tidyselect::any_of(c("numeric_relationship_id", "numeric_relationship_description")))
+
+  #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
   cols = runQuery("desc record_source",toxval.db)[,1]
@@ -137,8 +165,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   keep = nlist[is.element(nlist,cols)]
   refs = res[,keep]
   cols = runQuery("desc toxval",toxval.db)[,1]
-  nlist = names(res)
-  remove = nlist[!is.element(nlist,cols)]
+  nlist = names(res)[!names(res) %in% c("document_type", "study_reference")]
+  remove = nlist[!is.element(nlist, cols)]
   res = res[ , !(names(res) %in% c(remove))]
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
@@ -162,9 +190,19 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
-  runInsertTable(res, "toxval", toxval.db, verbose)
+  # Push res except for set_toxval_relationship_by_toxval_type needed columns
+  runInsertTable(res %>%
+                   dplyr::select(-document_type, -study_reference),
+                 "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))
+
+  #####################################################################
+  cat("Set Summary record relationship/hierarchy\n")
+  #####################################################################
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res,
+                                         toxval.db=toxval.db)
 
   #####################################################################
   cat("do the post processing\n")

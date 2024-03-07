@@ -52,7 +52,7 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("sources_of_contaminant_in_drinking_water", "subsource_type")
+  cremove = c("sources_of_contaminant_in_drinking_water", "subsource_type", "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
