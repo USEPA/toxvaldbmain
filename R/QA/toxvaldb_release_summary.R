@@ -69,7 +69,7 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
                               toxval.db)
 
     # Loop through tables
-    n_tbl_row <- lapply(tbl_list, function(tbl_n){
+    n_tbl_row <- lapply(unique(field_list$TABLE_NAME), function(tbl_n){
       message("...Pulling DDLs and row counts for '", tbl_n, "'")
       # Write DDLs by table
       tmp <- runQuery(paste0("SHOW CREATE TABLE ", tbl_n),
