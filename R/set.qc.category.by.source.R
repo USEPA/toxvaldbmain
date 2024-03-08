@@ -3,7 +3,8 @@
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source The source to set a qc_category for
-#' @param access_token A personal access token for authentication in Confluence/Jira
+#' @param jira_access_token A personal access token for authentication in Jira
+#' @param confluence_access_token A personal access token for authentication in Confluence
 #' @export
 #--------------------------------------------------------------------------------------
 set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_token, jira_access_token){
@@ -15,8 +16,9 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   }
   url <- "https://confluence.epa.gov/x/VuCkFg"
   # Retrieve Jira ticket data and confluence page data
-  jira_tickets <- pull_jira_info(jira_project = "TOXVAL", in_file = NULL, auth_token = pat)
-  response <- GET(url, add_headers(Authorization = paste("Bearer", access_token)))
+  jira_tickets <- pull_jira_info(jira_project = "TOXVAL", in_file = NULL, auth_token = jira_access_token) %>%
+    dplyr::filter(`Epic Link` == "TOXVAL-296")
+  response <- GET(url, add_headers(Authorization = paste("Bearer", confluence_access_token)))
 
   if (status_code(response) == 200) {
     confluence_page <- read_html(content(response, "text"))
@@ -107,7 +109,8 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   # Update qc_category in toxval
   if(nrow(res)){
     updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                         "ON (a.source = b.source) SET a.qc_category = b.qc_category")
+                         "ON (a.source = b.source) SET a.qc_category = b.qc_category ",
+                         "WHERE a.qc_category IS NOT NULL")
     # Run update query
     runUpdate(table="toxval", updateQuery=updateQuery, updated_df=res, db=toxval.db)
   }
