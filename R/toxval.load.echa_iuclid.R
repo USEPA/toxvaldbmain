@@ -75,8 +75,10 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
 
   # Load each source
   for(oht in iuclid_source_tables) {
+    remove_null_dtxsid=FALSE
     # Check if source has already been loaded
     if(oht %in% iuclid_toxval_ohts) {
+      next
       # Get load/import dates
       source_date = as.POSIXct(unique(runQuery(paste0("SELECT create_time FROM ",
                                                       oht), source.db))$create_time[1])
@@ -213,17 +215,18 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     #####################################################################
     cat("Set the toxval_relationship for separated toxval_numeric range records\n")
     #####################################################################
-    relationship_initial = res %>%
-      dplyr::filter(grepl("Range", toxval_subtype),
-                    !range_relationship_id %in% c("-"))
+    if("range_relationship_id" %in% names(res)) {
+      relationship_initial = res %>%
+        dplyr::filter(grepl("Range", toxval_subtype),
+                      !range_relationship_id %in% c("-"))
 
-    # Add check for filtered values
-    if(nrow(relationship_initial)) {
-      relationship = relationship_initial %>%
-        tidyr::separate_rows(
-          range_relationship_id,
-          sep = " \\|::\\| "
-        ) %>%
+      # Add check for filtered values
+      if(nrow(relationship_initial)) {
+        relationship = relationship_initial %>%
+          tidyr::separate_rows(
+            range_relationship_id,
+            sep = " \\|::\\| "
+          ) %>%
           dplyr::select(toxval_id, range_relationship_id, toxval_subtype) %>%
           tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_subtype, values_from = toxval_id) %>%
           dplyr::rename(toxval_id_1 = `Lower Range`,
@@ -231,15 +234,16 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
           dplyr::mutate(relationship = "toxval_numeric range") %>%
           dplyr::select(-range_relationship_id)
 
-      # Insert range relationships into toxval_relationship table
-      if(nrow(relationship)){
-        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+        # Insert range relationships into toxval_relationship table
+        if(nrow(relationship)){
+          runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+        }
       }
-    }
 
-    # Remove range_relationship_id
-    res <- res %>%
-      dplyr::select(-range_relationship_id)
+      # Remove range_relationship_id
+      res <- res %>%
+        dplyr::select(-range_relationship_id)
+    }
 
     #####################################################################
     cat("pull out record source to refs\n")
