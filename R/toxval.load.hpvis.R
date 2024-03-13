@@ -103,7 +103,7 @@ toxval.load.hpvis <- function(toxval.db,source.db,log=F) {
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","raw_input_file"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","raw_input_file","source_version_date"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")

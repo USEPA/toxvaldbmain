@@ -112,7 +112,7 @@ toxval.load.hawc_pfas_150 <- function(toxval.db, source.db,log=F){
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  res = res[ , !(names(res) %in% c("noel_original","loel_original","fel_original","data_location","doses_units"))]
+  res = res[ , !(names(res) %in% c("noel_original","loel_original","fel_original","data_location","doses_units","source_version_date"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]

@@ -75,7 +75,9 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=F){
   # trims leading and trailing whitespaces from the dataframe
   res <- data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
   res$toxval_numeric_original <- res$toxval_numeric
-  res[is.na(res[,"document_name"]),"document_name"] <- "-"
+  if("document_name" %in% names(res)) {
+    res[is.na(res[,"document_name"]),"document_name"] <- "-"
+  }
   res <- unique(res)
 
   res[is.element(res$toxval_type,c("RfD","RfC","cancer slope factor","cancer unit risk","")),"species_original"] = "-"
@@ -96,7 +98,7 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=F){
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","hero_id"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","hero_id","source_version_date"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")

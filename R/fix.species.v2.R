@@ -61,8 +61,10 @@ fix.species.v2 <- function(toxval.db,source=NULL,date_string="2023-05-18") {
         tag0 = tag
         nc = nchar(tag)
         tagend = substr(tag,nc-2,nc)
-        if(tagend==" sp") {
-          tag = paste0(tag,".")
+        if(!(tagend %in% c(NA))) {
+          if(tagend==" sp") {
+            tag = paste0(tag,".")
+          }
         }
         slist = c("other aquatic arthropod ","other aquatic crustacea: ","other aquatic mollusc: ",
                   "other aquatic worm: ","other,","other,other algae: ","other: ")
