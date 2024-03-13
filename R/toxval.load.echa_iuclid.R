@@ -75,10 +75,8 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
 
   # Load each source
   for(oht in iuclid_source_tables) {
-    remove_null_dtxsid=FALSE
     # Check if source has already been loaded
     if(oht %in% iuclid_toxval_ohts) {
-      next
       # Get load/import dates
       source_date = as.POSIXct(unique(runQuery(paste0("SELECT create_time FROM ",
                                                       oht), source.db))$create_time[1])
