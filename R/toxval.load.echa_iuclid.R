@@ -70,7 +70,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
                       "source_iuclid_shorttermtoxicitytofish"="Short Term Toxicity to Fish",
                       "source_iuclid_skinirritationcorrosion"="Skin Irritation Corrosion",
                       "source_iuclid_skinsensitisation"="Skin Sensitisation",
-                      "source_iuclid_developmentaltoxicitytetratogenicity"="Developmental Toxicity Tetratogenicity",
+                      "source_iuclid_developmentaltoxicityteratogenicity"="Developmental Toxicity Teratogenicity",
                       "source_iuclid_toxicityreproduction"="Toxicity Reproduction")
 
   # Load each source
