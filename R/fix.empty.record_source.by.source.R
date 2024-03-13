@@ -6,7 +6,7 @@
 #' @export
 #--------------------------------------------------------------------------------------
 fix.empty.record_source.by.source <- function(toxval.db, source=NULL){
-  printCurrentFunction(paste(toxval.db,":", source,subsource))
+  printCurrentFunction(paste(toxval.db,":", source))
   res <- runQuery("desc record_source",toxval.db)
   mask <- vector(mode="integer",length=dim(res)[1])
   mask[] <- 0
@@ -15,12 +15,6 @@ fix.empty.record_source.by.source <- function(toxval.db, source=NULL){
     if(contains(res[i,"Type"],"text")) mask[i] <- 1
   }
   cols <- res[mask==1,"Field"]
-
-  # Handle addition of subsource for queries
-  query_addition = ""
-  if(!is.null(subsource)) {
-    query_addition = paste0(" and subsource='", subsource, "'")
-  }
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
