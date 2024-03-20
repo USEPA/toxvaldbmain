@@ -275,6 +275,9 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     browser()
   }
 
+  # Perform deduping
+  res = toxval.load.dedup(res)
+
   cat("set the source_hash\n")
   # Vectorized approach to source_hash generation
   non_hash_cols <- toxval.config()$non_hash_cols

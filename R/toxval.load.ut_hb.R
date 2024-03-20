@@ -176,6 +176,9 @@ toxval.load.ut_hb <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
     dplyr::distinct() %>%
     replace(is.na(.), "-")
 
+  # Perform deduping
+  res = toxval.load.dedup(res)
+
   # Maintained logic from old script - comment out if unnecessary
   cat("set the source_hash\n")
   res$source_hash = NA

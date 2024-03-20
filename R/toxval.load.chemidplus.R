@@ -81,6 +81,10 @@ toxval.load.chemidplus <- function(toxval.db,source.db,log=F,do.init=F) {
     CHEMIDPLUS <<- res
   }
   res = CHEMIDPLUS
+
+  # Perform deduping
+  res = toxval.load.dedup(res)
+
   cat("set the source_hash\n")
   #res = fix.non_ascii.v2(res,source)
   res$source_hash = NA

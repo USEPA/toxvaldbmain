@@ -152,14 +152,6 @@ toxval.load.toxrefdb2.1 <- function(toxval.db,source.db,log=F,do.init=T) {
   }
   res = TOXREFDB21
 
-  cat("set the source_hash\n")
-  res$source_hash = NA
-  for (i in 1:nrow(res)){
-    row <- res[i,]
-    res[i,"source_hash"] = digest(paste0(row,collapse=""), serialize = FALSE)
-    if(i%%1000==0) cat(i," out of ",nrow(res),"\n")
-  }
-
   res$source = source
 
   res = source_chemical.toxrefdb(toxval.db,source.db,res,source,chem.check.halt=FALSE,
@@ -204,6 +196,17 @@ toxval.load.toxrefdb2.1 <- function(toxval.db,source.db,log=F,do.init=T) {
   x[is.element(x,"weeks (premating)")] <- "weeks"
   res[,"study_duration_units"] <- x
   res[,"study_duration_value"] <- as.numeric(res[,"study_duration_value"])
+
+  # Perform deduping
+  res = toxval.load.dedup(res)
+
+  cat("set the source_hash\n")
+  res$source_hash = NA
+  for (i in 1:nrow(res)){
+    row <- res[i,]
+    res[i,"source_hash"] = digest(paste0(row,collapse=""), serialize = FALSE)
+    if(i%%1000==0) cat(i," out of ",nrow(res),"\n")
+  }
 
   # name.list <- names(res)
   # name.list[is.element(name.list,"dose_end_unit")] <- "study_duration_units"
