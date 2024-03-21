@@ -68,8 +68,9 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
   out = out %>%
     dplyr::bind_cols(
       chem_curation_summ = chem_curation_summ %>%
-        dplyr::mutate(chem_curation_perc = round(((`TRUE`-`FALSE`)/`TRUE`) * 100, 3)) %>%
-        tidyr::unite(`FALSE`, `TRUE`, col="missing_chem_curation_frac", sep = "/", na.rm=TRUE)
+        dplyr::mutate(chem_curation_perc = round((`TRUE`/(`TRUE`+`FALSE`)) * 100, 3),
+                      missing_chem_curation_frac = paste0(`FALSE`, "/", (`TRUE`+`FALSE`))) %>%
+        dplyr::select(-`TRUE`, -`FALSE`)
       )
 
   # Check uncurated chemicals
@@ -125,8 +126,9 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
         missing_extraction_doc = length(src_hash[!src_hash %in% extraction_doc$source_hash]),
         has_extraction_doc = length(unique(extraction_doc$source_hash))
         ) %>%
-        dplyr::mutate(extract_doc_perc = round((has_extraction_doc/(has_extraction_doc + missing_extraction_doc)) * 100, 3)) %>%
-        tidyr::unite(missing_extraction_doc, has_extraction_doc, col="missing_extraction_doc_fraction", sep = "/", na.rm=TRUE)
+        dplyr::mutate(extract_doc_perc = round((has_extraction_doc/(has_extraction_doc + missing_extraction_doc)) * 100, 3),
+                      missing_extraction_doc_fraction = paste0(missing_extraction_doc, "/", (has_extraction_doc+missing_extraction_doc))) %>%
+        dplyr::select(-has_extraction_doc, -missing_extraction_doc)
     )
 
   # Check record_source table entries
