@@ -150,6 +150,13 @@ toxval.load.pprtv.cphea <- function(toxval.db,source.db, log=FALSE, remove_null_
   print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
 
   #####################################################################
+  cat("Set Summary record relationship/hierarchy\n")
+  #####################################################################
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res,
+                                         toxval.db=toxval.db)
+
+  #####################################################################
   cat("do the post processing\n")
   #####################################################################
   toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
