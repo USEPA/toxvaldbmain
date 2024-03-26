@@ -4,6 +4,9 @@
 #' @param source.db The source database
 #' @param source_name Name of source to check (e.g., IRIS)
 toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
+  # Check input param
+  if(is.null(source_name) || is.na(source_name)) stop("Input 'source_name' must not be NULL or NA")
+
   message("Generating report for...", source_name)
   # Check whether source is direct load
   is_direct_load = runQuery(paste0("SELECT DISTINCT source_table FROM toxval WHERE source='",
@@ -33,26 +36,27 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
       message(source_name, " provided table ", src_tbl, " does not exist...skipping...")
       return()
     }
-    # source_hash list
-    src_hash = runQuery(paste0("SELECT source_hash FROM ", src_tbl),
-                        db = source.db) %>%
-      dplyr::pull(source_hash)
+    # PUll source data
+    src_data = runQuery(paste0("SELECT source_hash, chemical_id, create_time FROM ", src_tbl),
+                        db = source.db)
 
-    # Get import date
-    import_date_val = runQuery(paste0("SELECT distinct create_time FROM ", src_tbl),
-                               db = source.db) %>%
-      dplyr::pull(create_time)
   } else {
-    # source_hash list
-    src_hash = runQuery(paste0("SELECT source_hash FROM toxval WHERE source='", source_name, "'"),
-                        db = toxval.db) %>%
-      dplyr::pull(source_hash)
-
-    # Set NA import date
-    import_date_val = NA
+    # Pull source data for "direct load" source type
+    src_data = runQuery(paste0("SELECT source_hash, chemical_id FROM toxval WHERE source='", source_name, "'"),
+                                db= toxval.db)
   }
 
+  # source_hash list
+  src_hash = src_data$source_hash
+  # Chemical ID list
+  chem_id_list = unique(src_data$chemical_id)
+  # Get import date
+  import_date_val = ifelse(is.null(unique(src_data$create_time)), NA, unique(src_data$create_time))
+
+  # Baseline information
   out = data.frame(
+    # Set direct_load type
+    is_direct_load = !!is_direct_load,
     # Report import date
     import_date = import_date_val,
 
@@ -70,22 +74,11 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
   )
 
   # Get chemical curation counts
-  if(!is_direct_load) {
-    chem_curation = runQuery(paste0("SELECT chemical_id, dtxsid FROM source_chemical ",
-                                    "WHERE chemical_id in (",
-                                    "SELECT chemical_id FROM ", src_tbl,
-                                    ")"),
-                             db=source.db)
-  } else {
-    chem_id_list = runQuery(paste0("SELECT chemical_id FROM toxval WHERE source='",
-                                   source_name, "'"),
-                            db=toxval.db)
-    chem_curation = runQuery(paste0("SELECT chemical_id, dtxsid FROM source_chemical ",
-                                    "WHERE chemical_id in ('",
-                                    paste0(chem_id_list$chemical_id, collapse="', '"),
-                                    "')"),
-                             db=source.db)
-  }
+  chem_curation = runQuery(paste0("SELECT chemical_id, dtxsid FROM source_chemical ",
+                                  "WHERE chemical_id in ('",
+                                  paste0(chem_id_list, collapse="', '"),
+                                  "')"),
+                           db=source.db)
 
   # Summarize chemical curation
   chem_curation_summ = chem_curation %>%
@@ -153,24 +146,17 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
                                          db = toxval.db) %>%
       dplyr::pull(n)
   }
+
   out = out %>%
     dplyr::mutate(n_records_no_chem_map = !!n_records_no_chem_map_val,
                   has_dtxsid_mapped = length(unique(missing_chems_curated$chemical_id)))
 
   # Check extraction document linkage
-  if(!is_direct_load) {
-    extraction_doc = runQuery(paste0("SELECT * FROM documents_records WHERE ",
-                                     "source_hash IN (SELECT source_hash FROM ",
-                                     src_tbl, ")"),
-                              db = source.db)
-  } else {
-    source_hashes = runQuery(paste0("SELECT source_hash FROM toxval WHERE source='", source_name, "'"),
-                             db = toxval.db)
-    extraction_doc = runQuery(paste0("SELECT * FROM documents_records WHERE source_hash IN ('",
-                                     paste0(source_hashes$source_hash, collapse="', '"),
-                                     "')"),
-                              db = source.db)
-  }
+  extraction_doc = runQuery(paste0("SELECT * FROM documents_records WHERE ",
+                                   "source_hash IN ('",
+                                   paste0(src_hash, collapse="', '"),
+                                   "')"),
+                            db = source.db)
 
   out = out %>%
     dplyr::bind_cols(
