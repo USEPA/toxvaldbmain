@@ -50,9 +50,11 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   old_qc_category$qc_category[old_qc_category$qc_category == "-"] <- NA
   old_qc_category$assignee <- NA
 
+  in_data <- jira_tickets$in_data
+  hashes <- jira_tickets$hashes
   for (i in 1:nrow(old_qc_category)){
     source_table_qc <- paste0(old_qc_category$source_table[i], " QC")
-    matching_rows <- jira_tickets[jira_tickets$Summary == source_table_qc | jira_tickets$Summary == old_qc_category$source_table[i],]
+    matching_rows <- in_data[in_data$Summary == source_table_qc | in_data$Summary == old_qc_category$source_table[i],]
     if(nrow(matching_rows) > 0){
       old_qc_category$assignee[i] <- matching_rows$Assignee[1]
     }
@@ -68,9 +70,11 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   for(src in valid_sources$source) {
     source_df <- subset(table_df, `Source Name` == src)
     existing_source <- old_qc_category %>% filter(source == src)
+    query = paste0("select distinct source_hash, source, qc_category from toxval where source = '", src, "'")
+    in_toxval = runQuery(query, toxval.db)
 
     curation_type <- unique(source_df$curation_type)
-    qc_status <- unique(source_df$`QC Status`)
+    qc_stat <- unique(source_df$`QC Status`)
 
     if(curation_type == 'automated'){
       if(!grepl("Programmatically extracted from structured data source", existing_source$qc_category)){
@@ -81,35 +85,37 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
         qc_category_new = "Manually extracted from unstructured data source"
       }
     }
-    if(qc_status == "LV 1- In Review" & is.na(existing_source$assignee)){
-      if(!grepl("Source overall passed QC, but this record was not manually checked", existing_source$qc_category)){
-        if(qc_category_new == "-" | is.na(qc_category_new)){
-          qc_category_new = "Source overall passed QC, but this record was not manually checked"
-        } else{
-          qc_category_new = paste0(qc_category_new, ", Source overall passed QC, but this record was not manually checked")
-        }
-      }
+
+    in_toxval$qc_category_new = qc_category_new
+
+    if(qc_stat == "LV 1- In Review" & is.na(existing_source$assignee)){
+      src_records <- hashes %>% filter(source == src)
+      merged <- merge(in_toxval, src_records, by=c('source_hash','source'), all.x=TRUE)
+      merged <- merged %>% mutate(qc_status = ifelse(is.na(qc_status), "-", qc_status))
+      merged <- merged %>%
+        mutate(qc_category_new = ifelse(tolower(qc_status) == 'pass', paste0(qc_category_new, ", Source overall passed QC, and this record was manually checked"),
+                                    paste0(qc_category_new, ", Source overall passed QC, but this record was not manually checked")))
     }
     #--------------------------------------------------------------------------------------
     # TODO: Incorporate logic for adding additional qc_categories
     #--------------------------------------------------------------------------------------
-
-    new_info <- c(src, qc_category_new)
+    in_toxval <- merged
+    in_toxval <- in_toxval %>% dplyr::select(source, source_hash, qc_category_new)
     res0 <- rbind(res0, new_info)
   }
   # Prep columns for insertion
-  colnames(res0) <- c("source", "qc_category_new")
+  colnames(res0) <- c("source", "source_hash", "qc_category_new")
   res1 <- merge(old_qc_category, res0, by="source")
   res <- res1 %>%
     tidyr::unite(col="qc_category", qc_category, qc_category_new, sep = ", ", na.rm = TRUE) %>%
     dplyr::rowwise() %>%
     dplyr::mutate(qc_category = toString(unique(unlist(strsplit(qc_category,",\\s+"))))) %>%
-    dplyr::select("source", "qc_category")
+    dplyr::select("source", "source_hash", "qc_category")
 
   # Update qc_category in toxval
   if(nrow(res)){
     updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                         "ON (a.source = b.source) SET a.qc_category = b.qc_category ",
+                         "ON (a.source_hash = b.source_hash) SET a.qc_category = b.qc_category ",
                          "WHERE a.qc_category IS NOT NULL")
     # Run update query
     runUpdate(table="toxval", updateQuery=updateQuery, updated_df=res, db=toxval.db)
