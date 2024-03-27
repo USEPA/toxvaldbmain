@@ -6,8 +6,8 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.pprtv.cphea <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "PPRTV CPHEA"
+toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "PPRTV (CPHEA)"
   source_table = "source_pprtv_cphea"
   verbose = log
   #####################################################################
