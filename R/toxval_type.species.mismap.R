@@ -9,10 +9,10 @@ library(digest)
 #-----------------------------------------------------------------------------------
 toxval_type.species.mismap <- function(toxval.db) {
   printCurrentFunction(toxval.db)
-  dir = "data/input/" # paste0(toxval.config()$datapath,"manuscript_data")
+  dir = paste0(toxval.config()$datapath, "data/input/") # paste0(toxval.config()$datapath,"manuscript_data")
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  res = NULL
-  for(src in slist) {
+
+  res = lapply(slist, function(src){
     cat(src,"\n")
     query = paste0("SELECT
                     a.dtxsid,a.casrn,a.name,
@@ -33,20 +33,27 @@ toxval_type.species.mismap <- function(toxval.db) {
                     b.source='",src,"'
                     and human_eco='human health'
                     and toxval_type_supercategory in ('Toxicity Value')")
-    mat = runQuery(query,toxval.db,T,F)
-    mat = unique(mat)
-    mat[is.na(mat$casrn),"casrn"] = mat[is.na(mat$casrn),"cleaned_casrn"]
-    mat[mat$casrn=='-',"casrn"] = mat[mat$casrn=='-',"cleaned_casrn"]
-    mat[is.na(mat$name),"name"] = mat[is.na(mat$name),"cleaned_name"]
-    mat[mat$name=='-',"name"] = mat[mat$name=='-',"cleaned_name"]
+    query %>%
+      runQuery(toxval.db, TRUE, FALSE) %>%
+      dplyr::distinct() %>%
+      # Replace NA or - name/casrn with cleaned name/casrn
+      dplyr::mutate(
+        casrn = dplyr::case_when(
+          casrn %in% c(NA, "-") ~ cleaned_casrn,
+          TRUE ~ casrn
+        ),
+        name = dplyr::case_when(
+          name %in% c(NA, "-") ~ cleaned_name,
+          TRUE ~ name
+        )
+      ) %>%
+      dplyr::select(-dplyr::any_of(c("cleaned_name", "cleaned_casrn"))) %>%
+      dplyr::distinct()
 
-    cremove = c("cleaned_name","cleaned_casrn")
-    mat = mat[ , !(names(mat) %in% cremove)]
-    mat = unique(mat)
-    res = rbind(res,mat)
-  }
+  }) %>%
+    dplyr::bind_rows()
 
-  file = paste0(dir,"/toxval_type.species.mismap ",toxval.db," ",Sys.Date(),".xlsx")
+  file = paste0(dir, "/toxval_type.species.mismap_", toxval.db, "_", Sys.Date(), ".xlsx")
   sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-  openxlsx::write.xlsx(res,file,firstRow=T,headerStyle=sty)
+  openxlsx::write.xlsx(res, file, firstRow=TRUE, headerStyle=sty)
 }

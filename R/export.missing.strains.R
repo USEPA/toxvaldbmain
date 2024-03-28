@@ -15,14 +15,14 @@ export.missing.strains <- function(toxval.db,date_string="2024-02-27") {
   missing = runQuery("select distinct strain_original from toxval",toxval.db)[,1]
   missing = missing[!is.element(missing,dict$strain_original)]
   cat("missing:",length(missing),"\n")
-  if(length(missing)>0) {
+  if(length(missing)) {
     temp = as.data.frame(matrix(nrow=length(missing),ncol=ncol(dict)))
     names(temp) = names(dict)
     temp[] = "-"
     temp[,1] = missing
-    for(i in 1:nrow(temp)) {
+    for(i in seq_len(nrow(temp))) {
       s0 = temp[i,1]
-      s0 = stri_escape_unicode(s0)
+      s0 = stringi::stri_escape_unicode(s0)
       query = paste0("select distinct species_original from toxval where strain_original='",s0,"'")
       temp[i,"species_original"] = runQuery(query,toxval.db)[1,1]
     }

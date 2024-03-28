@@ -7,7 +7,7 @@
 #' @param date_string The date of the latest dictionary version
 #' @export
 #--------------------------------------------------------------------------------------
-fix.strain.v2 <- function(toxval.db,source=NULL,date_string="2024-02-27",reset=F) {
+fix.strain.v2 <- function(toxval.db,source=NULL,date_string="2024-02-27",reset=FALSE) {
   printCurrentFunction()
   if(reset) runQuery("update toxval set strain='-', strain_group='-'",db5)
 
@@ -15,42 +15,48 @@ fix.strain.v2 <- function(toxval.db,source=NULL,date_string="2024-02-27",reset=F
 
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
   dict = read.xlsx(file)
-  dict = unique(dict)
+  dict = distinct(dict)
   dict$common_name = tolower(dict$common_name)
   if(is.null(source)) {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   } else {
     slist = source
   }
-  #slist = "ECHA IUCLID"
+
   for(source in slist) {
     cat("fix strain:",source,"\n")
-    query = paste0("select a.species_original, a.strain_original, b.species_id,b.common_name from
-                   toxval a, species b where
-                   a.species_id=b.species_id
-                   and a.human_eco='human health'
-                   and a.source='",source,"'")
+    query = paste0("select a.species_original, a.strain_original, b.species_id, b.common_name ",
+                   "from toxval a, species b ",
+                   "where a.species_id=b.species_id ",
+                   # "and a.human_eco='human health' ",
+                   "and a.source='",source,"'")
     t1 = runQuery(query,toxval.db)
-    t1 = unique(t1)
-    if(nrow(t1)>0) {
+    t1 = distinct(t1)
+    if(nrow(t1)) {
       spolist = sort(unique(t1$species_original))
       for(spo in spolist) {
-         t2 = t1[is.element(t1$species_original,spo),]
-        if(nrow(t2)>0) {
+        t2 = t1[is.element(t1$species_original,spo),]
+        if(nrow(t2)) {
           if(is.element(spo,dict$species_original)) {
             cat("  ",spo,"\n")
             sid = unique(t2[t2$species_original==spo,"species_id"])
             cn = unique(t2[t2$species_original==spo,"common_name"])
-              if(length(cn)>1) browser()
+            if(length(cn)>1) {
+              message("Multiple common names identified...how to proceed?")
+              browser()
+            }
             t3 = t2[t2$common_name==cn,"strain_original"]
             for(so in t3) {
-              so = str_replace_all(so,"\\'","")
+              so = stringr::str_replace_all(so,"\\'","")
               d1 = dict[is.element(dict$species_original,spo),]
               d2 = d1[is.element(d1$strain_original,so),]
-              if(nrow(d2)>0) {
-                if(nrow(d2)>1) browser()
+              if(nrow(d2)) {
+                if(nrow(d2)>1) {
+                  message("Multiple dictionary fixes identified...how to proceed?")
+                  browser()
+                }
                 query = paste0("update toxval set strain='",d2[1,"strain"],"', strain_group='",d2[1,"strain_group"],"' where source='",source,"' and strain_original='",so,"' and species_id=",sid)
-                if(d2[1,"strain_group"]=="Bird") browser()
+                # if(d2[1,"strain_group"]=="Bird") browser()
                 runQuery(query,toxval.db)
               }
             }
