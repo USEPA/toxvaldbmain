@@ -28,33 +28,35 @@ fix.species.common_name <- function(toxval.db) {
   res = res[res$common_name!=res$fixed,]
   cat("Phase 2: ",nrow(res),"\n")
 
-  for(i in 1:nrow(res)) {
-    query = paste0("update species set common_name=TRIM(common_name) where species_id=",res[i,"species_id"])
-    runQuery(query,toxval.db)
-  }
+  if(nrow(res)>0) {
+    for(i in 1:nrow(res)) {
+      query = paste0("update species set common_name=TRIM(common_name) where species_id=",res[i,"species_id"])
+      runQuery(query,toxval.db)
+    }
 
-  for(i in 1:nrow(res)) {
-    x = res[i,"fixed"]
-    val = paste0("[",x,"]")
-    tryCatch({
-      x = str_trim(x)
-    }, warning = function(w) {
-      cat("WARNING:",x,"\n")
-    }, error = function(e) {
-      cat("ERROR:",x,"\n")
-      x = iconv(x,from="UTF-8",to="ASCII//TRANSLIT")
-      x = str_trim(stri_escape_unicode(x))
-    })
-    res[i,"fixed"] = x
-  }
-  res = res[res$common_name!=res$fixed,]
-  cat("Phase 3: ",nrow(res),"\n")
+    for(i in 1:nrow(res)) {
+      x = res[i,"fixed"]
+      val = paste0("[",x,"]")
+      tryCatch({
+        x = str_trim(x)
+      }, warning = function(w) {
+        cat("WARNING:",x,"\n")
+      }, error = function(e) {
+        cat("ERROR:",x,"\n")
+        x = iconv(x,from="UTF-8",to="ASCII//TRANSLIT")
+        x = str_trim(stri_escape_unicode(x))
+      })
+      res[i,"fixed"] = x
+    }
+    res = res[res$common_name!=res$fixed,]
+    cat("Phase 3: ",nrow(res),"\n")
 
-  for(i in 1:nrow(res)) {
-    sid = res[i,"species_id"]
-    cn = res[i,"fixed"]
-    query = paste0("update species set common_name='",cn,"' where species_id=",sid)
-    runQuery(query,toxval.db)
+    for(i in 1:nrow(res)) {
+      sid = res[i,"species_id"]
+      cn = res[i,"fixed"]
+      query = paste0("update species set common_name='",cn,"' where species_id=",sid)
+      runQuery(query,toxval.db)
+    }
   }
 }
 

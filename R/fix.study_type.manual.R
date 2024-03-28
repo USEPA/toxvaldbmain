@@ -19,6 +19,7 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
   } else {
     slist = sort(unique(mat$source))
   }
+
   for(source in slist) {
     temp0 = mat %>%
       dplyr::select(dtxsid, source_name=source, study_type_corrected, source_hash) %>%
