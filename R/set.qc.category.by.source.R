@@ -16,8 +16,8 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   }
   url <- "https://confluence.epa.gov/x/VuCkFg"
   # Retrieve Jira ticket data and confluence page data
-  jira_tickets <- pull_jira_info(jira_project = "TOXVAL", in_file = NULL, auth_token = jira_access_token) %>%
-    dplyr::filter(`Epic Link` == "TOXVAL-296")
+  jira_tickets <- pull_jira_info(in_file = NULL, auth_token = jira_access_token) #%>%
+    #dplyr::filter(`Epic Link` == "TOXVAL-296")
   response <- GET(url, add_headers(Authorization = paste("Bearer", confluence_access_token)))
 
   if (status_code(response) == 200) {
