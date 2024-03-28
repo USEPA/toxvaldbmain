@@ -52,11 +52,14 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Select high value for study_duration_value
   res = res %>% dplyr::mutate(
+    # Select high value for study_duration_value
     study_duration_value = study_duration_value %>%
       gsub(".+\\-", "", .) %>%
-      as.numeric()
+      as.numeric(),
+
+    # Add human_eco field
+    human_eco = "human_health"
   )
 
   #####################################################################
