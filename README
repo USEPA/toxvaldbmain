@@ -31,34 +31,46 @@ system("R CMD Rd2pdf . --title=toxvaldbmain toxvaldbmain --output=toxvaldbmain_m
 ---------------------------------------------------------------------------------------------
 Managing git and bitbucket - internal
 ---------------------------------------------------------------------------------------------
+To add a token
+1. On your laptop, login to EPA git hub htpps://github.com/USEPA
+2. At the top right, go to your personal space and select settings
+3. At the left bottom, select developer settings
+4. At left, select personal access token
+5. select tokens (classic)
+6. At the top, select generate new token / generate token (classic)
+7. Type something into the note field
+8. Set expiration as never
+9. Select the repo box
+10. Generate token - save this token string to a file
+
+To clone the toxvaldbmain repo
+1. Make a folder on the Linux drive under
+2. Open Rstudio and select File / New project
+3. Select New Directory > R Package
+4. type in the name (like toxvaldbmaintemp)
+5. Select the folder you just created.
+6. Create project. This will open up Rstudio in that new folder
+7. Selet the git tab at the top right. Uner the More pulldown, select new terminal
+8. in that terminal, type ... git clone htpps://github.com/USEPA/toxvaldbmain.git
+9. You will be prompted for your username and password. This is your github username and the access token you just created
+10. If all is well, this will pull the backage down into a subfolder of the one you created above.
+11. Close the current Rstudio session and move the newly created repository folder (called toxvaldbmain) into the top level of the folder you just created. This is where you will now work
+
 
 adding to the remote bitbucket ...
 
 git config --global user.name "richardjudson"
 git config --global user.email "judson.richard@epa.gov"
+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
+
 
 git config --get remote.origin.url
-https://github.com/USEPA/toxvaldbmain.git
+git remote add origin https://github.com/USEPA/toxvaldbmain.git
 
 
-
-
-
-cd existing-project
-git init
-git add --all
-git commit -m "Initial Commit"
-git remote add origin ssh://git@ccte-bitbucket.epa.gov:7999/toxval/toxvaldb09.git
-git push -u origin HEAD:main
-
-cd existing-project
-git remote set-url origin ssh://git@ccte-bitbucket.epa.gov:7999/toxval/toxvaldb09.git
-git push -u origin --all
-git push origin --tagsr
 
 git push -u origin master
 
-https://ccte-bitbucket.epa.gov/projects/TOXVAL/repos/toxvaldb09/browse
 
 ---------------------------------------------------------------------------------------------
 Managing git and bitbucket - external
