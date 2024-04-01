@@ -7,54 +7,45 @@
 #--------------------------------------------------------------------------------------
 set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   res1 <- res %>%
-    dplyr::filter(grepl("Summary|Toxicological", document_type)) %>%
-    dplyr::mutate(preceding_text = toxval_type %>%
-                    gsub("\\s*\\(.*", "", .)
-                  )
+    dplyr::filter(grepl("Summary|Toxicological", document_type))
 
   # Identify and capture ex. NOAEL (HEC) -> NOAEL (ADJ) type relationship
   relationships_adj_hec <- res1 %>%
-    dplyr::group_by(study_reference, preceding_text) %>%
-    dplyr::filter(
-      any(grepl("\\(ADJ\\)", toxval_type)) & any(grepl("\\(HEC\\)", toxval_type))
-    ) %>%
+    dplyr::group_by(study_reference, toxval_type) %>%
     dplyr::summarize(
-      toxval_id_1 = toxval_id[grepl("\\(ADJ\\)", toxval_type)],
-      toxval_id_2 = toxval_id[grepl("\\(HEC\\)", toxval_type)],
-      toxval_type_1 = toxval_type[grepl("\\(ADJ\\)", toxval_type)],
-      toxval_type_2 = toxval_type[grepl("\\(HEC\\)", toxval_type)],
-      relationship = "derived from"
-    ) %>%
+      toxval_id_1 = ifelse("ADJ" %in% toxval_subtype & "HEC" %in% toxval_subtype,
+                            toxval_id[which(toxval_subtype == "ADJ")], NA),
+      toxval_id_2 = ifelse("ADJ" %in% toxval_subtype & "HEC" %in% toxval_subtype,
+                           toxval_id[which(toxval_subtype == "HEC")], NA),
+      relationship = ifelse("ADJ" %in% toxval_subtype & "HEC" %in% toxval_subtype,
+                             "derived from", NA)) %>%
+    ungroup() %>%
     dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2))
 
   # Identify and capture ex. NOAEL (ADJ) -> NOAEL type relationship
   relationships_adj_base <- res1 %>%
-    dplyr::group_by(study_reference, preceding_text) %>%
-    dplyr::filter(
-      any(grepl("\\(ADJ\\)", toxval_type)) & any(!grepl("\\(HEC\\)|\\(ADJ\\)", toxval_type))
-    ) %>%
+    dplyr::group_by(study_reference, toxval_type) %>%
     dplyr::summarize(
-      toxval_id_1 = toxval_id[!grepl("\\(ADJ\\)|\\(HEC\\)", toxval_type)],
-      toxval_id_2 = toxval_id[grepl("\\(ADJ\\)", toxval_type)],
-      toxval_type_1 = toxval_type[!grepl("\\(ADJ\\)|\\(HEC\\)", toxval_type)],
-      toxval_type_2 = toxval_type[grepl("\\(ADJ\\)", toxval_type)],
-      relationship = "derived from"
-    ) %>%
+      toxval_id_1 = ifelse("ADJ" %in% toxval_subtype & is.na(toxval_subtype),
+                           toxval_id[which(toxval_subtype == "ADJ")], NA),
+      toxval_id_2 = ifelse("ADJ" %in% toxval_subtype & is.na(toxval_subtype),
+                           toxval_id[which(is.na(toxval_subtype))], NA),
+      relationship = ifelse("ADJ" %in% toxval_subtype & is.na(toxval_subtype),
+                            "derived from", NA)) %>%
+    ungroup() %>%
     dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2))
 
   # Identify and capture ex. NOAEL (HEC)/NOAEL (HED) -> NOAEL type relationship
   relationship_hec_base <- res1 %>%
-    dplyr::group_by(study_reference, study_type, exposure_route, preceding_text) %>%
-    dplyr::filter(
-      any(grepl("\\(HEC\\)|\\(HED\\)", toxval_type)) & any(!grepl("\\(HEC\\)|\\(HED\\)", toxval_type))
-    ) %>%
+    dplyr::group_by(study_reference, toxval_type) %>%
     dplyr::summarize(
-      toxval_id_1 = toxval_id[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
-      toxval_id_2 = toxval_id[grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
-      toxval_type_1 = toxval_type[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
-      toxval_type_2 = toxval_type[grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
-      relationship = "derived from"
-    ) %>%
+      toxval_id_1 = ifelse(("HED" %in% toxval_subtype | "HEC" %in% toxval_subtype) & is.na(toxval_subtype),
+                           toxval_id[which(toxval_subtype == "HED" | toxval_subtype == "HEC")], NA),
+      toxval_id_2 = ifelse(("HED" %in% toxval_subtype | "HEC" %in% toxval_subtype) & is.na(toxval_subtype),
+                           toxval_id[which(is.na(toxval_subtype))], NA),
+      relationship = ifelse(("HED" %in% toxval_subtype | "HEC" %in% toxval_subtype) & is.na(toxval_subtype),
+                            "derived from", NA)) %>%
+    ungroup() %>%
     dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2) & !(toxval_id_2 %in% relationships_adj_base$toxval_id_2))
 
   # Combine relationships before insertion
