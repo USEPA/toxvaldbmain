@@ -4,10 +4,11 @@
 #' @param param The parameter value to be fixed
 #' @param source The source to be fixed
 #' @param ignore If TRUE allow missing values to be ignored
+#' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE) {
+fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE, report.only=FALSE) {
   printCurrentFunction(paste(toxval.db,":",param, ":", source))
 
   file <- paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/",param,"_5.xlsx")
@@ -20,8 +21,8 @@ fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE)
   db.values <- runQuery(paste0("select distinct ",param,"_original from toxval where source like '",source,"'"),toxval.db)[,1]
   missing <- db.values[!is.element(db.values,c(mat[,2],""))]
 
-
   missing = missing[!is.na(missing)]
+  if(report.only) return(missing)
 
   if(length(missing)>0 & !ignore) {
     cat("values missing from the dictionary\n")
@@ -31,7 +32,6 @@ fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE)
 
   # file <- paste0("./dictionary/missing_values_",param,"_",source,"_",Sys.Date(),".xlsx")
   # write.xlsx(missing,file)
-
 
   cat("  original list: ",nrow(mat),"\n")
 
@@ -49,10 +49,14 @@ fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE)
     v1 <- mat[i,1]
     cat(v0,":",v1,"\n"); flush.console()
 
-    query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'")
+    if(!report.only) {
+      query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'")
 
+      runInsert(query,toxval.db,T,F,T)
+    }
+  }
+  if(!report.only) {
+    query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'")
     runInsert(query,toxval.db,T,F,T)
   }
-  query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'")
-  runInsert(query,toxval.db,T,F,T)
 }

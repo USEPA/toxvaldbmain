@@ -5,10 +5,11 @@
 #' @param source The source to be fixed. If source=NULL, fix all sources
 #' @param fill.toxval_fix If TRUE (default) read the dictionaries into the toxval_fix table
 #' @param dict.date The dated version of the dictionary to use
+#' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dict.date="2023-08-23") {
+fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dict.date="2023-08-23", report.only=FALSE) {
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_duration_params"," ",dict.date,".xlsx")
   dict = read.xlsx(file)
@@ -37,19 +38,26 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dic
         x3 = x[1,"study_duration_class"]
         tlist = temp1$toxval_id
         tval = paste(tlist,collapse=",")
-        query = paste0("update toxval set study_duration_value='",x1,"', study_duration_units='",x2,"', study_duration_class='",x3,"' where toxval_id in (",tval,")")
-        runQuery(query,toxval.db)
+        if(!report.only) {
+          query = paste0("update toxval set study_duration_value='",x1,"', study_duration_units='",x2,"', study_duration_class='",x3,"' where toxval_id in (",tval,")")
+          runQuery(query,toxval.db)
+        }
       }
       else {
+        if(!report.only) {
+          cat("found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params",dict.date,".xlsx\nand add to the dictionary\n")
+        }
         missing = rbind(missing,temp1)
-        cat("found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params",dict.date,".xlsx\nand add to the dictionary\n")
       }
     }
   }
   if(!is.null(missing)) {
-    file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source,".xlsx")
-    if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source," ",subsource,".xlsx")
-    write.xlsx(missing,file)
+    if(!report.only) {
+      file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source,".xlsx")
+      if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source," ",subsource,".xlsx")
+      write.xlsx(missing,file)
+    }
   }
+  if(report.only) return(missing)
 }
 
