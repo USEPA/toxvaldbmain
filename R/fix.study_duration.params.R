@@ -44,15 +44,13 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dic
         }
       }
       else {
-        if(!report.only) {
-          cat("found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params",dict.date,".xlsx\nand add to the dictionary\n")
-        }
         missing = rbind(missing,temp1)
       }
     }
   }
   if(!is.null(missing)) {
     if(!report.only) {
+      cat("found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params",dict.date,".xlsx\nand add to the dictionary\n")
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source,".xlsx")
       if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source," ",subsource,".xlsx")
       write.xlsx(missing,file)
