@@ -31,7 +31,6 @@ toxval.load.dedup <- function(res,
   }
 
   # Add source_hash_temp column
-  cat("Using vectorized hashing! \n")
   res.temp = source_hash_vectorized(res, hashing_cols)
   res$source_hash_temp = res.temp$source_hash
 
@@ -49,7 +48,7 @@ toxval.load.dedup <- function(res,
     res = res %>%
       dplyr::group_by(source_hash_temp) %>%
       dplyr::mutate(dplyr::across(dplyr::any_of(!!dedup_fields),
-                                  ~paste0(.[!is.na(.)], collapse=!!delim) %>%
+                                  ~paste0(sort(unique(.[!is.na(.)])), collapse=!!delim) %>%
                                     dplyr::na_if("NA") %>%
                                     dplyr::na_if("") %>%
                                     dplyr::na_if("-")

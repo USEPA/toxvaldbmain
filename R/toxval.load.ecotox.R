@@ -214,7 +214,8 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                   toxval_units = study_duration_units)
 
   # Rejoin res
-  res <- rbind(res1,res2) %>%
+  res <- res1 %>%
+    dplyr::bind_rows(res2) %>%
     # Perform final cleaning/field addition operations
     dplyr::mutate(
       quality = paste("Control type:",quality),
@@ -275,8 +276,16 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     browser()
   }
 
-  # Perform deduping
-  res = toxval.load.dedup(res)
+  # Perform deduping (reporting time elapse - ~14-24 minutes)
+  system.time({
+    hashing_cols = c(toxval.config()$hashing_cols[!(toxval.config()$hashing_cols %in% c("critical_effect"))],
+                     "species_id", "common_name", "latin_name", "ecotox_group", "pmid")
+    res = toxval.load.dedup(res,
+                            hashing_cols = c(hashing_cols, paste0(hashing_cols, "_original"))) %>%
+      # Update critical_effect delimiter to "|"
+      dplyr::mutate(critical_effect = critical_effect %>%
+                      gsub("|::|", "|", x=., fixed = TRUE))
+  })
 
   cat("set the source_hash\n")
   # Vectorized approach to source_hash generation
