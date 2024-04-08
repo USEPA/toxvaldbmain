@@ -7,12 +7,31 @@
 #--------------------------------------------------------------------------------------
 set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   res1 <- res %>%
-    dplyr::filter(grepl("Summary|Toxicological", document_type))
+  # Split deduped records
+  tidyr::separate_rows(study_reference,
+                       document_type, sep=" \\|::\\| ") %>%
+    dplyr::mutate(
+      # Clean toxval_subtype
+      toxval_subtype = toxval_subtype %>%
+        stringr::str_squish()
+
+      # Standardize study_reference to improve groupby (comma/period usage interchanged, parts of studies)
+      study_reference = study_reference %>%
+        gsub("\\.|,", "", .) %>%
+        gsub("a$|b$|c$|d$", "", .) %>%
+        stringr::str_squish()
+    ) %>%
+
+    # Get summary data
+    dplyr::filter(grepl("Summary|Toxicological", document_type),
+                  !study_reference %in% c("-")) %>%
+    # Select all columns needed for setting relationships
+    dplyr::select(toxval_id, toxval_type, study_reference, study_type, exposure_route)
 
   # Identify and capture ex. NOAEL (HEC) -> NOAEL (ADJ) type relationship
   relationships_adj_hec <- res1 %>%
     dplyr::group_by(study_reference, toxval_type) %>%
-    dplyr::summarize(
+    dplyr::reframe(
       toxval_id_1 = ifelse("ADJ" %in% toxval_subtype & "HEC" %in% toxval_subtype,
                             toxval_id[which(toxval_subtype == "ADJ")], NA),
       toxval_id_2 = ifelse("ADJ" %in% toxval_subtype & "HEC" %in% toxval_subtype,
@@ -25,7 +44,7 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   # Identify and capture ex. NOAEL (ADJ) -> NOAEL type relationship
   relationships_adj_base <- res1 %>%
     dplyr::group_by(study_reference, toxval_type) %>%
-    dplyr::summarize(
+    dplyr::reframe(
       toxval_id_1 = ifelse("ADJ" %in% toxval_subtype & is.na(toxval_subtype),
                            toxval_id[which(toxval_subtype == "ADJ")], NA),
       toxval_id_2 = ifelse("ADJ" %in% toxval_subtype & is.na(toxval_subtype),
@@ -38,7 +57,7 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
   # Identify and capture ex. NOAEL (HEC)/NOAEL (HED) -> NOAEL type relationship
   relationship_hec_base <- res1 %>%
     dplyr::group_by(study_reference, toxval_type) %>%
-    dplyr::summarize(
+    dplyr::reframe(
       toxval_id_1 = ifelse(("HED" %in% toxval_subtype | "HEC" %in% toxval_subtype) & is.na(toxval_subtype),
                            toxval_id[which(toxval_subtype == "HED" | toxval_subtype == "HEC")], NA),
       toxval_id_2 = ifelse(("HED" %in% toxval_subtype | "HEC" %in% toxval_subtype) & is.na(toxval_subtype),
