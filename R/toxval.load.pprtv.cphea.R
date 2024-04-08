@@ -43,7 +43,8 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
   }
   res = runQuery(query,source.db,TRUE,FALSE)
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
-                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status",
+                                                                "document_type")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -67,7 +68,7 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
   #####################################################################
   cols1 = runQuery("desc record_source",toxval.db)[,1]
   cols2 = runQuery("desc toxval",toxval.db)[,1]
-  cols = unique(c(cols1,cols2))
+  cols = unique(c(cols1,cols2, "document_type"))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
@@ -118,6 +119,16 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
   print(dim(res))
 
   #####################################################################
+  cat("Set Summary record relationship/hierarchy\n")
+  #####################################################################
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res %>%
+                                           dplyr::rename(study_reference = long_ref),
+                                         toxval.db=toxval.db)
+  # Remove document_type not in toxval, used in set relationship
+  res = res %>%
+    dplyr::select(-document_type)
+  #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
   cols = runQuery("desc record_source",toxval.db)[,1]
@@ -151,13 +162,6 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
-
-  #####################################################################
-  cat("Set Summary record relationship/hierarchy\n")
-  #####################################################################
-  # Set Summary record relationship/hierarchy
-  set_toxval_relationship_by_toxval_type(res=res,
-                                         toxval.db=toxval.db)
 
   #####################################################################
   cat("do the post processing\n")
