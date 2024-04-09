@@ -51,10 +51,13 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Select higher value in ranged study_duration
-  study_duration_value = study_duration_value %>%
-    gsub(".+\\-", "", .) %>%
-    as.numeric()
+  # Select higher value in ranged
+  res = res %>%
+    dplyr::mutate(
+      study_duration_value = study_duration_value %>%
+        gsub(".*\\-", "", .) %>%
+        as.numeric()
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -69,7 +72,7 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   nlist = nlist[!is.element(nlist,cols)]
 
   # Dynamically remove unused columns (remove relationship_id for now)
-  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+  res = res %>% dplyr::select(-tidyselect::any_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
