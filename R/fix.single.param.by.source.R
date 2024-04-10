@@ -22,6 +22,7 @@ fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE,
   missing <- db.values[!is.element(db.values,c(mat[,2],""))]
 
   missing = missing[!is.na(missing)]
+  # If only reporting, return without making changes
   if(report.only) return(missing)
 
   if(length(missing)>0 & !ignore) {
@@ -40,7 +41,6 @@ fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE,
   #print(View(param_original_values))
   mat <- mat[is.element(mat[,2],param_original_values),]
 
-
   #print(View(mat))
   cat("  final list: ",nrow(mat),"\n")
 
@@ -48,15 +48,10 @@ fix.single.param.by.source <- function(toxval.db, param, source, ignore = FALSE,
     v0 <- mat[i,2]
     v1 <- mat[i,1]
     cat(v0,":",v1,"\n"); flush.console()
+    query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'")
 
-    if(!report.only) {
-      query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'")
-
-      runInsert(query,toxval.db,T,F,T)
-    }
-  }
-  if(!report.only) {
-    query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'")
     runInsert(query,toxval.db,T,F,T)
   }
+  query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'")
+  runInsert(query,toxval.db,T,F,T)
 }

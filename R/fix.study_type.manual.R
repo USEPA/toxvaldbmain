@@ -36,11 +36,11 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21", 
     names(temp) = c("source_hash","study_type")
 
     temp.old = runQuery(paste0("select source_hash, study_type from toxval where dtxsid != 'NODTXSID' and source = '",source,
-                            "' and toxval_type in (select toxval_type from toxval_type_dictionary ",
-                            "where toxval_type_supercategory in ('Point of Departure', 'Lethality Effect Level', 'Toxicity Value')) ",
-                            "and human_eco = 'human health' ",
-                            # Filter out those that already have a study_type present
-                            "and study_type = '-'"),toxval.db)
+                               "' and toxval_type in (select toxval_type from toxval_type_dictionary ",
+                               "where toxval_type_supercategory in ('Point of Departure', 'Lethality Effect Level', 'Toxicity Value')) ",
+                               "and human_eco = 'human health' ",
+                               # Filter out those that already have a study_type present
+                               "and study_type = '-'"),toxval.db)
 
     shlist = unique(temp0$source_hash)
     shlist.db = unique(temp.old$source_hash)
@@ -95,6 +95,7 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21", 
         }
       }
     }
+
     if(!report.only) {
       temp$code = paste(temp$source_hash,temp$study_type)
       temp.old$code = paste(temp.old$source_hash,temp.old$study_type)

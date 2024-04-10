@@ -18,7 +18,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, dic
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
-  missing = NULL
+  missing = data.frame()
   for(source in slist) {
     cat("\n-----------------------------------------------------\n")
     cat(source,"\n")

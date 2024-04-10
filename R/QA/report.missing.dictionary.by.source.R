@@ -1,12 +1,11 @@
 #-------------------------------------------------------------------------------------
 #' Report summary of missing dictionary entries for single, subset, or all sources
 #' @param toxval.db The current version of toxval
-#' @param source.db The current version of toxval_source
 #' @param source_name The source to be reported (single name or list). If source=NULL, report all sources
 #' @return A tibble with summarized missing dictionary information
 #' @export
 #-------------------------------------------------------------------------------------
-report.missing.dictionary.by.source <- function(toxval.db, source.db, source_name=NULL) {
+report.missing.dictionary.by.source <- function(toxval.db, source_name=NULL) {
   printCurrentFunction(toxval.db)
 
   # Get list of all sources if source_name is null
@@ -18,14 +17,18 @@ report.missing.dictionary.by.source <- function(toxval.db, source.db, source_nam
 
   # Report source or number of sources to check
   if(is.null(source_name)) {
-    cat("Checking missing dictionary entries for ", nrow(slist), " sources\n")
+    cat("Checking missing dictionary entries for ", length(slist), " sources\n")
   } else {
     cat("Checking missing dictionary entries for ", slist, "\n")
   }
 
   # Run functions to get missing dictionary info
   missing_dictionary_entries = export.missing.dictionary.entries(toxval.db, slist, report.only=TRUE)
-  num_missing_dictionary_entries = max(nrow(missing_dictionary_entries), 0)
+  num_missing_dictionary_entries = missing_dictionary_entries %>%
+    dplyr::select(-source) %>%
+    dplyr::distinct() %>%
+    nrow() %>%
+    max(., 0)
 
   missing_toxval_type = export.missing.toxval_type(toxval.db, report.only=TRUE)
   if (!is.null(missing_toxval_type)) {
@@ -33,15 +36,23 @@ report.missing.dictionary.by.source <- function(toxval.db, source.db, source_nam
     missing_toxval_type = missing_toxval_type %>%
       dplyr::filter(source %in% slist)
   }
-  num_missing_toxval_type = max(nrow(missing_toxval_type), 0)
+  num_missing_toxval_type = missing_toxval_type %>%
+    dplyr::select(-source) %>%
+    dplyr::distinct() %>%
+    nrow() %>%
+    max(., 0)
 
   missing_exposure_params = fix.exposure.params(toxval.db, slist, report.only=TRUE)
-  num_missing_exposure_params = max(nrow(missing_exposure_params), 0)
+  num_missing_exposure_params = missing_exposure_params %>%
+    dplyr::select(index1) %>%
+    dplyr::distinct() %>%
+    nrow() %>%
+    max(., 0)
 
   missing_rac = fix.risk_assessment_class.by.source(toxval.db, slist, report.only=TRUE)
   num_missing_rac = max(nrow(missing_rac), 0)
 
-  missing_single_param = NULL
+  missing_single_param = data.frame()
   for(s in slist) {
     for(param in c("exposure_form", "exposure_method", "exposure_route", "generation", "lifestage",
                    "media", "sex", "study_duration_class", "study_duration_units", "study_type",
@@ -57,10 +68,18 @@ report.missing.dictionary.by.source <- function(toxval.db, source.db, source_nam
       }
     }
   }
-  num_missing_single_param = max(nrow(missing_single_param), 0)
+  num_missing_single_param = missing_single_param %>%
+    dplyr::select(-source) %>%
+    dplyr::distinct() %>%
+    nrow() %>%
+    max(., 0)
 
   missing_study_duration = fix.study_duration.params(toxval.db, slist, report.only=TRUE)
-  num_missing_study_duration = max(nrow(missing_study_duration), 0)
+  num_missing_study_duration = missing_study_duration %>%
+    dplyr::select(index1) %>%
+    dplyr::distinct() %>%
+    nrow() %>%
+    max(., 0)
 
   missing_study_type = fix.study_type.manual(toxval.db, slist, report.only=TRUE)
   num_missing_study_type = max(nrow(missing_study_type), 0)
@@ -97,7 +116,7 @@ report.missing.dictionary.by.source <- function(toxval.db, source.db, source_nam
   names(output) = c("report_summary", "missing_sources", "missing_dictionary_entries", "missing_toxval_type",
                     "missing_exposure_params", "missing_rac", "missing_single_param",
                     "missing_study_duration", "missing_study_type")
-  openxlsx::write.xlsx(output, file)
+  writexl::write_xlsx(output, file)
 
   return(report_summary)
 }

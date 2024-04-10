@@ -10,7 +10,7 @@
 #' @export
 #--------------------------------------------------------------------------------------
 fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, restart=TRUE, report.only=FALSE) {
-  printCurrentFunction(toxval.db)
+  printCurrentFunction(paste(toxval.db,":", source))
   file = paste0(toxval.config()$datapath,"dictionary/RAC_rules_by_source v92.xlsx")
   print(file)
   conv = read.xlsx(file)
@@ -52,7 +52,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, restart=
       order = dict[i,"order"]
       query = paste0("update toxval set risk_assessment_class = '",rac,"' where ",field," = '",term,"' and source = '",source,"' and risk_assessment_class='-'")
       #cat(query,"\n")
-      runQuery(query,toxval.db,T,F)
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",order," : ",n1," out of ",n0," from original:",field,":",term," to rac:",rac,"\n")
