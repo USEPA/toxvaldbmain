@@ -10,7 +10,7 @@
 #' @param date_string The date of the dictionary versions
 #' @export
 #--------------------------------------------------------------------------------------
-species.mapper <- function(toxval.db,date_string="2023-02-14") {
+species.mapper <- function(toxval.db,date_string="2023-05-18") {
   printCurrentFunction()
   file =paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
   print(file)

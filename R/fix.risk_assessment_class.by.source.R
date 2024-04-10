@@ -11,6 +11,7 @@
 fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, restart=TRUE) {
   printCurrentFunction(paste(toxval.db,":", source))
   file = paste0(toxval.config()$datapath,"dictionary/RAC_rules_by_source v92.xlsx")
+  print(file)
   conv = read.xlsx(file)
   print(dim(conv))
   conv = conv[conv$order>0,]

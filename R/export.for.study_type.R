@@ -11,6 +11,9 @@ export.for.study_type <- function(toxval.db,source=NULL) {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath,"dictionary/")
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+
+  slist = slist[!is.element(slist,c("ECOTOX","ECHA IUCLID","TEST"))]
+
   if(!is.null(source)) slist = source
   res = NULL
   for(src in slist) {
@@ -47,9 +50,9 @@ export.for.study_type <- function(toxval.db,source=NULL) {
                     and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level','Toxicity Value')")
 
     mat = runQuery(query,toxval.db,T,F)
-    print(dim(mat))
+    #print(dim(mat))
     mat = unique(mat)
-    print(dim(mat))
+    #print(dim(mat))
     mat[is.na(mat$casrn),"casrn"] = mat[is.na(mat$casrn),"cleaned_casrn"]
     mat[is.na(mat$name),"name"] = mat[is.na(mat$name),"cleaned_name"]
     mat[mat$casrn=='-',"casrn"] = mat[mat$casrn=='-',"cleaned_casrn"]
