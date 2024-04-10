@@ -22,7 +22,7 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21", 
   }
 
   # Store aggregate missing entries
-  missing.all = NULL
+  missing.all = data.frame()
 
   for(source in slist) {
     temp0 = mat %>%

@@ -46,8 +46,8 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
   #print(View(full_dict))
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
-
-  #slist = slist[!is.element(slist,"ECOTOX")]
+  slist = sort(slist)
+  slist = slist[!is.element(slist,c("ECOTOX","ECHA IUCLID"))]
   for(source in slist) {
     cat("\n-----------------------------------------------------\n")
     cat(source,"\n")
