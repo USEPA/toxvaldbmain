@@ -152,9 +152,9 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   # if(nrow(linkage_res)) {
   #   runInsertTable(linkage_res, "toxval_relationship", toxval.db)
   # }
-  #
-  # # Remove toxval_relationship_id column from res
-  # res = res %>% dplyr::select(-toxval_relationship_id)
+
+  # Remove toxval_relationship_id column from res
+  res = res %>% dplyr::select(-toxval_relationship_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
