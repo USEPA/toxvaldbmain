@@ -2,10 +2,11 @@
 #' Fix the study_type using manual curation
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param dict.date The dated version of the dictionary to use
+#' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
+fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21", report.only=FALSE){
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",dict.date,".xlsx")
   print(file)
@@ -19,6 +20,10 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
   } else {
     slist = sort(unique(mat$source))
   }
+
+  # Store aggregate missing entries
+  missing.all = data.frame()
+
   for(source in slist) {
     temp0 = mat %>%
       dplyr::select(dtxsid, source_name=source, study_type_corrected, source_hash) %>%
@@ -31,11 +36,11 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
     names(temp) = c("source_hash","study_type")
 
     temp.old = runQuery(paste0("select source_hash, study_type from toxval where dtxsid != 'NODTXSID' and source = '",source,
-                            "' and toxval_type in (select toxval_type from toxval_type_dictionary ",
-                            "where toxval_type_supercategory in ('Point of Departure', 'Lethality Effect Level', 'Toxicity Value')) ",
-                            "and human_eco = 'human health' ",
-                            # Filter out those that already have a study_type present
-                            "and study_type = '-'"),toxval.db)
+                               "' and toxval_type in (select toxval_type from toxval_type_dictionary ",
+                               "where toxval_type_supercategory in ('Point of Departure', 'Lethality Effect Level', 'Toxicity Value')) ",
+                               "and human_eco = 'human health' ",
+                               # Filter out those that already have a study_type present
+                               "and study_type = '-'"),toxval.db)
 
     shlist = unique(temp0$source_hash)
     shlist.db = unique(temp.old$source_hash)
@@ -44,35 +49,35 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
       cat("Missing source_hash in replacement file:",source," missing ",length(missing)," out of ",length(shlist.db),"\n")
 
       query = paste0("SELECT
-                    a.dtxsid,a.name,
-                    b.source,
-                    b.risk_assessment_class,
-                    b.toxval_type,
-                    b.toxval_subtype,
-                    b.toxval_units,
-                    b.study_type_original,
-                    b.study_type,
-                    b.study_type as study_type_corrected,
-                    b.study_duration_value,
-                    b.study_duration_units,
-                    d.common_name,
-                    b.generation,
-                    b.exposure_route,
-                    b.exposure_method,
-                    b.critical_effect,
-                    f.long_ref,
-                    f.title,
-                    b.source_hash
-                    FROM
-                    toxval b
-                    INNER JOIN source_chemical a on a.chemical_id=b.chemical_id
-                    LEFT JOIN species d on b.species_id=d.species_id
-                    INNER JOIN record_source f on b.toxval_id=f.toxval_id
-                    INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type
-                    WHERE
-                    b.source='",source,"'
-                    and b.human_eco='human health'
-                    and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level')")
+                  a.dtxsid,a.name,
+                  b.source,
+                  b.risk_assessment_class,
+                  b.toxval_type,
+                  b.toxval_subtype,
+                  b.toxval_units,
+                  b.study_type_original,
+                  b.study_type,
+                  b.study_type as study_type_corrected,
+                  b.study_duration_value,
+                  b.study_duration_units,
+                  d.common_name,
+                  b.generation,
+                  b.exposure_route,
+                  b.exposure_method,
+                  b.critical_effect,
+                  f.long_ref,
+                  f.title,
+                  b.source_hash
+                  FROM
+                  toxval b
+                  INNER JOIN source_chemical a on a.chemical_id=b.chemical_id
+                  LEFT JOIN species d on b.species_id=d.species_id
+                  INNER JOIN record_source f on b.toxval_id=f.toxval_id
+                  INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type
+                  WHERE
+                  b.source='",source,"'
+                  and b.human_eco='human health'
+                  and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level')")
       replacements = runQuery(query,toxval.db,T,F)
       # Check if any returned from query
       if(nrow(replacements)){
@@ -81,53 +86,59 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
         replacements = replacements[is.element(replacements$source_hash,missing),]
         # Check if any missing
         if(nrow(replacements)){
-          file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",dict.date,".csv")
-          write.csv(replacements,file,row.names=F)
+          if(!report.only) {
+            file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",dict.date,".csv")
+            write.csv(replacements,file,row.names=F)
+          }
+          missing.all = rbind(missing.all, replacements)
           #browser()
         }
       }
     }
-    temp$code = paste(temp$source_hash,temp$study_type)
-    temp.old$code = paste(temp.old$source_hash,temp.old$study_type)
-    n1 = nrow(temp)
-    n2 = nrow(temp.old)
-    temp3 = temp[!is.element(temp$code,temp.old$code),]
-    n3 = nrow(temp3)
-    cat("==============================================\n")
-    cat(source,n1,n2,n3," [n1 is new records, n2 is old records, n3 is number of records to be updated]\n")
-    cat("==============================================\n")
-    # for(i in 1:nrow(temp3)) {
-    #   hk = temp3[i,"source_hash"]
-    #   st = temp3[i,"study_type"]
-    #   query = paste0("update toxval set study_type='",st,"' where source_hash='",hk,"'")
-    #   #print(query)
-    #   runQuery(query,toxval.db)
-    #   if(i%%100==0) cat("finished",i,"out of",nrow(temp3),"\n")
-    # }
 
-    # Prepare for batched updates
-    # Batch update
-    # https://www.mssqltips.com/sqlservertip/5829/update-statement-performance-in-sql-server/
-    batch_size <- 500
-    startPosition <- 1
-    endPosition <- nrow(temp3)# runQuery(paste0("SELECT max(id) from documents"), db=db) %>% .[[1]]
-    incrementPosition <- batch_size
+    if(!report.only) {
+      temp$code = paste(temp$source_hash,temp$study_type)
+      temp.old$code = paste(temp.old$source_hash,temp.old$study_type)
+      n1 = nrow(temp)
+      n2 = nrow(temp.old)
+      temp3 = temp[!is.element(temp$code,temp.old$code),]
+      n3 = nrow(temp3)
+      cat("==============================================\n")
+      cat(source,n1,n2,n3," [n1 is new records, n2 is old records, n3 is number of records to be updated]\n")
+      cat("==============================================\n")
+      # for(i in 1:nrow(temp3)) {
+      #   hk = temp3[i,"source_hash"]
+      #   st = temp3[i,"study_type"]
+      #   query = paste0("update toxval set study_type='",st,"' where source_hash='",hk,"'")
+      #   #print(query)
+      #   runQuery(query,toxval.db)
+      #   if(i%%100==0) cat("finished",i,"out of",nrow(temp3),"\n")
+      # }
 
-    while(startPosition <= endPosition){
-      message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())
+      # Prepare for batched updates
+      # Batch update
+      # https://www.mssqltips.com/sqlservertip/5829/update-statement-performance-in-sql-server/
+      batch_size <- 500
+      startPosition <- 1
+      endPosition <- nrow(temp3)# runQuery(paste0("SELECT max(id) from documents"), db=db) %>% .[[1]]
+      incrementPosition <- batch_size
 
-      updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                           "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type",
-                           " WHERE a.source_hash in ('",
-                           paste0(temp3$source_hash[startPosition:incrementPosition], collapse="', '"), "')")
+      while(startPosition <= endPosition){
+        message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())
 
-      runUpdate(table="toxval",
-                updateQuery = updateQuery,
-                updated_df = temp3 %>% select(source_hash, study_type),
-                db=toxval.db)
+        updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
+                             "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type",
+                             " WHERE a.source_hash in ('",
+                             paste0(temp3$source_hash[startPosition:incrementPosition], collapse="', '"), "')")
 
-      startPosition <- startPosition + batch_size
-      incrementPosition <- startPosition + batch_size - 1
+        runUpdate(table="toxval",
+                  updateQuery = updateQuery,
+                  updated_df = temp3 %>% select(source_hash, study_type),
+                  db=toxval.db)
+
+        startPosition <- startPosition + batch_size
+        incrementPosition <- startPosition + batch_size - 1
+      }
     }
 
     # check = runQuery(paste0("select dtxsid,source,study_type,source_hash from toxval where dtxsid!='NODTXSID' and source='",source,
@@ -149,5 +160,8 @@ fix.study_type.manual = function(toxval.db,source=NULL, dict.date="2023-08-21"){
     #   cat("\n\nStopping here means that the study_type fix process did not work for source:",source,"\n")
     #   browser()
     # }
+  }
+  if(report.only) {
+    return(missing.all)
   }
 }
