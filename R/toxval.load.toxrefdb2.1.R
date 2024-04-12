@@ -44,8 +44,6 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
                   toxval_type = calc_pod_type,
                   toxval_numeric_qualifier = qualifier,
                   toxval_numeric = mg_kg_day_value,
-                  exposure_route = admin_route,
-                  exposure_method = admin_method,
                   species = species,
                   strain = strain,
                   study_duration_value = dose_end,
@@ -58,6 +56,9 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
                     sep = "_",
                     remove = FALSE) %>%
     dplyr::mutate(
+      exposure_route = admin_route,
+      exposure_method = admin_method,
+      exposure_form = vehicle,
       source = !!source,
       toxval_units = "mg/kg-day",
       study_type = dplyr::case_when(
@@ -86,10 +87,22 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
         strain %in% c("[Other]") ~ "Other",
         TRUE ~ strain
       ),
-      exposure_route = tolower(exposure_route),
       exposure_method = dplyr::case_when(
         exposure_method == "[Not Specified]" ~ "not specified",
+        grepl("gavage", exposure_route) ~ "gavage",
         TRUE ~ exposure_method
+      ) %>%
+        tolower() %>%
+        gsub("\\/intubation", "", .),
+      exposure_route = dplyr::case_when(
+        grepl("gavage", exposure_route) ~ "oral",
+        exposure_route == "Direct" ~ "injection",
+        TRUE ~ exposure_route
+      ) %>%
+        tolower(),
+      exposure_form = dplyr::case_when(
+        exposure_form %in% c("None", "none") ~ NA,
+        TRUE ~ exposure_form
       ) %>%
         tolower(),
       study_duration_units = dplyr::case_when(
@@ -105,6 +118,8 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
     dplyr::mutate(
       dplyr::across(dplyr::where(is.character), ~tidyr::replace_na(.x, '-'))
     )
+
+  # View(res %>% select(admin_route, admin_method, vehicle, exposure_route, exposure_method, exposure_form) %>% distinct())
 
   cat("set the source_hash\n")
   # Add source_hash_temp column
