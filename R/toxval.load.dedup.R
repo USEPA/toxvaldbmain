@@ -62,15 +62,16 @@ toxval.load.dedup <- function(res,
       dplyr::summarise(n = dplyr::n()) %>%
       dplyr::filter(n > 1)
 
-    # Remove source_hash_temp field if it was not already present in data
-    res = res %>% dplyr::select(-source_hash_temp)
-
     if(nrow(dup_hashes)) {
       cat("Deduping failed. Duplicate records still present.\n")
       browser()
     } else {
       cat("Deduping was successful. Returning...\n")
     }
+
+    # Remove source_hash_temp field if it was not already present in data
+    res = res %>% dplyr::select(-source_hash_temp)
+
   } else {
     cat("No duplicate records found.\n")
   }
