@@ -54,7 +54,9 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
-  #slist = slist[!is.element(slist,"ECOTOX")]
+  # slist = slist[!is.element(slist,c("ECOTOX","ECHA IUCLID"))]
+  slist = sort(slist)
+  
   for(source in slist) {
     cat("\n-----------------------------------------------------\n")
     cat(source,subsource,"\n")

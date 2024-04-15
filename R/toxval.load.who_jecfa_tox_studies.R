@@ -1,22 +1,20 @@
 #--------------------------------------------------------------------------------------
-#' Load HAWC from toxval_source to toxval
+#' Load WHO JECFA Tox Studies from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
-#' @export
 #--------------------------------------------------------------------------------------
-toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  printCurrentFunction(toxval.db)
-  source <- "HAWC Project"
-  source_table = "source_hawc"
+toxval.load.who_jecfa_tox_studies <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "WHO JECFA Tox Studies"
+  source_table = "source_who_jecfa_tox_studies"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -25,6 +23,7 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
+
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -52,32 +51,17 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
+  # Select high value for study_duration_value
   res = res %>% dplyr::mutate(
-    # Set NA study_duration for entries with both GD and PND values
-    study_duration_value = dplyr::case_when(
-      grepl("PND", study_duration_value) & grepl("GD", study_duration_value) ~ as.character(NA),
-      grepl("weeks", study_duration_value) & grepl("GD", study_duration_value) ~ as.character(NA),
-      TRUE ~ study_duration_value
-    ),
-    # Set NA for units without values
-    study_duration_units = dplyr::case_when(
-      is.na(study_duration_value) ~ as.character(NA),
-      TRUE ~ study_duration_units
-    ),
-    # Select higher value in ranged study_duration
     study_duration_value = study_duration_value %>%
       gsub(".+\\-", "", .) %>%
-      as.numeric(),
-    study_duration_units = study_duration_units %>%
-      tidyr::replace_na("-")
+      as.numeric()
   )
 
-  cremove = c("assessment","target","noel_original","loel_original","fel_original",
-            "endpoint_url_original","study_id","authors_short","full_text_url","study_url_original",
-            "experiment_name","experiment_type","chemical_source","guideline_compliance","dosing_regime_id",
-            "route_of_exposure","exposure_duration_value","exposure_duration_text","doses","endpoint_url",
-            "study_url", "study_duration_qualifier", "toxval_numeric_dose_index", "experiment_url",
-            "experiment_id", "assessment_url")
+  cremove = c("who_jecfa_chemical_id","webpage_name","chemical_names","synonyms",
+              "ins","functional_class","ins_matches","jecfa_number","cas_number",
+              "evaluation_year","pivotal_study","animal_specie","effect","point_of_departure",
+              "chemical_url","study_duration_qualifier","age_value","age_units","curators_notes")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -89,7 +73,7 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name", "range_relationship_id", "relationship"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -101,20 +85,17 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = unique(res)
+  res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  res = res[!is.na(res$toxval_numeric),]
-  # res = res[res$toxval_numeric>0,]
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
     dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
   res = distinct(res)
-  res = res[,!is.element(names(res),c("casrn","name"))]
+  res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
@@ -129,6 +110,25 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
+
+  #####################################################################
+  cat("Set the toxval_relationship for separated toxval_numeric range records")
+  #####################################################################
+  relationship_res = res %>%
+    dplyr::filter(grepl("Range", relationship)) %>%
+    dplyr::select(toxval_id, range_relationship_id, relationship) %>%
+    tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=relationship, values_from = toxval_id) %>%
+    dplyr::rename(toxval_id_1 = `Lower Range`,
+                  toxval_id_2 = `Upper Range`) %>%
+    dplyr::mutate(relationship = "toxval_numeric range") %>%
+    dplyr::select(-range_relationship_id)
+  # Insert range relationships into toxval_relationship table
+  if(nrow(relationship_res)){
+    runInsertTable(mat=relationship_res, table='toxval_relationship', db=toxval.db)
+  }
+  # Remove range_relationship_id
+  res <- res %>%
+    dplyr::select(-tidyselect::any_of(c("range_relationship_id", "relationship")))
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -146,9 +146,10 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "website"
-  refs$record_source_note = "to be cleaned up"
-  refs$record_source_level = "primary (risk assessment values)"
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
+  refs$url = "https://apps.who.int/food-additives-contaminants-jecfa-database/"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
@@ -158,11 +159,8 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://hawcproject.org/assessment/public/"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
@@ -189,4 +187,5 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("finish\n")
   #####################################################################
+  return(0)
 }

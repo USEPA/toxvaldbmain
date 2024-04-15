@@ -51,27 +51,6 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-
-  res = res %>% dplyr::mutate(
-    # Set NA study_duration for entries with both GD and PND values
-    study_duration_value = dplyr::case_when(
-      grepl("PND", study_duration_value) & grepl("GD", study_duration_value) ~ as.character(NA),
-      grepl("weeks", study_duration_value) & grepl("GD", study_duration_value) ~ as.character(NA),
-      TRUE ~ study_duration_value
-    ),
-    # Set NA for units without values
-    study_duration_units = dplyr::case_when(
-      is.na(study_duration_value) ~ as.character(NA),
-      TRUE ~ study_duration_units
-    ),
-    # Select higher value in ranged study_duration
-    study_duration_value = study_duration_value %>%
-      gsub(".+\\-", "", .) %>%
-      as.numeric(),
-    study_duration_units = study_duration_units %>%
-      tidyr::replace_na("-")
-  )
-
   cremove = c("assessment","target","noel_original","loel_original","fel_original",
             "endpoint_url_original","study_id","authors_short","full_text_url","study_url_original",
             "experiment_name","experiment_type","chemical_source","guideline_compliance","dosing_regime_id",

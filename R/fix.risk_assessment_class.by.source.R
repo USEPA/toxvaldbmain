@@ -7,11 +7,13 @@
 #' @param source The source to be updated
 #' @param subsource The subsource to be updated (NULL default)
 #' @param restart If TRUE, delete all values and start from scratch
+#' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @export
 #--------------------------------------------------------------------------------------
-fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsource=NULL, restart=TRUE) {
+fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsource=NULL, restart=TRUE, report.only=FALSE) {
   printCurrentFunction(paste(toxval.db,":", source, subsource))
   file = paste0(toxval.config()$datapath,"dictionary/RAC_rules_by_source v92.xlsx")
+  print(file)
   conv = read.xlsx(file)
   print(dim(conv))
   conv = conv[conv$order>0,]
@@ -21,12 +23,14 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
   conv = conv[conv$useme==1,]
   conv = conv[!is.na(conv$source),]
 
+
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
     query_addition = paste0(" and subsource='", subsource, "'")
   }
-
+  # Store all missing RAC entries
+  missing.all = NULL
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   slist = sort(slist)
@@ -35,13 +39,14 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     cat("----------------------------------------\n")
     cat(source,subsource,"\n")
     cat("----------------------------------------\n")
-    if(restart) {
+    
+    if(restart & !report.only) {
       query = paste0("update toxval set risk_assessment_class = '-'  where source like '",source,"'",query_addition)
       runInsert(query,toxval.db,T,F,T)
     }
     dict = conv[conv$source==source,]
-    if(!nrow(dict)){
-      cat("\n\n>>> ",source,subsource,"\nStopping here means that new values need to be added to the risk_assessment_class dictionary:\n",file,
+    if(!nrow(dict) & !report.only){
+      cat("\n\n>>> ",source,"\nStopping here means that new values need to be added to the risk_assessment_class dictionary:\n",file,
           "\nFind the unique values of study_type and enter them into the file.\nThen rerun the load.\n\n")
       browser()
     }
@@ -55,51 +60,53 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       order = dict[i,"order"]
       query = paste0("update toxval set risk_assessment_class = '",rac,"' where ",field," = '",term,"' and source = '",source,"' and risk_assessment_class='-'",query_addition)
       #cat(query,"\n")
-      runQuery(query,toxval.db,T,F)
+      
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'",query_addition),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'",query_addition) ,toxval.db)[1,1]
+
       cat("RAC still missing: ",order," : ",n1," out of ",n0," from original:",field,":",term," to rac:",rac,"\n")
       if(n1==0) break()
     }
     if(source=="DOD ERED") {
       query = paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'ED%' and source = '",source,"' and risk_assessment_class='-'")
-      runQuery(query,toxval.db,T,F)
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",n1," out of ",n0,"\n")
 
       query = paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'EC%' and source = '",source,"' and risk_assessment_class='-'")
-      runQuery(query,toxval.db,T,F)
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",n1," out of ",n0,"\n")
 
-        query = paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'IP%' and source = '",source,"' and risk_assessment_class='-'")
-      runQuery(query,toxval.db,T,F)
+      query = paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'IP%' and source = '",source,"' and risk_assessment_class='-'")
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",n1," out of ",n0,"\n")
 
       query = paste0("update toxval set risk_assessment_class = 'acute' where toxval_type like 'LD%' and source = '",source,"' and risk_assessment_class='-'")
-      runQuery(query,toxval.db,T,F)
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",n1," out of ",n0,"\n")
 
       query = paste0("update toxval set risk_assessment_class = 'acute' where toxval_type like 'LC%' and source = '",source,"' and risk_assessment_class='-'")
-      runQuery(query,toxval.db,T,F)
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",n1," out of ",n0,"\n")
 
       query = paste0("update toxval set risk_assessment_class = 'other' where toxval_type_original like 'N/R%' and source = '",source,"' and risk_assessment_class='-'")
-      runQuery(query,toxval.db,T,F)
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",n1," out of ",n0,"\n")
 
       query = paste0("update toxval set risk_assessment_class = 'other' where toxval_type_original like 'BIED%' and source = '",source,"' and risk_assessment_class='-'")
-      runQuery(query,toxval.db,T,F)
+      if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'"),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'") ,toxval.db)[1,1]
       cat("RAC still missing: ",n1," out of ",n0,"\n")
@@ -147,13 +154,17 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
         query = paste0(query, " and b.subsource='",subsource,"'")
       }
       temp = runQuery(query,toxval.db)
+      missing.all = rbind(missing.all, temp)
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_rac/missing_RAC_",source, " ",subsource,".xlsx") %>%
         gsub(" \\.xlsx", ".xlsx", .)
-      write.xlsx(temp,file)
-      cat("\n\n>>> ",source,subsource,"\nStopping here means that new values need to be added to the risk_assessment_class dictionary:\n",file,
-          "\nFind the unique values of temp$study_type and enter them into the file.\nThen rerun the load.\n\n")
-      browser()
+      if (!report.only) {
+        write.xlsx(temp,file)
+        cat("\n\n>>> ",source,subsource,"\nStopping here means that new values need to be added to the risk_assessment_class dictionary:\n",file,
+            "\nFind the unique values of temp$study_type and enter them into the file.\nThen rerun the load.\n\n")
+        browser()
+      }
       #if(!is.element(source,c("DOD ERED","EFSA","HAWC","HPVIS","IRIS"))) browser()
     }
   }
+  if (report.only) return(missing.all)
 }

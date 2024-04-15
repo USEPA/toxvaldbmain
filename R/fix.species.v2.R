@@ -122,4 +122,6 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
     runQuery("update toxval set species_id=4510 where species_id=23410",toxval.db)
     runQuery("update toxval set species_id=1000000 where species_id=-1",toxval.db)
   }
+
+  fix.species.duplicates(toxval.db)
 }

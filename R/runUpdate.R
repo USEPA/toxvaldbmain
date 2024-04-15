@@ -53,6 +53,8 @@ runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE
     cat("db: ",db,"\n")
   }
   tryCatch({
+    # Drop temp table
+    runStatement(query="DROP TABLE IF EXISTS z_updated_df", db=db)
     # Push temp table of updates
     # Create a table like the source table so the COLLATE and encoding arguments match
     runQuery(paste0("CREATE TABLE z_updated_df LIKE ", table), db)

@@ -6,10 +6,11 @@
 #' @param subsource The subsource to be fixed (NULL default)
 #' @param fill.toxval_fix If TRUE (default) read the dictionaries into the toxval_fix table
 #' @param dict.date The dated version of the dictionary to use
-#' @return The database will be altered
+#' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
+#' @return The database will be altered (if report.only=TRUE, return missing entries)
 #' @export
 #-------------------------------------------------------------------------------------
-fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.date="2023-08-23") {
+fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.date="2023-08-23", report.only=FALSE) {
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/exposure_route_method_form"," ",dict.date,".xlsx")
   dict = read.xlsx(file)
@@ -44,9 +45,10 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.dat
         eform = x[1,"exposure_form"]
         tlist = temp1$toxval_id
         tval = paste(tlist,collapse=",")
-        query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id in (",tval,")")
-        runQuery(query,toxval.db)
-
+        if (!report.only) {
+          query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id in (",tval,")")
+          runQuery(query,toxval.db)
+        }
         # for(i in 1:nrow(temp1)) {
         #   tid = temp1[i,"toxval_id"]
         #   query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id=",tid)
@@ -56,18 +58,23 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.dat
       }
       else {
         missing = rbind(missing,temp1)
-        cat("found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form",dict.date,".xlsx\nand add to the dictionary\n")
-        #browser()
+        if (!report.only) {
+          cat("found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form",dict.date,".xlsx\nand add to the dictionary\n")
+          #browser()
+        }
       }
     }
   }
-  if(!is.null(missing)) {
+  if(!is.null(missing) & !report.only) {
     if(is.null(source)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form all source.xlsx")
     else {
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source,".xlsx")
       if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source," ",subsource,".xlsx")
     }
     write.xlsx(missing,file)
+  }
+  if (report.only) {
+    return(missing)
   }
 }
 
