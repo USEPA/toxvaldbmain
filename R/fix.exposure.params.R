@@ -3,6 +3,7 @@
 #' based on a 3 column dictionary ~/dictionary/exposure_route_method_form.xlsx
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param source The source to be fixed. If source=NULL, fix all sources
+#' @param subsource The subsource to be fixed (NULL default)
 #' @param fill.toxval_fix If TRUE (default) read the dictionaries into the toxval_fix table
 #' @param dict.date The dated version of the dictionary to use
 #' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
@@ -18,12 +19,20 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.dat
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
+
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   missing = NULL
   for(source in slist) {
     cat("\n-----------------------------------------------------\n")
-    cat(source,"\n")
+    cat(source,subsource,"\n")
     cat("-----------------------------------------------------\n")
-    res = runQuery(paste0("select source,toxval_id,exposure_route_original,exposure_method_original,exposure_form_original from toxval where source='",source,"'"),toxval.db)
+    res = runQuery(paste0("select source,toxval_id,exposure_route_original,exposure_method_original,exposure_form_original from toxval where source='",source,"'",query_addition),
+                   toxval.db)
     res$index1 = paste(res[,3],res[,4],res[,5])
     ilist = unique(res$index1)
     for(index in ilist) {

@@ -4,10 +4,11 @@
 #'
 #' @param toxval.db The version of the database to use
 #' @param source The source to be fixed. If NULL, fix for all sources
+#' @param subsource The subsource to be fixed (NULL default)
 #' @param date_string The date of the latest dictionary version
 #' @export
 #--------------------------------------------------------------------------------------
-fix.strain.v2 <- function(toxval.db,source=NULL,date_string="2024-02-27",reset=FALSE) {
+fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2023-04-03",reset=FALSE) {
   printCurrentFunction()
   if(reset) runQuery("update toxval set strain='-', strain_group='-'",db5)
 
@@ -23,13 +24,19 @@ fix.strain.v2 <- function(toxval.db,source=NULL,date_string="2024-02-27",reset=F
     slist = source
   }
 
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+          
   for(source in slist) {
-    cat("fix strain:",source,"\n")
+    cat("fix strain:",source,subsource"\n")
     query = paste0("select a.species_original, a.strain_original, b.species_id, b.common_name ",
                    "from toxval a, species b ",
                    "where a.species_id=b.species_id ",
                    # "and a.human_eco='human health' ",
-                   "and a.source='",source,"'")
+                   "and a.source='",source,"'",query_addition)
     t1 = runQuery(query,toxval.db)
     t1 = distinct(t1)
     if(nrow(t1)) {
@@ -55,7 +62,7 @@ fix.strain.v2 <- function(toxval.db,source=NULL,date_string="2024-02-27",reset=F
                   message("Multiple dictionary fixes identified...how to proceed?")
                   browser()
                 }
-                query = paste0("update toxval set strain='",d2[1,"strain"],"', strain_group='",d2[1,"strain_group"],"' where source='",source,"' and strain_original='",so,"' and species_id=",sid)
+                query = paste0("update toxval set strain='",d2[1,"strain"],"', strain_group='",d2[1,"strain_group"],"' where source='",source,"' and strain_original='",so,"' and species_id=",sid,query_addition)
                 # if(d2[1,"strain_group"]=="Bird") browser()
                 runQuery(query,toxval.db)
               }
