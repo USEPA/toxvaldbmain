@@ -49,15 +49,16 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
                   study_duration_value = dose_end,
                   study_duration_units = dose_end_unit,
                   year = study_year,
-                  long_ref = study_citation
+                  long_ref = study_citation,
+                  exposure_route = admin_route,
+                  exposure_method = admin_method
     ) %>%
     tidyr::separate(col = toxval_study_source_id,
                     into = c("toxrefdb_study_id", "lifestage", "generation", "sex", "endpoint_category"),
                     sep = "_",
                     remove = FALSE) %>%
     dplyr::mutate(
-      exposure_route = admin_route,
-      exposure_method = admin_method,
+
       exposure_form = vehicle,
       source = !!source,
       toxval_units = "mg/kg-day",
@@ -180,13 +181,17 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
+  if(is.element("species_original",names(res))) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(dim(res))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
+    dplyr::mutate(dplyr::across(where(is.character),
+                                ~stringr::str_squish(.) %>%
+                                  dplyr::na_if("NA")
+                                )
+                  )
   res = distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
