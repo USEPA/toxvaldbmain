@@ -29,9 +29,9 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2023
   if(!is.null(subsource)) {
     query_addition = paste0(" and subsource='", subsource, "'")
   }
-          
+
   for(source in slist) {
-    cat("fix strain:",source,subsource"\n")
+    cat("fix strain:",source,subsource,"\n")
     query = paste0("select a.species_original, a.strain_original, b.species_id, b.common_name ",
                    "from toxval a, species b ",
                    "where a.species_id=b.species_id ",

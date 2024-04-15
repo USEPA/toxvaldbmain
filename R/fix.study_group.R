@@ -73,7 +73,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, reset=FALSE)
       nsg = length(unique(temp_sg$study_group)) + length(temp$toxval_id[!temp$toxval_id %in% temp_sg$toxval_id])
       cat("  nrow:",nr," unique values:",nsg,"\n")
       # Set default study group to toxval_id
-      query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'",query_addition))
+      query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'",query_addition)
       runQuery(query,toxval.db)
 
       # If duplicate groups, set to generated study group
