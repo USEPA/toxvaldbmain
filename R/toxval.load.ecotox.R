@@ -280,13 +280,15 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
 
   # Perform deduping (reporting time elapse - ~14-24 minutes)
   system.time({
-    hashing_cols = c(toxval.config()$hashing_cols[!(toxval.config()$hashing_cols %in% c("critical_effect"))],
+    hashing_cols = c(toxval.config()$hashing_cols[!(toxval.config()$hashing_cols %in% c("critical_effect", "study_type"))],
                      "species_id", "common_name", "latin_name", "ecotox_group", "source_source_id")
     res = toxval.load.dedup(res,
                             hashing_cols = c(hashing_cols, paste0(hashing_cols, "_original"))) %>%
       # Update critical_effect delimiter to "|"
       dplyr::mutate(critical_effect = critical_effect %>%
-                      gsub("|::|", "|", x=., fixed = TRUE))
+                      gsub(" |::| ", "|", x=., fixed = TRUE),
+                    study_type = study_type %>%
+                      gsub(" |::| ", "|", x=., fixed = TRUE))
   })
 
   cat("set the source_hash\n")
