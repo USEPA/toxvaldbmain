@@ -67,6 +67,7 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
     # Select higher value in ranged study_duration
     study_duration_value = study_duration_value %>%
       gsub(".+\\-", "", .) %>%
+      dplyr::na_if("-") %>%
       as.numeric(),
     study_duration_units = study_duration_units %>%
       tidyr::replace_na("-")
