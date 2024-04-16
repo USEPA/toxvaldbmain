@@ -73,7 +73,7 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
       tidyr::replace_na("-")
   )
 
-  cremove = c("assessment","target","noel_original","loel_original","fel_original",
+  cremove = c("assessment","target_organ","noel_original","loel_original","fel_original",
             "endpoint_url_original","study_id","authors_short","full_text_url","study_url_original",
             "experiment_name","experiment_type","chemical_source","guideline_compliance","dosing_regime_id",
             "route_of_exposure","exposure_duration_value","exposure_duration_text","doses","endpoint_url",
