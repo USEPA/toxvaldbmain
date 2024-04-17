@@ -19,6 +19,7 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     runInsert("delete from toxval_fix",toxval.db)
 
     filenames <- list.files(path = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/"), pattern="_5.xlsx", full.names = T)
+
     full_dict <- lapply(filenames, function(x) read.xlsx(x, colNames = T)) %T>% {
       names(.) <- gsub("_5.xlsx", "", basename(filenames))
     }
@@ -47,7 +48,7 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
   slist = sort(slist)
-  slist = slist[!is.element(slist,c("ECOTOX","ECHA IUCLID"))]
+  #slist = slist[!is.element(slist,c("ECOTOX","ECHA IUCLID"))]
   for(source in slist) {
     cat("\n-----------------------------------------------------\n")
     cat(source,"\n")
