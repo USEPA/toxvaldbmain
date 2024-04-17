@@ -14,7 +14,7 @@ export.missing.toxval_type <- function(toxval.db) {
   res = res[!is.element(res$toxval_type,tlist2),]
   cat("missing values:",nrow(res),"\n")
   if(nrow(res)>0) {
-    file = paste0("../dictionary/missing/missing_toxval_type ",Sys.Date(),".xlsx")
+    file = paste0(toxval.config()$datapath,"/dictionary/missing/missing_toxval_type ",Sys.Date(),".xlsx")
     write.xlsx(res,file)
   }
 }
