@@ -9,11 +9,11 @@
 fix.study_group <- function(toxval.db, source=NULL, reset=FALSE) {
   printCurrentFunction(toxval.db)
 
-  if(reset) runQuery("update toxval set study_group='-'",toxval.db)
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
-  slist = slist[!is.element(slist,c("ECOTOX"))]
+  slist = slist[!is.element(slist,c("FDA CEDI","Mass. Drinking Water Standards"))]
   for(source in slist) {
+    if(reset) runQuery(paste0("update toxval set study_group='-' where source='",source,"'"),toxval.db)
     sglist = runQuery(paste0("select distinct study_group from toxval where source='",source,"'"),toxval.db)[,1]
     doit = FALSE
     # Check for unassigned study group values
@@ -23,12 +23,20 @@ fix.study_group <- function(toxval.db, source=NULL, reset=FALSE) {
       # Reset to "-"
       runQuery(paste0("update toxval set study_group='-' where source='",source,"'"),toxval.db)
       # Query unique study fields
-      query = paste0("select a.toxval_id, a.dtxsid,c.common_name, a.toxval_units, ",
-                     "a.target_species, a.study_type, a.exposure_route,a.exposure_method, ",
-                     "a.study_duration_value, a.study_duration_units, ",
-                     "a.strain, b.year, b.long_ref, b.title, b.author ",
+      query = paste0("select a.toxval_id,a.dtxsid,c.common_name, a.toxval_units,  ",
+                     "a.study_type, a.exposure_route,a.exposure_method,a.exposure_form, ",
+                     "a.study_duration_value, a.study_duration_units, a.sex, a.lifestage, a.generation, a.year,",
+                     "a.strain, b.year as record_year, b.long_ref, b.title ",
                      "from toxval a, record_source b, species c ",
                      "where a.species_id=c.species_id and a.toxval_id=b.toxval_id and a.source='",source,"'")
+      # if(source=="ECHA IUCLID")
+      #       query = paste0("select a.toxval_id,a.dtxsid,c.common_name, a.toxval_units,  ",
+      #                "a.study_type, a.exposure_route,a.exposure_method,a.exposure_form, ",
+      #                "a.study_duration_value, a.study_duration_units, a.sex, a.lifestage, a.generation, a.year,",
+      #                "a.strain, b.year as record_year, b.long_ref, b.title ",
+      #                "from toxval a, record_source b, species c ",
+      #                "where a.species_id=c.species_id and a.toxval_id=b.toxval_id and a.source='",source,"'")
+      # Pull data
       # Pull data
       temp = runQuery(query,toxval.db)
       # Hash to identify duplicate groups
@@ -60,7 +68,8 @@ fix.study_group <- function(toxval.db, source=NULL, reset=FALSE) {
       nsg = length(unique(temp_sg$study_group)) + length(temp$toxval_id[!temp$toxval_id %in% temp_sg$toxval_id])
       cat("  nrow:",nr," unique values:",nsg,"\n")
       # Set default study group to toxval_id
-      query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'")
+      #query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'")
+      query = paste0("update toxval set study_group=CONCAT(source,':',toxval_id,':',sex,':',generation,lifestage) where source='",source,"'")
       runQuery(query,toxval.db)
 
       # If duplicate groups, set to generated study group
@@ -68,7 +77,7 @@ fix.study_group <- function(toxval.db, source=NULL, reset=FALSE) {
         cat("   Number of dups:", length(unique(temp_sg$study_group)),"\n")
         # Query to inner join and make updates with mw dataframe (temp table added/dropped)
         updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                             "ON (a.toxval_id = b.toxval_id) SET a.study_group = b.study_group ",
+                             "ON (a.toxval_id = b.toxval_id) SET a.study_group = CONCAT(b.study_group,':',a.sex,':',a.generation,a.lifestage) ",
                              "WHERE a.study_group IS NOT NULL")
         # Run update query
         runUpdate(table="toxval", updateQuery=updateQuery, updated_df=temp_sg, db=toxval.db)
