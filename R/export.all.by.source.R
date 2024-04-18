@@ -4,11 +4,12 @@
 #'
 #' @param toxval.db Database version
 #' @param source The source to be updated
+#' @param subsource The subsource to be updated
 #' #' @return for each source writes an Excel file with the name
 #'  ../export/export_by_source_{data}/toxval_all_{toxval.db}_{source}.xlsx
 #'
 #-----------------------------------------------------------------------------------
-export.all.by.source <- function(toxval.db, source=NULL) {
+export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
   printCurrentFunction(toxval.db)
 
   dir = paste0(toxval.config()$datapath,"export/export_by_source_",toxval.db,"_",Sys.Date())
@@ -30,6 +31,12 @@ export.all.by.source <- function(toxval.db, source=NULL) {
   }
 
   if(!is.null(source)) slist=source
+
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
 
   for(src in slist) {
     query = paste0("SELECT
@@ -85,6 +92,10 @@ export.all.by.source <- function(toxval.db, source=NULL) {
                     INNER JOIN record_source f on b.toxval_id=f.toxval_id
                     WHERE
                     b.source='",src,"'")
+    if(!is.null(subsource)) {
+      query = paste0(query, " and b.subsource='",subsource,"'")
+    }
+
     mat = runQuery(query,toxval.db,T,F)
     mat[is.na(mat$casrn),"casrn"] = mat[is.na(mat$casrn),"cleaned_casrn"]
     mat[mat$casrn=='-',"casrn"] = mat[mat$casrn=='-',"cleaned_casrn"]
@@ -94,7 +105,8 @@ export.all.by.source <- function(toxval.db, source=NULL) {
     mat = mat[ , !(names(mat) %in% cremove)]
     mat = unique(mat)
     cat(src,nrow(mat),"\n")
-    file = paste0(dir,"/toxval_all_",toxval.db,"_",src,".xlsx")
+    file = paste0(dir,"/toxval_all_",toxval.db,"_",src, " ", subsource, ".xlsx") %>%
+      gsub(" \\.xlsx", ".xlsx", .)
     sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
     openxlsx::write.xlsx(mat,file,firstRow=T,headerStyle=sty)
   }

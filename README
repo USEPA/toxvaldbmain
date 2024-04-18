@@ -1,5 +1,4 @@
-THis file contains instructions for managing code (git, documentation, ...)
-
+This file contains instructions for managing code (git, documentation, ...)
 
 ---------------------------------------------------------------------------------------------
 Code Documentation
@@ -23,7 +22,6 @@ Sys.setenv(PATH=paste(Sys.getenv("PATH"),"C:/Program Files/MiKTeX 2.9/miktex/bin
 
 Running documentation - this builds the file toxvaldb09_manual.pdf
 
-
 Sys.setenv(PATH = paste(Sys.getenv("PATH"), "C:/Program Files/MiKTeX 2.9/miktex/bin/x64", sep=.Platform$path.sep))
 Sys.setenv(R_PAPERSIZE="letter")
 system("R CMD Rd2pdf . --title=toxvaldbmain toxvaldbmain --output=toxvaldbmain_manual.pdf --force --no-clean --internals")
@@ -31,54 +29,45 @@ system("R CMD Rd2pdf . --title=toxvaldbmain toxvaldbmain --output=toxvaldbmain_m
 ---------------------------------------------------------------------------------------------
 Managing git and bitbucket - internal
 ---------------------------------------------------------------------------------------------
-To add a token
-1. On your laptop, login to EPA git hub htpps://github.com/USEPA
-2. At the top right, go to your personal space and select settings
-3. At the left bottom, select developer settings
-4. At left, select personal access token
-5. select tokens (classic)
-6. At the top, select generate new token / generate token (classic)
-7. Type something into the note field
-8. Set expiration as never
-9. Select the repo box
-10. Generate token - save this token string to a file
+To get a GitHub token
+1. Log into GitHub https://github.com
+2. At the top right, click on your profile picture to open your profile pane and select "Settings"
+3. At the bottom of the left panel, select "Developer settings"
+4. At left, select "Personal access tokens"
+5. Select "Tokens (classic)"
+6. At the top, select "Generate new token", then "Generate new token (classic)"
+7. Give the token an informative name in the "Note" field
+8. Set expiration to 90 days (security requirment for tokens to expire, just like passwords)
+9. Select the "repo" checkbox
+10. Scroll to the bottom of the form and clicl "Generate token"
+11. Save this token string for future reference
+12. Click the "Confirugre SSO" dropdown menu on the token and click "USEPA" to allow SSO authorization
 
 To clone the toxvaldbmain repo
-1. Make a folder on the Linux drive under
-2. Open Rstudio and select File / New project
-3. Select New Directory > R Package
-4. type in the name (like toxvaldbmaintemp)
-5. Select the folder you just created.
-6. Create project. This will open up Rstudio in that new folder
-7. Selet the git tab at the top right. Uner the More pulldown, select new terminal
-8. in that terminal, type ... git clone htpps://github.com/USEPA/toxvaldbmain.git
-9. You will be prompted for your username and password. This is your github username and the access token you just created
-10. If all is well, this will pull the backage down into a subfolder of the one you created above.
-11. Close the current Rstudio session and move the newly created repository folder (called toxvaldbmain) into the top level of the folder you just created. This is where you will now work
+1. Make a folder on the Linux drive
+2. Open an RStudio session and a terminal (or use a local terminal with git installed)
+  a. Select the git tab at the top right. Under the "More" dropdown menu, select "new terminal"
+3. Set working directory to the new folder
+4. Clone the toxvaldbmain repo (can be HTTPS, SSH, etc. depending on environment setup needs)
+  `> git clone https://github.com/USEPA/toxvaldbmain.git`
+5. You will be prompted for your username and password. This is your github username and the access token you just created
+6. If all is well, this will pull the package down into a subfolder of the one you created above.
+7. Contact the team lead if any issues occur.
 
+Additional useful commands:
 
-adding to the remote bitbucket ...
-
-git config --global user.name "richardjudson"
-git config --global user.email "judson.richard@epa.gov"
-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
-
+git config --global user.name "*User name*"
+git config --global user.email "*Email*"
 
 git config --get remote.origin.url
 git remote add origin https://github.com/USEPA/toxvaldbmain.git
 
-
-
 git push -u origin master
-
 
 ---------------------------------------------------------------------------------------------
 Managing git and bitbucket - external
 ---------------------------------------------------------------------------------------------
 
-
-
 ---------------------------------------------------------------------------------------------
 Compiling the Vignettes
 ---------------------------------------------------------------------------------------------
-
