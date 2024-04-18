@@ -54,7 +54,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
                   exposure_method = admin_method
     ) %>%
     tidyr::separate(col = toxval_study_source_id,
-                    into = c("toxrefdb_study_id", "lifestage", "generation", "sex", "endpoint_category"),
+                    into = c("external_source_id", "lifestage", "generation", "sex", "endpoint_category"),
                     sep = "_",
                     remove = FALSE) %>%
     dplyr::mutate(
@@ -81,9 +81,10 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
         sex == "MF" ~ "male/female",
         TRUE ~ sex
       ),
-      toxrefdb_study_id = toxrefdb_study_id %>%
+      external_source_id = external_source_id %>%
         gsub("studyid", "", .) %>%
         as.numeric(),
+      external_source_id_desc = "ToxRefDB Study ID",
       strain = dplyr::case_when(
         strain %in% c("[Other]") ~ "Other",
         TRUE ~ strain
@@ -113,11 +114,20 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
         study_duration_units == "day (PND)" ~ "PND",
         grepl("week", study_duration_units) ~ "weeks",
         TRUE ~ study_duration_units
-      )
+      ),
+      critical_effect = critical_effect %>%
+        dplyr::na_if("NA"),
+      endpoint_category = endpoint_category %>%
+        dplyr::na_if("NA")
     ) %>%
     tidyr::drop_na(toxval_type, toxval_numeric, toxval_units) %>%
+    tidyr::unite("critical_effect", endpoint_category, critical_effect, sep=": ", na.rm=TRUE, remove=FALSE) %>%
     dplyr::mutate(
-      dplyr::across(dplyr::where(is.character), ~tidyr::replace_na(.x, '-'))
+      # Carry over dynamic generation value by using two separate assignments
+      critical_effect = stringr::str_replace_all(critical_effect, "\\|", stringr::str_c("\\|", endpoint_category, ": ")),
+      dplyr::across(dplyr::where(is.character), ~tidyr::replace_na(.x, '-') %>%
+                      dplyr::na_if("NA") %>%
+                      dplyr::na_if(""))
     )
 
   # View(res %>% select(admin_route, admin_method, vehicle, exposure_route, exposure_method, exposure_form) %>% distinct())
@@ -150,7 +160,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   #####################################################################
 
   cremove = c("study_source","chemical_index",
-              "study_id", "toxval_study_source_id", "toxrefdb_study_id", "endpoint_category",
+              "study_id", "toxval_study_source_id", "endpoint_category",
               "dose_level", "vehicle", "study_duration_qualifier")
 
   res = res[ , !(names(res) %in% cremove)]
