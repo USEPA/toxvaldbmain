@@ -86,21 +86,23 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
   res0 <- ticket_attachment_metadata %>%
     filter(str_detect(Summary, " QC"))
 
-  recent_files <- res0 %>%
-    filter(str_detect(jira_link, "toxval_qc"))%>%
-    group_by(Summary) %>%
-    slice_max(date)
+  # Use all QC files from Jira
+  qc_files <- res0 %>%
+    filter(str_detect(jira_link, "toxval_qc")) #%>%
+    # group_by(Summary) %>%
+    # slice_max(date)
 
   res <- data.frame()
-  for(i in seq_len(nrow(recent_files))){
-    jira_link <- recent_files$jira_link[i]
-    file_ext <- recent_files$file_ext[i]
+  for(i in seq_len(nrow(qc_files))){
+    jira_link <- qc_files$jira_link[i]
+    file_ext <- qc_files$file_ext[i]
     file <- jira_load_file_from_api(url = jira_link, headers = headers, file_type = file_ext, mode='wb')
     df <- data.frame(file$Sheet1)
     tryCatch({
       res0 <- df %>%
         select(source, source_hash, qc_status)
-      res <- bind_rows(res, res0)
+      res <- bind_rows(res, res0) %>%
+        dplyr::distinct()
     }, error = function(e){
       print(paste("Error:", conditionMessage(e)))
     })
