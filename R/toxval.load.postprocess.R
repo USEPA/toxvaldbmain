@@ -16,6 +16,12 @@ toxval.load.postprocess <- function(toxval.db,
                                     remove_null_dtxsid=TRUE){
   printCurrentFunction(toxval.db)
 
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   do.convert.units = TRUE # override default because it is not specified in all toxval load functions
   if(source=="ECOTOX") do.convert.units = FALSE
   #####################################################################
@@ -35,7 +41,8 @@ toxval.load.postprocess <- function(toxval.db,
   }
 
   # Check if any data left after NULL DTXSID removal
-  n_check = runQuery(paste0("SELECT count(*) as n FROM toxval where source = '", source,"'"), toxval.db)
+  n_check = runQuery(paste0("SELECT count(*) as n FROM toxval where source = '", source,"'",query_addition),
+                     toxval.db)
   if(!n_check$n){
     message("No rows to postprocess...returning...")
     return()
@@ -53,24 +60,24 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix species by source\n")
   #####################################################################
-  fix.species.v2(toxval.db, source)
+  fix.species.v2(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix human_eco by source\n")
   #####################################################################
-  fix.human_eco.by.source(toxval.db, source, reset = TRUE)
+  fix.human_eco.by.source(toxval.db, source, subsource, reset = TRUE)
 
   #####################################################################
   cat("fix all.parameters (exposure_method, exposure_route, sex,strain,
     study_duration_class, study_duration_units, study_type,toxval_type,
     exposure_form, media, toxval_subtype) by source\n")
   #####################################################################
-  fix.all.param.by.source(toxval.db, source,subsource,fill.toxval_fix=TRUE)
+  fix.all.param.by.source(toxval.db,source,subsource,fill.toxval_fix=TRUE)
 
   #####################################################################
   cat("get MW if needed for unit conversion\n")
   #####################################################################
-  if(do.convert.units) toxval.set.mw(toxval.db, source)
+  if(do.convert.units) toxval.set.mw(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix units by source\n")
@@ -80,12 +87,12 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix strain by source\n")
   #####################################################################
-  fix.strain.v2(toxval.db, source)
+  fix.strain.v2(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix priority_id by source\n")
   #####################################################################
-  fix.priority_id.by.source(toxval.db, source)
+  fix.priority_id.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix critical_effect by source\n")
@@ -97,17 +104,17 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("add the manual study_type fixes\n")
   #####################################################################
-  fix.study_type.manual(toxval.db, source)
+  fix.study_type.manual(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix risk assessment class by source\n")
   #####################################################################
-  fix.risk_assessment_class.by.source(toxval.db, source)
+  fix.risk_assessment_class.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix empty cells to hyphen by source\n")
   #####################################################################
-  fix.empty.by.source(toxval.db, source)
+  fix.empty.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix empty cells in record source to hyphen by source\n")
@@ -117,27 +124,27 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("set toxval defaults globally by source\n")
   #####################################################################
-  fill.toxval.defaults.global.by.source(toxval.db, source)
+  fill.toxval.defaults.global.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("special case for toxval_numeric_qualifier\n")
   #####################################################################
-  runQuery(paste0("update toxval set toxval_numeric_qualifier='' where toxval_numeric_qualifier='-' and source='",source,"'"),toxval.db)
+  runQuery(paste0("update toxval set toxval_numeric_qualifier='' where toxval_numeric_qualifier='-' and source='",source,"'",query_addition),toxval.db)
 
   #####################################################################
   cat("special case for study_duration_value\n")
   #####################################################################
-  runQuery(paste0("update toxval set study_duration_value=-999 where study_duration_value is NULL and source='",source,"'"),toxval.db)
+  runQuery(paste0("update toxval set study_duration_value=-999 where study_duration_value is NULL and source='",source,"'",query_addition),toxval.db)
 
   #####################################################################
   cat("fix qa status by source\n")
   #####################################################################
-  fix.qc_status.by.source(toxval.db, source)
+  fix.qc_status.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix study group by source\n")
   #####################################################################
-  fix.study_group(toxval.db, source)
+  fix.study_group(toxval.db, source, subsource)
 
   #####################################################################
   #cat("set hash toxval by source\n")
@@ -150,5 +157,5 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("export by source\n")
   #####################################################################
-  export.all.by.source(toxval.db, source)
+  export.all.by.source(toxval.db, source, subsource)
 }

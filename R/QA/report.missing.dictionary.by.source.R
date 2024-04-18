@@ -22,35 +22,64 @@ report.missing.dictionary.by.source <- function(toxval.db, source_name=NULL) {
     cat("Checking missing dictionary entries for ", slist, "\n")
   }
 
+  # Track sources with missing dictionary information
+  missing_sources = NULL
+
   # Run functions to get missing dictionary info
   missing_dictionary_entries = export.missing.dictionary.entries(toxval.db, slist, report.only=TRUE)
-  num_missing_dictionary_entries = missing_dictionary_entries %>%
-    dplyr::select(-source) %>%
-    dplyr::distinct() %>%
-    nrow() %>%
-    max(., 0)
+  if(!is.null(missing_dictionary_entries)) {
+    num_missing_dictionary_entries = missing_dictionary_entries %>%
+      dplyr::select(-source) %>%
+      dplyr::distinct() %>%
+      nrow() %>%
+      max(., 0)
+    missing_sources = rbind(missing_sources,
+                            missing_dictionary_entries %>%
+                              dplyr::select(source) %>%
+                              dplyr::distinct())
+  } else {
+    num_missing_dictionary_entries = 0
+  }
 
   missing_toxval_type = export.missing.toxval_type(toxval.db, report.only=TRUE)
+  num_missing_toxval_type = 0
   if (!is.null(missing_toxval_type)) {
     # Ensure that only specified sources are included in output
     missing_toxval_type = missing_toxval_type %>%
       dplyr::filter(source %in% slist)
+    num_missing_toxval_type = missing_toxval_type %>%
+      dplyr::select(-source) %>%
+      dplyr::distinct() %>%
+      nrow() %>%
+      max(., 0)
+    missing_sources = rbind(missing_sources,
+                            missing_toxval_type %>%
+                              dplyr::select(source) %>%
+                              dplyr::distinct())
   }
-  num_missing_toxval_type = missing_toxval_type %>%
-    dplyr::select(-source) %>%
-    dplyr::distinct() %>%
-    nrow() %>%
-    max(., 0)
 
   missing_exposure_params = fix.exposure.params(toxval.db, slist, report.only=TRUE)
-  num_missing_exposure_params = missing_exposure_params %>%
-    dplyr::select(index1) %>%
-    dplyr::distinct() %>%
-    nrow() %>%
-    max(., 0)
+  num_missing_exposure_params = 0
+  if(!is.null(missing_exposure_params)) {
+    num_missing_exposure_params = missing_exposure_params %>%
+      dplyr::select(index1) %>%
+      dplyr::distinct() %>%
+      nrow() %>%
+      max(., 0)
+    missing_sources = rbind(missing_sources,
+                            missing_exposure_params %>%
+                              dplyr::select(source) %>%
+                              dplyr::distinct())
+  }
 
-  missing_rac = fix.risk_assessment_class.by.source(toxval.db, slist, report.only=TRUE)
+  missing_rac = fix.risk_assessment_class.by.source(toxval.db, source_name, report.only=TRUE)
   num_missing_rac = max(nrow(missing_rac), 0)
+  if(!is.null(missing_rac)) {
+    missing_sources = rbind(missing_sources,
+                            missing_rac %>%
+                              dplyr::select(source) %>%
+                              dplyr::distinct())
+  }
 
   missing_single_param = data.frame()
   for(s in slist) {
@@ -68,27 +97,51 @@ report.missing.dictionary.by.source <- function(toxval.db, source_name=NULL) {
       }
     }
   }
-  num_missing_single_param = missing_single_param %>%
-    dplyr::select(-source) %>%
-    dplyr::distinct() %>%
-    nrow() %>%
-    max(., 0)
+  num_missing_single_param = 0
+  if(!is.null(missing_single_param) & nrow(missing_single_param) > 0) {
+    num_missing_single_param = missing_single_param %>%
+      dplyr::distinct() %>%
+      nrow() %>%
+      max(., 0)
+    missing_sources = rbind(missing_sources,
+                            missing_single_param %>%
+                              dplyr::select(source) %>%
+                              dplyr::distinct())
+  }
 
   missing_study_duration = fix.study_duration.params(toxval.db, slist, report.only=TRUE)
-  num_missing_study_duration = missing_study_duration %>%
-    dplyr::select(index1) %>%
-    dplyr::distinct() %>%
-    nrow() %>%
-    max(., 0)
+  num_missing_study_duration = 0
+  if(!is.null(missing_study_duration)) {
+    if(nrow(missing_study_duration) > 0) {
+      num_missing_study_duration = missing_study_duration %>%
+        dplyr::select(index1) %>%
+        dplyr::distinct() %>%
+        nrow() %>%
+        max(., 0)
+      missing_sources = rbind(missing_sources,
+                              missing_study_duration %>%
+                                dplyr::select(source) %>%
+                                dplyr::distinct())
+    }
+  }
 
   missing_study_type = fix.study_type.manual(toxval.db, slist, report.only=TRUE)
+  if(!is.null(missing_study_type)) {
+    missing_sources = rbind(missing_sources,
+                            missing_study_type %>%
+                              dplyr::select(source) %>%
+                              dplyr::distinct())
+  }
   num_missing_study_type = max(nrow(missing_study_type), 0)
 
   # Get list of sources with missing information
-  missing_sources = missing_dictionary_entries %>%
-    dplyr::select(source) %>%
-    dplyr::distinct()
-  num_missing_sources = max(nrow(missing_sources), 0)
+  if(!is.null(missing_dictionary_entries)) {
+    missing_sources = dplyr::distinct(missing_sources)
+    num_missing_sources = nrow(missing_sources)
+  } else {
+    missing_sources = NULL
+    num_missing_sources = 0
+  }
 
   # Generate summary report
   report_summary = tibble::tibble(
@@ -116,7 +169,7 @@ report.missing.dictionary.by.source <- function(toxval.db, source_name=NULL) {
   names(output) = c("report_summary", "missing_sources", "missing_dictionary_entries", "missing_toxval_type",
                     "missing_exposure_params", "missing_rac", "missing_single_param",
                     "missing_study_duration", "missing_study_type")
-  writexl::write_xlsx(output, file)
+  openxlsx::write.xlsx(output, file)
 
   return(report_summary)
 }
