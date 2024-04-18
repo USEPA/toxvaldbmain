@@ -89,19 +89,41 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
     in_toxval$qc_category_new = qc_category_new
 
     if(qc_stat == "LV 1- In Review" & is.na(existing_source$assignee)){
-      src_records <- hashes %>% filter(source == src)
-      merged <- merge(in_toxval, src_records, by=c('source_hash','source'), all.x=TRUE)
-      merged <- merged %>% mutate(qc_status = ifelse(is.na(qc_status), "-", qc_status))
-      merged <- merged %>%
-        mutate(qc_category_new = ifelse(tolower(qc_status) == 'pass', paste0(qc_category_new, ", Source overall passed QC, and this record was manually checked"),
-                                    paste0(qc_category_new, ", Source overall passed QC, but this record was not manually checked")))
+      # Set qc_category for entries present in QC sampling
+      src_records <- hashes %>% filter(source == src) %>%
+        dplyr::mutate(
+          qc_category_new = paste0(!!qc_category_new, ", Source overall passed QC, and this record was manually checked")
+        )
+
+      # Add sampled QC category to all source toxval hashes
+      merged = in_toxval %>%
+        dplyr::select(-qc_category_new) %>%
+        dplyr::left_join(src_records, by=c('source_hash', 'source')) %>%
+        dplyr::mutate(
+          qc_category_new = dplyr::case_when(
+            # Add new QC category for unsampled values
+            is.na(qc_category_new) ~ paste0(!!qc_category_new,
+                                            ", Source overall passed QC, but this record was not manually checked"),
+            TRUE ~ qc_category_new
+          )
+        )
+
+      # Comment out for now - assume that all entries in the hashes DF have been manually checked
+      # merged <- merge(in_toxval, src_records, by=c('source_hash','source'), all.x=TRUE)
+      # merged <- merged %>% mutate(qc_status = ifelse(is.na(qc_status), "-", qc_status))
+      # merged <- merged %>%
+      #   mutate(
+      #     qc_category_new = ifelse(tolower(qc_status) == 'pass', paste0(qc_category_new, ", Source overall passed QC, and this record was manually checked"),
+      #                              paste0(qc_category_new, ", Source overall passed QC, but this record was not manually checked"))
+      #   )
+
     }
     #--------------------------------------------------------------------------------------
     # TODO: Incorporate logic for adding additional qc_categories
     #--------------------------------------------------------------------------------------
     in_toxval <- merged
     in_toxval <- in_toxval %>% dplyr::select(source, source_hash, qc_category_new)
-    res0 <- rbind(res0, new_info)
+    res0 <- rbind(res0, in_toxval)
   }
   # Prep columns for insertion
   colnames(res0) <- c("source", "source_hash", "qc_category_new")
