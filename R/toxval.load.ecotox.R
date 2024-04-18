@@ -84,7 +84,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     year = "publication_year",
     # pmid = "reference_number",
     # External ECOTOX reference number
-    source_source_id = "reference_number",
+    external_source_id = "reference_number",
     observed_duration_std="observed_duration_std",
     observed_duration_units_std="observed_duration_units_std",
     observ_duration_mean_op="observ_duration_mean_op",
@@ -105,6 +105,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     dplyr::select(dplyr::all_of(names(rename_list))) %>%
 
     dplyr::mutate(
+      external_source_id_desc = "ECOTOX Reference Number",
       # Set species to lower and select latin_name when common_name is not available
       species_original = dplyr::case_when(
         !is.na(common_name) ~ common_name,
@@ -281,7 +282,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   # Perform deduping (reporting time elapse - ~14-24 minutes)
   system.time({
     hashing_cols = c(toxval.config()$hashing_cols[!(toxval.config()$hashing_cols %in% c("critical_effect", "study_type"))],
-                     "species_id", "common_name", "latin_name", "ecotox_group", "source_source_id")
+                     "species_id", "common_name", "latin_name", "ecotox_group", "external_source_id")
     res = toxval.load.dedup(res,
                             hashing_cols = c(hashing_cols, paste0(hashing_cols, "_original"))) %>%
       # Update critical_effect delimiter to "|"
@@ -295,7 +296,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   # Vectorized approach to source_hash generation
   non_hash_cols <- toxval.config()$non_hash_cols
   res = res %>%
-    tidyr::unite(hash_col, all_of(sort(names(.)[!names(.) %in% non_hash_cols])), sep="", remove = FALSE) %>%
+    tidyr::unite(hash_col, all_of(sort(names(.)[!names(.) %in% non_hash_cols])), sep="-", remove = FALSE) %>%
     dplyr::rowwise() %>%
     dplyr::mutate(source_hash = digest(hash_col, serialize = FALSE)) %>%
     dplyr::ungroup() %>%
