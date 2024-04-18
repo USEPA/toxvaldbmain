@@ -3,6 +3,7 @@
 #' and export them
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param source The source to be fixed. If source=NULL, fix all sources
+#' @param subsource The subsource to be fixed (NULL default)
 #' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @return An excel file in dictionaries with the missing entries (if report.only=TRUE, return tibble)
 #' "missing dictionary entries {Sys.Date}.xlsx"
@@ -13,6 +14,13 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
   flist = runQuery("select distinct field from toxval_fix",toxval.db)[,1]
   if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
+
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   res.all = NULL
 
   for(source in slist) {
@@ -20,7 +28,7 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
     for(field in flist) {
       field0 = paste0(field,"_original")
       tlist = runQuery(paste0("select term_original from toxval_fix where field='",field,"'"),toxval.db)[,1]
-      res0 = runQuery(paste0("select distinct source,",field0," as term_original from toxval where source='",source,"'"),toxval.db)
+      res0 = runQuery(paste0("select distinct source,",field0," as term_original from toxval where source='",source,"'",query_addition),toxval.db)
       n0 = nrow(res0)
       res0 = res0[!res0$term_original %in% tlist,]
       n1 = nrow(res0)
