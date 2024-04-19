@@ -31,6 +31,7 @@ export.for.study_type <- function(toxval.db,source=NULL) {
                     b.study_duration_units,
                     d.common_name,
                     b.generation,
+                    b.lifestage,
                     b.exposure_route,
                     b.exposure_method,
                     b.critical_effect,
