@@ -64,8 +64,8 @@ export.for.study_type <- function(toxval.db,source=NULL) {
     res = rbind(res,mat)
   }
   res$fixed = 0
-  if(is.null(source)) file = paste0(dir,"/study_type/toxval_new_study_type ",toxval.db," ",Sys.Date(),".xlsx")
-  else file = paste0(dir,"/study_type/toxval_new_study_type ",source," ",toxval.db," ",Sys.Date(),".xlsx")
+  if(is.null(source)) file = paste0(dir,"/study_type/toxval_new_study_type All Sources ",Sys.Date(),".xlsx")
+  else file = paste0(dir,"/study_type/toxval_new_study_type ", source," ", toxval.db," ",Sys.Date(),".xlsx")
   sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   write.xlsx(res,file,firstRow=T,headerStyle=sty)
   file = paste0(dir,"/study_type/toxval_new_study_type ",source," ",toxval.db," ",Sys.Date(),".csv")
