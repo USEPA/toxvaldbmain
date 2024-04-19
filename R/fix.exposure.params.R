@@ -5,14 +5,13 @@
 #' @param source The source to be fixed. If source=NULL, fix all sources
 #' @param subsource The subsource to be fixed (NULL default)
 #' @param fill.toxval_fix If TRUE (default) read the dictionaries into the toxval_fix table
-#' @param dict.date The dated version of the dictionary to use
 #' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @return The database will be altered (if report.only=TRUE, return missing entries)
 #' @export
 #-------------------------------------------------------------------------------------
-fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.date="2023-08-23", report.only=FALSE) {
+fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.only=FALSE) {
   printCurrentFunction(toxval.db)
-  file = paste0(toxval.config()$datapath,"dictionary/exposure_route_method_form"," ",dict.date,".xlsx")
+  file = paste0(toxval.config()$datapath,"dictionary/exposure_route_method_form.xlsx")
   dict = read.xlsx(file)
   dict$index1 = paste(dict[,1],dict[,2],dict[,3])
   dict$index2 = paste(dict[,4],dict[,5],dict[,6])
@@ -59,7 +58,7 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, dict.dat
       else {
         missing = rbind(missing,temp1)
         if (!report.only) {
-          cat("found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form",dict.date,".xlsx\nand add to the dictionary\n")
+          cat("Found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form.xlsx\n and add to the dictionary\n")
           #browser()
         }
       }
