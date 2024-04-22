@@ -11,6 +11,9 @@ export.for.study_type <- function(toxval.db,source=NULL) {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath,"dictionary/")
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+
+  slist = slist[!is.element(slist,c("ECOTOX","ECHA IUCLID","TEST"))]
+
   if(!is.null(source)) slist = source
   res = NULL
   for(src in slist) {
@@ -28,6 +31,7 @@ export.for.study_type <- function(toxval.db,source=NULL) {
                     b.study_duration_units,
                     d.common_name,
                     b.generation,
+                    b.lifestage,
                     b.exposure_route,
                     b.exposure_method,
                     b.critical_effect,
@@ -47,9 +51,9 @@ export.for.study_type <- function(toxval.db,source=NULL) {
                     and e.toxval_type_supercategory in ('Point of Departure','Lethality Effect Level','Toxicity Value')")
 
     mat = runQuery(query,toxval.db,T,F)
-    print(dim(mat))
+    #print(dim(mat))
     mat = unique(mat)
-    print(dim(mat))
+    #print(dim(mat))
     mat[is.na(mat$casrn),"casrn"] = mat[is.na(mat$casrn),"cleaned_casrn"]
     mat[is.na(mat$name),"name"] = mat[is.na(mat$name),"cleaned_name"]
     mat[mat$casrn=='-',"casrn"] = mat[mat$casrn=='-',"cleaned_casrn"]
@@ -61,8 +65,8 @@ export.for.study_type <- function(toxval.db,source=NULL) {
     res = rbind(res,mat)
   }
   res$fixed = 0
-  if(is.null(source)) file = paste0(dir,"/study_type/toxval_new_study_type ",toxval.db," ",Sys.Date(),".xlsx")
-  else file = paste0(dir,"/study_type/toxval_new_study_type ",source," ",toxval.db," ",Sys.Date(),".xlsx")
+  if(is.null(source)) file = paste0(dir,"/study_type/toxval_new_study_type All Sources ",Sys.Date(),".xlsx")
+  else file = paste0(dir,"/study_type/toxval_new_study_type ", source," ", toxval.db," ",Sys.Date(),".xlsx")
   sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   write.xlsx(res,file,firstRow=T,headerStyle=sty)
   file = paste0(dir,"/study_type/toxval_new_study_type ",source," ",toxval.db," ",Sys.Date(),".csv")
