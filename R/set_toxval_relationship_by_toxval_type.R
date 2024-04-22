@@ -10,22 +10,13 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
     # Split deduped records
     tidyr::separate_rows(study_reference, document_type, sep=" \\|::\\| ") %>%
 
-    # Combine toxval_type and toxval_subtype in case ADJ/HEC/HED stored in toxval_subtype
     dplyr::mutate(
-      # Clean/correctly format toxval_subtype
-      toxval_subtype_cleaned = toxval_subtype %>%
-        stringr::str_squish() %>%
-        paste0("(", ., ")") %>%
-        dplyr::na_if("(-)") %>%
-        dplyr::na_if("(NA)"),
-
       # Standardize study_reference to improve groupby (comma/period usage interchanged, parts of studies)
       study_reference = study_reference %>%
         gsub("\\.|,", "", .) %>%
         gsub("a$|b$|c$|d$", "", .) %>%
         stringr::str_squish()
     ) %>%
-    tidyr::unite("toxval_type", toxval_type, toxval_subtype_cleaned, remove=TRUE, na.rm=TRUE, sep=" ") %>%
 
     # Get summary data
     dplyr::filter(grepl("Summary|Toxicological", document_type),
