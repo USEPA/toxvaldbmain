@@ -117,41 +117,41 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   # #####################################################################
   # cat("add record linkages to toxval_relationship\n")
   # #####################################################################
-  # # Add linkages connecting RfC/RfD to original test data
-  # linkage_res = res %>%
-  #   # Expand collapsed toxval_relationship_id
-  #   tidyr::separate_rows(toxval_relationship_id, sep = " \\|::\\| ") %>%
-  #   dplyr::mutate(
-  #     toxval_relationship_id = toxval_relationship_id %>%
-  #       stringr::str_squish() %>%
-  #       as.numeric(),
-  #     # Add variable to ensure relationships are ordered as RfC/RfD - original data ("derived from")
-  #     sort_var = dplyr::case_when(
-  #       toxval_type %in% c("RfC", "RfD") ~ 0,
-  #       TRUE ~ 1
-  #     )
-  #   ) %>%
-  #   dplyr::select(toxval_id, toxval_relationship_id, toxval_type, sort_var) %>%
-  #   dplyr::group_by(toxval_relationship_id) %>%
-  #   # Ensure "derived from" ordering
-  #   dplyr::arrange(sort_var, .by_group=TRUE) %>%
-  #   # Build relationship
-  #   dplyr::mutate(toxval_relationship = paste0(toxval_id, collapse = ", "),
-  #                 relationship = paste("derived from") %>%
-  #                   stringr::str_squish()) %>%
-  #   dplyr::ungroup() %>%
-  #   # Remove entries where no linkage was fond
-  #   dplyr::filter(grepl(",", toxval_relationship)) %>%
-  #   # Convert to final linkage table format
-  #   dplyr::select(toxval_relationship, relationship) %>%
-  #   dplyr::distinct() %>%
-  #   tidyr::separate(col="toxval_relationship", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
-  #   dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
-  #
-  # # Send linkage data to ToxVal
-  # if(nrow(linkage_res)) {
-  #   runInsertTable(linkage_res, "toxval_relationship", toxval.db)
-  # }
+  # Add linkages connecting RfC/RfD to original test data
+  linkage_res = res %>%
+    # Expand collapsed toxval_relationship_id
+    tidyr::separate_rows(toxval_relationship_id, sep = " \\|::\\| ") %>%
+    dplyr::mutate(
+      toxval_relationship_id = toxval_relationship_id %>%
+        stringr::str_squish() %>%
+        as.numeric(),
+      # Add variable to ensure relationships are ordered as RfC/RfD - original data ("derived from")
+      sort_var = dplyr::case_when(
+        toxval_type %in% c("RfC", "RfD") ~ 0,
+        TRUE ~ 1
+      )
+    ) %>%
+    dplyr::select(toxval_id, toxval_relationship_id, toxval_type, sort_var) %>%
+    dplyr::group_by(toxval_relationship_id) %>%
+    # Ensure "derived from" ordering
+    dplyr::arrange(sort_var, .by_group=TRUE) %>%
+    # Build relationship
+    dplyr::mutate(toxval_relationship = paste0(toxval_id, collapse = ", "),
+                  relationship = paste("derived from") %>%
+                    stringr::str_squish()) %>%
+    dplyr::ungroup() %>%
+    # Remove entries where no linkage was fond
+    dplyr::filter(grepl(",", toxval_relationship)) %>%
+    # Convert to final linkage table format
+    dplyr::select(toxval_relationship, relationship) %>%
+    dplyr::distinct() %>%
+    tidyr::separate(col="toxval_relationship", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
+    dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
+
+  # Send linkage data to ToxVal
+  if(nrow(linkage_res)) {
+    runInsertTable(linkage_res, "toxval_relationship", toxval.db)
+  }
 
   # Remove toxval_relationship_id column from res
   res = res %>% dplyr::select(-toxval_relationship_id)
