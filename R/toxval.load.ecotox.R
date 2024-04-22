@@ -222,7 +222,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     # Perform final cleaning/field addition operations
     dplyr::mutate(
       quality = paste("Control type:",quality),
-      study_duration_class = "chronic",
+      # study_duration_class = "chronic",
 
       # Fix CASRN values
       casrn = sapply(casrn, FUN=fix.casrn)
