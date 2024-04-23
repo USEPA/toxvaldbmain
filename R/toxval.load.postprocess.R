@@ -104,7 +104,8 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("add the manual study_type fixes\n")
   #####################################################################
-  fix.study_type.manual(toxval.db, source, subsource)
+  fix.study_type.by.source(toxval.db, mode="import", source=source,
+                           subsource=subsource)
 
   #####################################################################
   cat("fix risk assessment class by source\n")
