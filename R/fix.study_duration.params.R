@@ -50,7 +50,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
         x1 = x$study_duration_value
         x2 = x$study_duration_units
         x3 = x$study_duration_class
-        if(length(length(c(x1, x2, x3))) > 3){
+        if(length(c(x1, x2, x3)) != 3){
           message("Error: Dictionary study_duration has multiple matches...need to fix dictionary")
           browser()
           stop()
