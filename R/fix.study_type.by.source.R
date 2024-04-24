@@ -46,6 +46,20 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   #----------------------------------------------------------------------------
   if(mode=="export") {
     for(source in slist) {
+
+      cat("Checking old logged study_type already imported...\n")
+      import_logged <- list.files(paste0(dir),
+                                  pattern = source,
+                                  recursive = TRUE,
+                                  full.names = TRUE) %>%
+        # Ignore files in specific subfolders
+        .[!grepl("export_temp|old files", .)] %>%
+        lapply(., readxl::read_xlsx) %>%
+        dplyr::bind_rows() %>%
+        dplyr::pull(source_hash) %>%
+        unique() %>%
+        paste0(collapse="', '")
+
       query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
                     "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
                     "b.toxval_units, b.study_type_original, b.study_type, ",
@@ -62,21 +76,28 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                     "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
                     "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                     "WHERE b.source='", source, "'",
-                    query_addition)
+                    query_addition,
+                    " and b.source_hash NOT IN ('", import_logged, "')")
 
-      mat = runQuery(query,toxval.db,T,F)
-      mat = unique(mat)
-      mat$fixed = 0
+      cat("Pulling source_hash records not already accounted for...\n")
+      mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
+        dplyr::distinct() %>%
+        dplyr::mutate(fixed = 0)
+
+      if(!nrow(mat)){
+        cat("No source_hashes to export...all accounted for.\n")
+        return()
+      }
       dir1 = paste0(dir,"export_temp/")
       file = paste0(dir1,"/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
       sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-      write.xlsx(mat,file,firstRow=T,headerStyle=sty)
+      write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
       file = paste0(dir1,"/toxval_new_study_type ",source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".csv")
-      write.csv(mat,file=file,row.names=F)
+      write.csv(mat,file=file,row.names=FALSE)
     }
   }
 
@@ -149,7 +170,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           query = paste0(query, " and b.subsource='",subsource,"'")
         }
 
-        replacements = runQuery(query,toxval.db,T,F)
+        replacements = runQuery(query,toxval.db,TRUE,FALSE)
         # Check if any returned from query
         if(nrow(replacements)){
           replacements$fixed = 0
@@ -161,7 +182,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
               file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ", source," ", subsource) %>%
                 stringr::str_squish() %>%
                 paste0(".csv")
-              write.csv(replacements,file,row.names=F)
+              write.csv(replacements,file,row.names=FALSE)
             }
             missing.all = rbind(missing.all, replacements)
           }
