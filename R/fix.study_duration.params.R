@@ -31,7 +31,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
     cat("\n-----------------------------------------------------\n")
     cat(source,subsource,"\n")
     cat("-----------------------------------------------------\n")
-    res = runQuery(paste0("select source,toxval_id,
+    res = runQuery(paste0("select toxval_id,
                           study_duration_value_original, study_duration_units_original, study_duration_class_original
                           from toxval where source='",source,"'",query_addition),toxval.db)
     res$index1 = paste(res[,3],res[,4],res[,5])
@@ -39,7 +39,6 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
     for(index in ilist) {
       temp1 = res[res$index1==index,]
       if(is.element(index,dict$index1)) {
-        #cat(source,index,"\n")
         x = dict[is.element(dict$index1,index),]
         x1 = x[1,"study_duration_value"]
         x2 = x[1,"study_duration_units"]
@@ -56,12 +55,12 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
       }
     }
   }
-  if(!is.null(missing)) {
+  if(nrow(missing)) {
     if(!report.only) {
       cat("Found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params.xlsx\n and add to the dictionary\n")
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source,".xlsx")
       if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ", source," ", subsource,".xlsx")
-      write.xlsx(missing,file)
+      write.xlsx(distinct(missing), file)
     }
   }
   if(report.only) return(missing)
