@@ -91,7 +91,8 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
-  res = generate.originals(toxval.db,res)  res$toxval_numeric = as.numeric(res$toxval_numeric)
+  res = generate.originals(toxval.db,res)
+  res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
