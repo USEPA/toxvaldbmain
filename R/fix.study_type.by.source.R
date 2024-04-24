@@ -93,12 +93,19 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         stringr::str_squish() %>%
         paste0(".xlsx")
       print(file)
-      mat = readxl::read_xlsx(file)
-      mat = mat[mat$dtxsid!='NODTXSID',]
-      mat = mat[!is.na(mat$dtxsid),]
-      #mat = fix.trim_spaces(mat)
-      mat <- mat %>%
-        dplyr::mutate(dplyr::across(where(is.character), ~stringr::str_squish(.)))
+      if(file.exists(file)){
+        mat = readxl::read_xlsx(file)
+        mat = mat[mat$dtxsid!='NODTXSID',]
+        mat = mat[!is.na(mat$dtxsid),]
+        #mat = fix.trim_spaces(mat)
+        mat <- mat %>%
+          dplyr::mutate(dplyr::across(where(is.character), ~stringr::str_squish(.)))
+      } else {
+        # Create empty dataframe
+        mat = data.frame(matrix(ncol=4,nrow=0,
+                                dimnames=list(NULL, c("dtxsid", "source", "study_type_corrected", "source_hash"))))
+      }
+
       temp0 = mat %>%
         dplyr::select(dtxsid, source_name=source, study_type_corrected, source_hash) %>%
         dplyr::filter(source_name == source) %>%
