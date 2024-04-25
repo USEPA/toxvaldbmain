@@ -108,11 +108,6 @@ toxval.load.postprocess <- function(toxval.db,
                            subsource=subsource)
 
   #####################################################################
-  cat("fix risk assessment class by source\n")
-  #####################################################################
-  fix.risk_assessment_class.by.source(toxval.db, source, subsource)
-
-  #####################################################################
   cat("fix empty cells to hyphen by source\n")
   #####################################################################
   fix.empty.by.source(toxval.db, source, subsource)
@@ -136,6 +131,11 @@ toxval.load.postprocess <- function(toxval.db,
   cat("special case for study_duration_value\n")
   #####################################################################
   runQuery(paste0("update toxval set study_duration_value=-999 where study_duration_value is NULL and source='",source,"'",query_addition),toxval.db)
+
+  #####################################################################
+  cat("fix risk assessment class by source\n")
+  #####################################################################
+  fix.risk_assessment_class.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix qa status by source\n")
