@@ -93,7 +93,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         stringr::str_squish() %>%
         paste0(".xlsx")
       # sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-      # write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
+      write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
       # file = paste0(dir1,"/toxval_new_study_type ",source, " ", subsource) %>%
       #   stringr::str_squish() %>%
       #   paste0(".csv")
@@ -182,7 +182,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
               file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ", source," ", subsource) %>%
                 stringr::str_squish() %>%
                 paste0(".xlsx")
-              write.csv(replacements,file,row.names=FALSE)
+              writexl::write_xlsx(replacements,file)
             }
             missing.all = rbind(missing.all, replacements)
           }

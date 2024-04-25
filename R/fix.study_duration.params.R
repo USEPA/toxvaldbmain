@@ -13,6 +13,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_duration_params.xlsx")
   dict = read.xlsx(file) %>%
+    dplyr::distinct() %>%
     tidyr::unite(col="index1",
                  c("study_duration_value_original", "study_duration_units_original", "study_duration_class_original"),
                  remove=FALSE, sep=" ") %>%

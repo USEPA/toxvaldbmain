@@ -5,7 +5,6 @@
 #' @param subsource The subsource to be fixed
 #' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @return The database will be altered
-#' @export
 #--------------------------------------------------------------------------------------
 fix.study_type.manual = function(toxval.db, source=NULL, subsource=NULL, report.only=FALSE){
   printCurrentFunction(toxval.db)
