@@ -56,11 +56,15 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
           browser()
           stop()
         }
-        tlist = temp1$toxval_id
+        # Replace with NULL value if NA or blank value
+        if(x1 %in% c(NA, "-")){
+          x1 = "NULL"
+        }
+        tlist = unique(temp1$toxval_id)
         tval = paste(tlist,collapse=",")
         if(!report.only) {
-          query = paste0("update toxval set study_duration_value='",x1,
-                         "', study_duration_units='",x2,
+          query = paste0("update toxval set study_duration_value=",x1,
+                         ", study_duration_units='",x2,
                          "', study_duration_class='",x3,
                          "' where toxval_id in (",tval,")")
           runQuery(query,toxval.db)
