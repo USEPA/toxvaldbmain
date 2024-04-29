@@ -39,7 +39,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
   dir = paste0(toxval.config()$datapath,"dictionary/study_type_by_source/")
   # dir = "data/study_type_by_source/"
-  slist = runQuery("select distinct source from toxval",toxval.db)[1,]
+  slist = runQuery("select distinct source from toxval",toxval.db) %>%
+    dplyr::pull(source)
   if(!is.null(source)) slist = source
   #----------------------------------------------------------------------------
   # Run the export process
@@ -47,7 +48,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   if(mode=="export") {
     for(source in slist) {
 
-      cat("Checking old logged study_type already imported...\n")
+      cat("Checking old '", source,"'logged study_type already imported...\n")
       import_logged <- list.files(paste0(dir),
                                   pattern = source,
                                   recursive = TRUE,
@@ -55,10 +56,14 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         # Ignore files in specific subfolders
         .[!grepl("export_temp|old files", .)] %>%
         lapply(., readxl::read_xlsx) %>%
-        dplyr::bind_rows() %>%
-        dplyr::pull(source_hash) %>%
-        unique() %>%
-        paste0(collapse="', '")
+        dplyr::bind_rows()
+
+      if(nrow(import_logged)){
+        import_logged = import_logged %>%
+          dplyr::pull(source_hash) %>%
+          unique() %>%
+          paste0(collapse="', '")
+      }
 
       query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
                     "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
@@ -92,7 +97,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       file = paste0(dir1,"/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
-      # sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+      sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
       write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
       # file = paste0(dir1,"/toxval_new_study_type ",source, " ", subsource) %>%
       #   stringr::str_squish() %>%
