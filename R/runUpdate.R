@@ -6,8 +6,9 @@
 #' @param db the name of the database
 #' @param do.halt if TRUE, halt on errors or warnings
 #' @param verbose if TRUE, print diagnostic information
+#' @param trigger_check if FALSE, audit triggers are ignored/bypassed
 #' @export
-#' @title FUNCTION_TITLE
+#' @title runUpdate
 #' @param table PARAM_DESCRIPTION
 #' @return OUTPUT_DESCRIPTION
 #' @details DETAILS
@@ -24,7 +25,8 @@
 #' @importFrom RMySQL dbConnect MySQL dbWriteTable dbSendQuery dbDisconnect
 #' @importFrom DBI dbSendStatement
 #--------------------------------------------------------------------------------------
-runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE, verbose=FALSE){
+runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE,verbose=FALSE,
+                      trigger_check=TRUE){
   if(is.null(updateQuery)){
     cat("No query provided...\n")
     return(NULL)
@@ -69,10 +71,12 @@ runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE
     con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),user=DB.USER,password=DB.PASSWORD,host=DB.SERVER,dbname=db)
 
     res = RMySQL::dbWriteTable(con,
-                               name=updateTable,
-                               value=updated_df,
-                               row.names=FALSE,
-                               append=TRUE)
+                       name=updateTable,
+                       value=updated_df,
+                       row.names=FALSE,
+                       append=TRUE)
+    # Enable/Disable triggers (custom global variable in triggers)
+    RMySQL::dbSendQuery(con, paste0("SET @TRIGGER_CHECKS = ", trigger_check))
     # Send update
     DBI::dbSendStatement(con, updateQuery)
     RMySQL::dbDisconnect(con)
@@ -83,7 +87,7 @@ runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE
     #  if(do.halt) browser()
   }, error = function(e) {
     #cat("ERROR:",updateQuery,"\n")
-    cat("Error message: ",paste0(e, collapse=" | "), "\n")
+    cat("Error messge: ",paste0(e, collapse=" | "), "\n")
     if(do.halt) browser()
   }# , finally = { dbDisconnect(con) }
   )

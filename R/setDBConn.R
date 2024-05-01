@@ -7,7 +7,7 @@
 #' @param password SQL password corresponding to username
 #' @param api_auth API Key for CCTE API's
 #' @param port Port for the server connection. Default of 3306.
-#' @title FUNCTION_TITLE
+#' @title setDBConn
 #' @return OUTPUT_DESCRIPTION
 #' @details DETAILS
 #' @examples
@@ -27,3 +27,14 @@ setDBConn <- function(server="ccte-mysql-res.epa.gov",user=NULL,password=NULL,ap
   DB.PORT <<- port
   API_AUTH <<- api_auth
 }
+
+
+
+
+
+
+
+
+
+
+

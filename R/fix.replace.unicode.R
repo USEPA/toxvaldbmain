@@ -42,9 +42,11 @@ fix.replace.unicode <- function(df) {
   alpha = c("<U+1D6C2>", "<U+1D6FC>", "<U+1D736>", "<U+1D770>", "<U+1D7AA>",
             "\u03B1", "\u1D6C2", "\u1D6FC", "\u1D736", "\u1D770", "\u1D7AA", "<U+03B1>")
 
+  apostrophe_alpha = c("\u0386")
+
   beta = c("<U+03B2>", "<U+03D0>", "<U+1D6C3>", "<U+1D6FD>", "<U+1D737>", "<U+1D771>", "<U+1D7AB>",
            "<U+0392>", "<U+1D6A9>", "<U+1D6E3>", "<U+1D71D>", "<U+1D757>", "<U+1D791>", "<U+1D5D>",
-           "<U+1D66>", "<U+00df?",
+           "<U+1D66>", "<U+00df>",
            "\u03B2", "\u03D0", "\u1D6C3", "\u1D6FD", "\u1D737", "\u1D771", "\u1D7AB",
            "\u0392", "\u1D6A9", "\u1D6E3", "\u1D71D", "\u1D757", "\u1D791", "\u1D5D",
            "\u1D66", "\u00df")
@@ -57,7 +59,7 @@ fix.replace.unicode <- function(df) {
             "\u1D5E", "\u1D67", "\u1D26", "\u0263")
 
   mu = c("<U+03BC>", "<U+00B5>", "<U+1D6CD>", "<U+1D707>", "<U+1D741>", "<U+1D77B>", "<U+1D7B5>",
-         "\u03BC", "\u00B5", "\u1D6CD", "\u1D707", "\u1D741", "\u1D77B", "\u1D7B5")
+         "\u03BC", "\u00B5", "\u1D6CD", "\u1D707", "\u1D741", "\u1D77B", "\u1D7B5", "\u039c", "\u03bc")
 
   epsilon = c("<U+03B5>", "<U+03AD>", "<U+03F5>", "<U+1F10>", "<U+1F11>", "<U+1F72>",
               "<U+1D6C6>", "<U+1D700>", "<U+1D73A>", "<U+1D774>", "<U+1D7AE>", "<U+0395>",
@@ -91,7 +93,9 @@ fix.replace.unicode <- function(df) {
   apostrophe_omega = c("<U+038F>", "<U+1F68>", "<U+1F69>", "<U+1FFA>",
                        "\u038f", "\u1f68", "\u1f69", "\u1ffa")
 
-  omicron = c("\u03bf|\u039f")
+  omicron = c("\u03bf", "\u039f")
+
+  apostrophe_omicron = c("\u038c")
 
   eta = c("<U+03B7>", "<U+03AE>", "<U+1F20>", "<U+1F21>", "<U+1F74>", "<U+1FC3>", "<U+1FC6>",
           "<U+1D6C8>", "<U+1D702>", "<U+1D73C>", "<U+1D776>", "<U+1D7B0>", "<U+0397>",
@@ -118,21 +122,19 @@ fix.replace.unicode <- function(df) {
             "\u03f9", "\u1d6ba", "\u1d6f4", "\u1d72e", "\u1d768", "\u1d7a2")
 
   delta = c("<U+03B4>", "<U+0394>", "<U+1D6AB>", "<U+1D6E5>", "<U+1D71F>", "<U+1D759>", "<U+1D793>",
-            "<U+1D5F>", "<U+1D6C5>", "<U+1D6FF>", "<U+1D739>", "<U+1D773>", "<U+1D7AD>",
+            "<U+1D5F>", "<U+1D6C5>", "<U+1D6FF>", "<U+1D739>", "<U+1D773>", "<U+1D7AD>", "<U+00F0>",
             "\u03b4", "\u0394", "\u1d6ab", "\u1d6e5", "\u1d71f", "\u1d759", "\u1d793",
-            "\u1d5f", "\u1d6c5", "\u1d6ff", "\u1d739", "\u1d773", "\u1d7ad")
+            "\u1d5f", "\u1d6c5", "\u1d6ff", "\u1d739", "\u1d773", "\u1d7ad", "\u00f0")
 
   upsilon = c("\u03c5")
 
-  iota = c("\u03b9|\u0399")
+  iota = c("\u03b9", "\u0399")
 
-  mu = c("\u039c|\u03bc")
-
-  nu = c("\u039d")
+  nu = c("\u039d", "\u03bd")
 
   tau = c("\u03c4")
 
-  theta = c("\u03b8")
+  theta = c("\u03b8", "\u0398")
 
   pi = c("\u03c0", "\u03a0")
 
@@ -140,9 +142,14 @@ fix.replace.unicode <- function(df) {
 
   phi = c("\u03c6")
 
+  psi = c("\u03c8")
+
+  zeta = c("\u03b6")
+
   df = df %>%
     # Replacements from: https://www.rapidtables.com/math/symbols/greek_alphabet.html
     gsub(paste0(alpha, collapse="|"), "a", .) %>%
+    gsub(paste0(apostrophe_alpha, collapse="|"), "'a", .) %>%
     gsub(paste0(beta, collapse="|"), "b", .) %>%
     gsub(paste0(gamma, collapse="|"), "g", .) %>%
     gsub(paste0(epsilon, collapse="|"), "e", .) %>%
@@ -152,18 +159,21 @@ fix.replace.unicode <- function(df) {
     gsub(paste0(omega, collapse="|"), "o", .) %>%
     gsub(paste0(apostrophe_omega, collapse="|"), "'o", .) %>%
     gsub(paste0(omicron, collapse="|"), "o", .) %>%
+    gsub(paste0(apostrophe_omicron, collapse="|"), "'o", .) %>%
     gsub(paste0(eta, collapse="|"), "h", .) %>%
     gsub(paste0(apostrophe_eta, collapse="|"), "'h", .) %>%
     gsub(paste0(delta, collapse="|"), "d", .) %>%
     gsub(paste0(upsilon, collapse="|"), "u", .) %>%
     gsub(paste0(iota, collapse="|"), "i", .) %>%
-    gsub(paste0(mu, collapse="|"), "m", .) %>%
+    # gsub(paste0(mu, collapse="|"), "m", .) %>%
     gsub(paste0(nu, collapse="|"), "n", .) %>%
     gsub(paste0(tau, collapse="|"), "t", .) %>%
     gsub(paste0(theta, collapse="|"), "th", .) %>%
     gsub(paste0(pi, collapse="|"), "p", .) %>%
     gsub(paste0(chi, collapse="|"), "ch", .) %>%
     gsub(paste0(phi, collapse="|"), "ph", .) %>%
+    gsub(paste0(psi, collapse="|"), "ps", .) %>%
+    gsub(paste0(zeta, collapse="|"), "z", .) %>%
 
     # Fix omega with preceding letter
     gsub("<U+33C0>|\u33c0", "KO", .) %>%
@@ -185,7 +195,7 @@ fix.replace.unicode <- function(df) {
     # Fix whitespace
     gsub("[\r\n][\r\n]", " ", .) %>%
     gsub("\u00a0|<U+00A0>|\u2003", " ", .) %>%
-    gsub("\u200b", "", .) %>%
+    gsub("\u200b|\u0081|\u008d|\u0090|\u0002", "", .) %>%
 
     # Fix escaped quotation marks
     gsub("\\\\{1,}'", "'", .) %>%
@@ -198,7 +208,7 @@ fix.replace.unicode <- function(df) {
     gsub("\u00b4|<U+00B4>|\u2018|<U+2018>|\u0092|<U+0092>|\u2019|<U+2019>|\u2032", "'", .) %>%
 
     # Handle special case for micro sign
-    gsub("\u00c2|\u00b5|\u00c2u", "u", .) %>%
+    gsub("\u00c2\u00b5|\u00b5|\u00c2u", "u", .) %>%
 
     # Remove euro/pound currency symbol unicode
     gsub("\u20ac|u00a3", "", .) %>%
@@ -214,7 +224,8 @@ fix.replace.unicode <- function(df) {
     gsub("\u00ce\u00b1", "a", .) %>%
 
     # Handle dashes/bullets
-    gsub("\u2013|\u2014|\u2212|\u2010|\u2012|\u25a0|\u2022|\u2219|\u2666|\u00af", "-", .) %>%
+    gsub("\u2013|\u2014|\u2212|\u2010|\u2012|\u25a0|\u2022|\u2219|\u2666|\uff70|\u2011", "-", .) %>%
+    gsub("\u25a1|\u2756|\u00a8|\u00a4|\u00ad|\u25cf|\u00af", "-", .) %>%
 
     # Fix quotations and apostrophes
     gsub("\u201c|<U+201C>|\u201d|<U+201D>|\u201e", '"', .) %>%
@@ -237,6 +248,8 @@ fix.replace.unicode <- function(df) {
     gsub("\u00bf|<U+00BF>", "?", .) %>%
     gsub("\u2026|<U+2026>", "...", .) %>%
     gsub("\u02c6", "^", .) %>%
+    gsub("\u00a1", "!", .) %>%
+    gsub("\u201a|\u00b8", ",", .) %>%
 
     # Fix math symbols
     gsub("\u2265|<U+2265>", ">=", .) %>%
@@ -250,6 +263,7 @@ fix.replace.unicode <- function(df) {
     gsub("\u2030|<U+2030>", "%o", .) %>%
     gsub("\u00ac", "-", .) %>%
     gsub("\u00bd", "1/2", .) %>%
+    gsub("\u2153", "1/3", .) %>%
     gsub("\u00be", "3/4", .) %>%
     gsub("\u215b", "1/8", .) %>%
     gsub("\u215c", "3/8", .) %>%
@@ -264,6 +278,7 @@ fix.replace.unicode <- function(df) {
     gsub("\u2248", "~", .) %>%
     gsub("\u222a", "U", .) %>%
     gsub("\u2229", "^", .) %>%
+    gsub("\u221a", "sqrt", .) %>%
 
     # Fix parentheses and brackets
     gsub("\uff08", "(", .) %>%
@@ -272,44 +287,59 @@ fix.replace.unicode <- function(df) {
     gsub("\uff3b", "[", .) %>%
     gsub("\u00ab", "<<", .) %>%
     gsub("\u00bb", ">>", .) %>%
+    gsub("\u2329|\u2039", "<", .) %>%
+    gsub("\uff5b", "{", .) %>%
 
     # Fix roman numeral 2
-    gsub("\u2161","II", .) %>%
+    gsub("\u2161", "II", .) %>%
 
     # Fix numero symbol
     gsub("\u2116", "No.", .) %>%
 
-    # Fix fullwidth latin small letter o
-    gsub("\uff4f", "o", .) %>%
-
     # Fix fullwidth digit 1
-    gsub("\uff11", 1, .) %>%
+    gsub("\uff11", "1", .) %>%
 
     # Fix fullwidth digit 3
-    gsub("\uff13", 3, .) %>%
+    gsub("\uff13", "3", .) %>%
 
     # Fix fullwidth digit 7
-    gsub("\uff17", 7, .) %>%
+    gsub("\uff17", "7", .) %>%
+
+    # Fix divider
+    gsub("\u2223|\u00a6|\u2020", "|", .) %>%
 
     # Fix miscellaneous letters
     gsub("\u0067", "g", .) %>%
     gsub("\u00fc|\u00f9|\u00fa", "u", .) %>%
-    gsub("\u00a5", "y", .) %>%
-    gsub("\u00c2|\u00c3|\u00c4", "A", .) %>%
-    gsub("\u00ba|\u00f6|\u00f8|\u00f3|\u0151", "o", .) %>%
+    gsub("\u00a5|\u00fd", "y", .) %>%
+    gsub("\u0178|\u00dd", "Y", .) %>%
+    gsub("\u00c2|\u00c3|\u00c4|\u0391|\u00c1|\u00c0", "A", .) %>%
+    gsub("\u00ba|\u00f6|\u00f8|\u00f2|\u00f3|\u00f4|\uff4f|\u02da|\u0151", "o", .) %>%
     gsub("\u00d6", "O", .) %>%
     gsub("\u00e9|\u00e8|\u00eb|\u00ea", "e", .) %>%
-    gsub("\u00ce", "I", .) %>%
+    gsub("\u00ce|\u00cf|\u00cc", "I", .) %>%
     gsub("\u00e7", "c", .) %>%
-    gsub("\u00e2|\u00e4|\u00e1|\u00e0", "a", .) %>%
+    gsub("\u00e2|\u00e4|\u00e1|\u00e5|\u00e0|\u00e3", "a", .) %>%
     gsub("\ufb02", "fl", .) %>%
-    gsub("\u00c9|\u00c8", "E", .) %>%
-    gsub("\u00ef|\u00ec|\u00ed", "i", .) %>%
+    gsub("\u0192", "f", .) %>%
+    gsub("\u00c9|\u00ca|\u00c8", "E", .) %>%
+    gsub("\u00ef|\u00ec|\u00ee|\u00ed", "i", .) %>%
     gsub("\u00dc", "U", .) %>%
-    gsub(" \u017e", "z", .) %>%
+    gsub("\u017e", "z", .) %>%
     gsub("\u0165", "t'", .) %>%
     gsub("\u0127", "h", .) %>%
-    gsub("\u00a7", "s", .) %>%
+    gsub("\u03a4", "T", .) %>%
+    gsub("\u00c6", "AE", .) %>%
+    gsub("\u00e6", "ae", .) %>%
+    gsub("\u0160", "S", .) %>%
+    # Latin Small Letter N with Acute
+    gsub("\u0144", "n", .) %>%
+
+    # Fix section sign
+    gsub("\u00a7", "S", .) %>%
+
+    # Fix paragraph sign
+    gsub("\u00b6", "P", .) %>%
 
     # Fix arrows
     gsub("\u2192", "->", .) %>%
@@ -320,7 +350,7 @@ fix.replace.unicode <- function(df) {
     gsub("\u2193", "", .) %>%
 
     # Remove unidentified characters
-    gsub("\ufffd|\uf0d4|\ufeff|\uf06d", "", .)
+    gsub("\ufffd|\uf8e8|\ufeff|\uf6da|\uf06e|\uf020|\uf06d|\uf0d4", "", .)
 
   # Identify and print unicode symbols that were not handled
   not_handled = df %>%
