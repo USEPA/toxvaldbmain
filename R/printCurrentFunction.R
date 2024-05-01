@@ -2,7 +2,7 @@
 #' @description Print the name of the current function
 #' @param comment.string An optional string to be printed
 #' @title printCurrentFunction
-#' @return OUTPUT_DESCRIPTION
+#' @return None
 #' @details DETAILS
 #' @examples
 #' \dontrun{

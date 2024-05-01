@@ -1,6 +1,7 @@
 #--------------------------------------------------------------------------------------
 #' @description Runs a database query and returns a result set
-#'
+
+#' @param table table to update
 #' @param updateQuery a properly formatted SQL query as a string in the form of an UPDATE INNER JOIN
 #' @param updated_df a dataframe of updated data to temporarily write to database for INNER JOIN
 #' @param db the name of the database
@@ -9,8 +10,7 @@
 #' @param trigger_check if FALSE, audit triggers are ignored/bypassed
 #' @export
 #' @title runUpdate
-#' @param table PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
+#' @return None
 #' @details DETAILS
 #' @examples
 #' \dontrun{
@@ -24,6 +24,7 @@
 #' @rdname runUpdate
 #' @importFrom RMySQL dbConnect MySQL dbWriteTable dbSendQuery dbDisconnect
 #' @importFrom DBI dbSendStatement
+#' @importFrom digest digest
 #--------------------------------------------------------------------------------------
 runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE,verbose=FALSE,
                       trigger_check=TRUE){

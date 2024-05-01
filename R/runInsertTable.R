@@ -1,6 +1,3 @@
-# library(RMySQL)
-# library(DBI)
-#--------------------------------------------------------------------------------------
 #' @description Inserts multiple rows into a database table
 #'
 #' @param mat data frame containing the data, with the column names corresponding
@@ -8,9 +5,9 @@
 #' @param db the name of the database
 #' @param do.halt if TRUE, halt on errors or warnings
 #' @param verbose if TRUE, print diagnostic information
-#' @title FUNCTION_TITLE
-#' @param get.id PARAM_DESCRIPTION, Default: T
-#' @return OUTPUT_DESCRIPTION
+#' @param get.id Whether to return ID or not, Default: T
+#' @title runInsertTable
+#' @return ID or None
 #' @details DETAILS
 #' @examples
 #' \dontrun{

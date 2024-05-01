@@ -1,6 +1,3 @@
-# library(RMySQL)
-# library(DBI)
-#--------------------------------------------------------------------------------------
 #' @description set SQL connection to the database
 #' @param server SQL server on which relevant database lives
 #' @param user SQL username to access database
@@ -8,7 +5,7 @@
 #' @param api_auth API Key for CCTE API's
 #' @param port Port for the server connection. Default of 3306.
 #' @title setDBConn
-#' @return OUTPUT_DESCRIPTION
+#' @return None
 #' @details DETAILS
 #' @examples
 #' \dontrun{

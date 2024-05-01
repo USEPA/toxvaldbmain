@@ -4,8 +4,8 @@
 #' @param The source to be fixed
 #' @return The dataframe with non ascii characters replaced with cleaned versions
 #' @export
-#' @title FUNCTION_TITLE
-#' @param source PARAM_DESCRIPTION
+#' @title fix.non_ascii.v2
+#' @param source Current ToxVal source
 #' @details DETAILS
 #' @examples
 #' \dontrun{
@@ -21,6 +21,8 @@
 #' @importFrom openxlsx read.xlsx write.xlsx
 #' @importFrom stringr str_trim
 #' @importFrom stringi stri_escape_unicode
+#' @importFrom dplyr select distinct mutate filter
+#' @importFrom rlang sym
 #-------------------------------------------------------------------------------------
 fix.non_ascii.v2 <- function(df,source){
   printCurrentFunction(source)

@@ -1,7 +1,3 @@
-# library(RMySQL)
-# library(DBI)
-
-#--------------------------------------------------------------------------------------
 #' @description Insert a record into a database. if auto.increment=TRUE, return the auto incremented
 #' primary key of the record. otherwise, return -1
 #' @param query a properly formatted SQL query as a string

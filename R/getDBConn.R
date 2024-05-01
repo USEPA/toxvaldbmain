@@ -5,14 +5,14 @@
 #' @return print the database connection information
 #' @title getDBConn
 #' @details DETAILS
-#' @examples
+#' @examples 
 #' \dontrun{
 #' if(interactive()){
 #'  #EXAMPLE1
 #'  }
 #' }
 #' @rdname getDBConn
-#' @export
+#' @export 
 #--------------------------------------------------------------------------------------
 getDBConn <- function() {
   printCurrentFunction()
