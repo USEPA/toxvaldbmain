@@ -115,16 +115,20 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     missing.all = data.frame()
 
     for(source in slist) {
-      file = paste0(dir,"toxval_new_study_type ",source, " ", subsource) %>%
-        stringr::str_squish() %>%
-        paste0(".xlsx")
-      print(file)
-      if(file.exists(file)){
-        mat = readxl::read_xlsx(file)
-        mat = mat[mat$dtxsid!='NODTXSID',]
-        mat = mat[!is.na(mat$dtxsid),]
-        #mat = fix.trim_spaces(mat)
-        mat <- mat %>%
+
+      file_list <- list.files(paste0(dir),
+                        pattern = paste0(source, " ", subsource) %>%
+                          stringr::str_squish(),
+                        recursive = TRUE,
+                        full.names = TRUE) %>%
+        # Ignore files in specific subfolders
+        .[!grepl("export_temp|old files", .)]
+
+      if(length(file_list)){
+        cat("Pulling study_type maps for import...\n")
+        mat = lapply(file_list, readxl::read_xlsx) %>%
+          dplyr::bind_rows() %>%
+          dplyr::filter(!dtxsid %in% c(NA, "NODTXSID", "-")) %>%
           dplyr::mutate(dplyr::across(where(is.character), ~stringr::str_squish(.)))
       } else {
         # Create empty dataframe
@@ -136,6 +140,12 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         dplyr::select(dtxsid, source_name=source, study_type_corrected, source_hash) %>%
         dplyr::filter(source_name == source) %>%
         dplyr::distinct()
+
+      if(any(duplicated(temp0$source_hash))){
+        cat("Unresolved duplicate source_hash mappings...")
+        browser()
+        stop()
+      }
 
       cat(source,nrow(temp0),"\n")
       temp0$key = paste(temp0$dtxsid,temp0$source_name,temp0$study_type_corrected,temp0$source_hash)
