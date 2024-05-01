@@ -13,7 +13,7 @@ fill.chemical.by.source <- function(toxval.db, source, verbose=TRUE) {
   res = runQuery(paste0("select dtxsid,casrn,name from source_chemical where source = '",source,
                         "' and dtxsid != '-'") ,toxval.db)
   cat("Rows in source_chemical:",nrow(res),"\n")
-  res = distinct(res)
+  res = dplyr::distinct(res)
   cat("Unique rows in source_chemical:",nrow(res),"\n")
   x = unique(res$dtxsid)
   cat("Unique dtxsid values:",length(x),"\n")
@@ -29,7 +29,7 @@ fill.chemical.by.source <- function(toxval.db, source, verbose=TRUE) {
     if(!validUTF8(name)) name = "invalid name"
     name2 = name
     name2 = tryCatch({
-       stri_escape_unicode(stri_enc_toutf8(name))
+       stringi::stri_escape_unicode(stringi::stri_enc_toutf8(name))
     }, error = function(e) {
       cat("Error messge: ",paste0(e, collapse=" | "), "\n")
       cat("bad name\n  ",name,"\n  ",name2,"\n")

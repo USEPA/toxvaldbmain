@@ -118,7 +118,7 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95",user="_dataminer",password=
 
     res = rbind(res,mat)
   }
-  sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+  sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   file = paste0(dir,"ToxValDB View ",toxval.db," ",Sys.Date(),".xlsx")
   openxlsx::write.xlsx(res,file,firstRow=T,headerStyle=sty)
 }

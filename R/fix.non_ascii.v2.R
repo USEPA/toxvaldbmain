@@ -58,7 +58,7 @@ fix.non_ascii.v2 <- function(df,source){
         tryCatch({
           n0 = i
           n1 = iconv(n0,from="UTF-8",to="ASCII//TRANSLIT")
-          n2 = str_trim(stri_escape_unicode(n1))
+          n2 = stringr::str_trim(stringi::stri_escape_unicode(n1))
           # row[1,"raw"] = n0
           # row[1,"converted"] = n1
           # res = rbind(res,row)

@@ -21,7 +21,7 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
 
     filenames <- list.files(path = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/"), pattern="_5.xlsx", full.names = T)
 
-    full_dict <- lapply(filenames, function(x) read.xlsx(x, colNames = T)) %T>% {
+    full_dict <- lapply(filenames, function(x) openxlsx::read.xlsx(x, colNames = T)) %T>% {
       names(.) <- gsub("_5.xlsx", "", basename(filenames))
     }
     field <- names(full_dict)
@@ -31,7 +31,7 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     full_dict <- lapply(full_dict, setNames, colnames)
     full_dict <- do.call(rbind,full_dict)
     rownames(full_dict) <- NULL
-    full_dict <- lapply(full_dict, function(x) type.convert(as.character(x), as.is = T))
+    full_dict <- lapply(full_dict, function(x) utils::type.convert(as.character(x), as.is = T))
     full_dict <- data.frame(full_dict, stringsAsFactors = F)
     full_dict = unique(full_dict)
     full_dict = full_dict[!is.na(full_dict$term_original),]

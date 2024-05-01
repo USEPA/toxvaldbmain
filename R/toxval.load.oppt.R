@@ -17,7 +17,7 @@ toxval.load.oppt <- function(toxval.db, source.db, log=F){
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -168,7 +168,7 @@ toxval.load.oppt <- function(toxval.db, source.db, log=F){
   new_res$risk_assessment_class <- "-"
   for(i in 1:nrow(new_res)) {
     for(col in names(new_res)) {
-      new_res[i,col] <- str_trim(new_res[i,col],"both")
+      new_res[i,col] <- stringr::str_trim(new_res[i,col],"both")
     }
     er0 <- new_res[i,"exposure_route"]
     st0 <- new_res[i,"study_type"]
@@ -188,20 +188,20 @@ toxval.load.oppt <- function(toxval.db, source.db, log=F){
     else if(new_res[i,"exposure_route"]=="Other") {new_res[i,"exposure_route"] <- "other"; new_res[i,"exposure_method"] <- "other"}
 
     tvt <- new_res[i,"toxval_type"]
-    if(contains(tvt,"LD50")) tvt <- "LD50"
-    else if(contains(tvt,"LC50")) tvt <- "LC50"
-    else if(contains(tvt,"LOAEC")) tvt <- "LOAEC"
-    else if(contains(tvt,"LOAEL")) tvt <- "LOAEL"
-    else if(contains(tvt,"NOAEC")) tvt <- "NOAEC"
-    else if(contains(tvt,"NOAEL")) tvt <- "NOAEL"
+    if(tidyselect::contains(tvt,"LD50")) tvt <- "LD50"
+    else if(tidyselect::contains(tvt,"LC50")) tvt <- "LC50"
+    else if(tidyselect::contains(tvt,"LOAEC")) tvt <- "LOAEC"
+    else if(tidyselect::contains(tvt,"LOAEL")) tvt <- "LOAEL"
+    else if(tidyselect::contains(tvt,"NOAEC")) tvt <- "NOAEC"
+    else if(tidyselect::contains(tvt,"NOAEL")) tvt <- "NOAEL"
     new_res[i,"toxval_type"] <- tvt
 
     tvu <- new_res[i,"toxval_units"]
-    if(contains(tvu,"mg/L")) tvu <- "mg/L"
-    else if(contains(tvu,"mg/kg")) tvu <- "mg/kg-day"
-    else if(contains(tvu,"ppm")) tvu <- "ppm"
+    if(tidyselect::contains(tvu,"mg/L")) tvu <- "mg/L"
+    else if(tidyselect::contains(tvu,"mg/kg")) tvu <- "mg/kg-day"
+    else if(tidyselect::contains(tvu,"ppm")) tvu <- "ppm"
     new_res[i,"toxval_units"] <- tvu
-    if(contains(new_res[i,"sex"],"sex")) new_res[i,"sex"] <- "male and female"
+    if(tidyselect::contains(new_res[i,"sex"],"sex")) new_res[i,"sex"] <- "male and female"
   }
   res = new_res
   res = res[is.element(res$toxval_type,c("NOAEC","LOAEL","NOAEL","LD50","LC50","LOAEC")),]
@@ -209,12 +209,12 @@ toxval.load.oppt <- function(toxval.db, source.db, log=F){
   slist = unique(res$species)
   res$strain = res$species
   for(species in slist) {
-    if(contains(species,"rabbit")) res[is.element(res$species,species),"species"] = "rabbit"
-    else if(contains(species,"mouse")) res[is.element(res$species,species),"species"] = "mouse"
-    else if(contains(species,"mice")) res[is.element(res$species,species),"species"] = "mouse"
-    else if(contains(species,"Guinea pig")) res[is.element(res$species,species),"species"] = "guinea pig"
-    else if(contains(species,"rat")) res[is.element(res$species,species),"species"] = "rat"
-    else if(contains(species,"dog")) res[is.element(res$species,species),"species"] = "dog"
+    if(tidyselect::contains(species,"rabbit")) res[is.element(res$species,species),"species"] = "rabbit"
+    else if(tidyselect::contains(species,"mouse")) res[is.element(res$species,species),"species"] = "mouse"
+    else if(tidyselect::contains(species,"mice")) res[is.element(res$species,species),"species"] = "mouse"
+    else if(tidyselect::contains(species,"Guinea pig")) res[is.element(res$species,species),"species"] = "guinea pig"
+    else if(tidyselect::contains(species,"rat")) res[is.element(res$species,species),"species"] = "rat"
+    else if(tidyselect::contains(species,"dog")) res[is.element(res$species,species),"species"] = "dog"
     else res[is.element(res$species,species),"species"] = "unknown"
   }
 
@@ -308,7 +308,7 @@ toxval.load.oppt <- function(toxval.db, source.db, log=F){
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)

@@ -12,13 +12,13 @@ toxval.load.species <- function(toxval.db,date_string="2023-05-18") {
   #################################################################
   file = paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
   print(file)
-  dict = read.xlsx(file)
+  dict = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/ecotox_species_synonyms_",date_string,".xlsx")
   print(file)
-  synonyms = read.xlsx(file)
+  synonyms = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/toxvaldb_extra_species_",date_string,".xlsx")
   print(file)
-  extra = read.xlsx(file)
+  extra = openxlsx::read.xlsx(file)
 
   dict2 = extra[,c("species_id","common_name","latin_name","ecotox_group")]
   dict2 = dict2[!is.element(dict2$species_id,dict$species_id),]

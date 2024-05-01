@@ -64,7 +64,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res <- res %>%
     dplyr::rename(# risk_assessment_class = risk_assessment_duration,
                   quality = overall_confidence) %>%
-    select(-dplyr::any_of(non_toxval_cols)) %>%
+    dplyr::select(-dplyr::any_of(non_toxval_cols)) %>%
     dplyr::filter(toxval_numeric != "-")
 
   # Fill in long_ref where missing
@@ -109,7 +109,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
 
@@ -119,8 +119,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[,!is.element(names(res),c("casrn","name"))]
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
@@ -182,8 +182,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "https://www.epa.gov/iris"

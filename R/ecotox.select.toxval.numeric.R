@@ -8,7 +8,7 @@ ecotox.select.toxval.numeric <- function(in_data){
   # Track original rows to ensure all remain at end
   orig_n <- nrow(in_data)
   in_data <- in_data %>%
-    dplyr::mutate(tmp_id = 1:n())
+    dplyr::mutate(tmp_id = 1:dplyr::n())
   ### First, select conc1_mean_std (standardized conc1 mean value) without issues
   out_ls$conc1_mean_std <- in_data %>%
     dplyr::rename(toxval_units = conc1_units_std) %>%

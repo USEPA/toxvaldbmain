@@ -47,14 +47,14 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
       if (!report.only) {
         file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries ",source," ",Sys.Date(),".xlsx")
         if(!is.null(subsource)) file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries ",source," ",subsource," ",Sys.Date(),".xlsx")
-        if(nrow(res)>0) write.xlsx(res,file)
+        if(nrow(res)>0) openxlsx::write.xlsx(res,file)
       }
     }
   }
   if (!report.only) {
     if(!is.null(res.all)) {
       file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries all sources ",Sys.Date(),".xlsx")
-      if(nrow(res.all)>0) write.xlsx(res.all,file)
+      if(nrow(res.all)>0) openxlsx::write.xlsx(res.all,file)
     }
   } else {
     return(res.all)

@@ -31,6 +31,6 @@ species.strain.mismap <- function(toxval.db) {
     dplyr::distinct()
 
   file = paste0(dir,"/species.strain.mismap_", toxval.db, "_", Sys.Date(), ".xlsx")
-  sty = createStyle(halign="center", valign="center", textRotation=90, textDecoration = "bold")
+  sty = openxlsx::createStyle(halign="center", valign="center", textRotation=90, textDecoration = "bold")
   openxlsx::write.xlsx(mat, file, firstRow=TRUE, headerStyle=sty)
 }

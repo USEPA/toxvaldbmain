@@ -16,7 +16,7 @@ toxval.load.tri <- function(toxval.db,source.db,log=F) {
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -34,7 +34,7 @@ toxval.load.tri <- function(toxval.db,source.db,log=F) {
   cat("load data to res\n")
   #####################################################################
   file = paste0(toxval.config()$datapath,"tri/TRI PODs 2022-10-21.xlsx")
-  res = read.xlsx(file)
+  res = openxlsx::read.xlsx(file)
   res = res[!is.na(res$casrn),]
   for(i in 1:nrow(res)) res[i,"casrn"] = fix.casrn(res[i,"casrn"])
   res$url = "https://www.epa.gov/toxics-release-inventory-tri-program"
@@ -44,7 +44,7 @@ toxval.load.tri <- function(toxval.db,source.db,log=F) {
   res$source_hash = NA
   for (i in 1:nrow(res)){
     row <- res[i,]
-    res[i,"source_hash"] = digest(paste0(row,collapse=""), serialize = FALSE)
+    res[i,"source_hash"] = digest::digest(paste0(row,collapse=""), serialize = FALSE)
     if(i%%1000==0) cat(i," out of ",nrow(res),"\n")
   }
 
@@ -148,7 +148,7 @@ toxval.load.tri <- function(toxval.db,source.db,log=F) {
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)

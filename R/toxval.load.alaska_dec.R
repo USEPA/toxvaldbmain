@@ -15,7 +15,7 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
     cat("start output log, log files for each source can be accessed from output_log folder\n")
     #####################################################################
     con1 <- file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 <- log_open(con1)
+    con1 <- logr::log_open(con1)
     con <- file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -122,7 +122,7 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)

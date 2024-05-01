@@ -22,7 +22,7 @@ source_chemical.extra <- function(toxval.db,
   cat("Do the chemical checking\n")
   #####################################################################
   res = res %>%
-    tidyr::unite(col="chemical_index", all_of(casrn.col), all_of(name.col), sep=" ", remove=FALSE)
+    tidyr::unite(col="chemical_index", tidyselect::all_of(casrn.col), tidyselect::all_of(name.col), sep=" ", remove=FALSE)
     # dplyr::mutate(dplyr::across(all_of(c(casrn.col, name.col)),
     #                             # Replace zero width space unicode
     #                             ~gsub("\u200b|\u00a0", "", .)),
@@ -67,14 +67,14 @@ source_chemical.extra <- function(toxval.db,
   #####################################################################
   chems = cbind(res[,c(casrn.col,name.col)],result$res0[,c(casrn.col,name.col)])
   names(chems) = c("raw_casrn","raw_name","cleaned_casrn","cleaned_name")
-  chems = distinct(chems)
+  chems = dplyr::distinct(chems)
   chems$source = source
 
   prefix = runQuery(paste0("select chemprefix from chemical_source_index where source='",source,"'"),source.db)[1,1]
   ilist = seq(from=1,to=nrow(chems))
   chems$chemical_id = "-"
   for(i in 1:nrow(chems)) {
-    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name")],collapse=""),algo="xxhash64", serialize = FALSE))
+    chems[i,"chemical_id"] = paste0(prefix,"_",digest::digest(paste0(chems[i,c("raw_casrn","raw_name")],collapse=""),algo="xxhash64", serialize = FALSE))
   }
   # check for duplicates
   x = chems$chemical_id

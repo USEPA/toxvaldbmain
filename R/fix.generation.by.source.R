@@ -10,7 +10,7 @@ fix.generation.by.source <- function(toxval.db, source, subsource=NULL) {
   printCurrentFunction(paste(toxval.db,":", source))
 
   file <- paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/generation_5.xlsx")
-  full_dict <- read.xlsx(file)
+  full_dict <- openxlsx::read.xlsx(file)
   full_dict$field <- "generation"
   colnames <- c("term_final","term_original","field")
 

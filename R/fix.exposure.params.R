@@ -12,7 +12,7 @@
 fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.only=FALSE) {
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/exposure_route_method_form.xlsx")
-  dict = read.xlsx(file)
+  dict = openxlsx::read.xlsx(file)
   dict$index1 = paste(dict[,1],dict[,2],dict[,3])
   dict$index2 = paste(dict[,4],dict[,5],dict[,6])
 
@@ -70,7 +70,7 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source,".xlsx")
       if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source," ",subsource,".xlsx")
     }
-    write.xlsx(missing,file)
+    openxlsx::write.xlsx(missing,file)
   }
   if (report.only) {
     return(missing)

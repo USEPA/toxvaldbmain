@@ -41,13 +41,13 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     cat("load ECOTOX data\n")
     file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX ",sys.date,".RData")
     load(file=file)
-    ECOTOX <- distinct(ECOTOX)
+    ECOTOX <- dplyr::distinct(ECOTOX)
     res0 <<- ECOTOX
 
     # Write dictionary for current ECOTOX version
-    dict = distinct(ECOTOX[,c("species_scientific_name","species_common_name","species_group","habitat")])
+    dict = dplyr::distinct(ECOTOX[,c("species_scientific_name","species_common_name","species_group","habitat")])
     file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX_dictionary_",sys.date,".xlsx")
-    write.xlsx(dict,file)
+    openxlsx::write.xlsx(dict,file)
   } else {
     res0 <- ECOTOX
   }
@@ -150,9 +150,9 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     ) %>%
 
     # Replace NA values ("NA", "NR", "")
-    dplyr::mutate(dplyr::across(where(is.character), ~na_if(., "NA")),
-                  dplyr::across(where(is.character), ~na_if(., "NR")),
-                  dplyr::across(where(is.character), ~na_if(., ""))) %>%
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~dplyr::na_if(., "NA")),
+                  dplyr::across(tidyselect::where(is.character), ~dplyr::na_if(., "NR")),
+                  dplyr::across(tidyselect::where(is.character), ~dplyr::na_if(., ""))) %>%
 
     # Remove effect_measurement field
     dplyr::select(-effect_measurement) %>%
@@ -229,7 +229,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     ) %>%
 
     # Remove excess whitespace
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
 
   # Remove intermediates
   rm(res1, res2, ECOTOX)
@@ -266,7 +266,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
 
   # Add chem_map info to res
   res <- res %>%
-    left_join(chem_map %>%
+    dplyr::left_join(chem_map %>%
                 dplyr::select(-chemical_index),
               by = c("dtxsid", "name", "casrn"))
 
@@ -296,11 +296,11 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   # Vectorized approach to source_hash generation
   non_hash_cols <- toxval.config()$non_hash_cols
   res = res %>%
-    tidyr::unite(hash_col, all_of(sort(names(.)[!names(.) %in% non_hash_cols])), sep="-", remove = FALSE) %>%
+    tidyr::unite(hash_col, tidyselect::all_of(sort(names(.)[!names(.) %in% non_hash_cols])), sep="-", remove = FALSE) %>%
     dplyr::rowwise() %>%
-    dplyr::mutate(source_hash = digest(hash_col, serialize = FALSE)) %>%
+    dplyr::mutate(source_hash = digest::digest(hash_col, serialize = FALSE)) %>%
     dplyr::ungroup() %>%
-    select(-hash_col)
+    dplyr::select(-hash_col)
 
   ##############################################################################
   ### Start of standard toxval.load logic
@@ -341,7 +341,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -349,8 +349,8 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -391,8 +391,8 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$subsource <- "EPA ORD"

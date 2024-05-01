@@ -15,8 +15,8 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2023
   fix.species.duplicates(toxval.db)
 
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
-  dict = read.xlsx(file)
-  dict = distinct(dict)
+  dict = openxlsx::read.xlsx(file)
+  dict = dplyr::distinct(dict)
   dict$common_name = tolower(dict$common_name)
   if(is.null(source)) {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
@@ -38,7 +38,7 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2023
                    # "and a.human_eco='human health' ",
                    "and a.source='",source,"'",query_addition)
     t1 = runQuery(query,toxval.db)
-    t1 = distinct(t1)
+    t1 = dplyr::distinct(t1)
     if(nrow(t1)) {
       spolist = sort(unique(t1$species_original))
       for(spo in spolist) {

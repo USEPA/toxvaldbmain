@@ -12,7 +12,7 @@
 fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, report.only=FALSE) {
   printCurrentFunction(toxval.db)
   file = paste0(toxval.config()$datapath,"dictionary/study_duration_params.xlsx")
-  dict = read.xlsx(file) %>%
+  dict = openxlsx::read.xlsx(file) %>%
     dplyr::distinct() %>%
     tidyr::unite(col="index1",
                  c("study_duration_value_original", "study_duration_units_original", "study_duration_class_original"),
@@ -80,7 +80,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
       cat("Found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params.xlsx\n and add to the dictionary\n")
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source,".xlsx")
       if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ", source," ", subsource,".xlsx")
-      write.xlsx(distinct(missing), file)
+      openxlsx::write.xlsx(dplyr::distinct(missing), file)
     }
   }
   if(report.only) return(missing)

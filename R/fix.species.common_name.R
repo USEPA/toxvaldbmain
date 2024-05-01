@@ -15,13 +15,13 @@ fix.species.common_name <- function(toxval.db) {
     x = res[i,"fixed"]
     val = paste0("[",x,"]")
     tryCatch({
-      x = str_trim(x)
+      x = stringr::str_trim(x)
     }, warning = function(w) {
       cat("WARNING:",x,"\n")
     }, error = function(e) {
       cat("ERROR:",x,"\n")
       x = iconv(x,from="UTF-8",to="ASCII//TRANSLIT")
-      x = str_trim(stri_escape_unicode(x))
+      x = stringr::str_trim(stringi::stri_escape_unicode(x))
     })
     res[i,"fixed"] = x
   }
@@ -37,13 +37,13 @@ fix.species.common_name <- function(toxval.db) {
     x = res[i,"fixed"]
     val = paste0("[",x,"]")
     tryCatch({
-      x = str_trim(x)
+      x = stringr::str_trim(x)
     }, warning = function(w) {
       cat("WARNING:",x,"\n")
     }, error = function(e) {
       cat("ERROR:",x,"\n")
       x = iconv(x,from="UTF-8",to="ASCII//TRANSLIT")
-      x = str_trim(stri_escape_unicode(x))
+      x = stringr::str_trim(stringi::stri_escape_unicode(x))
     })
     res[i,"fixed"] = x
   }

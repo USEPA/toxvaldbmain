@@ -18,7 +18,7 @@ export.missing.toxval_type <- function(toxval.db, report.only=FALSE) {
   if (!report.only) {
     if(nrow(res)>0) {
       file = paste0(toxval.config()$datapath,"/dictionary/missing/missing_toxval_type ",Sys.Date(),".xlsx")
-      write.xlsx(res,file)
+      openxlsx::write.xlsx(res,file)
     }
   } else {
     return(res)

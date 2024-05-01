@@ -14,7 +14,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
   printCurrentFunction(paste(toxval.db,":", source, subsource))
   file = paste0(toxval.config()$datapath,"dictionary/RAC_rules_by_source v92.xlsx")
   print(file)
-  conv = read.xlsx(file)
+  conv = openxlsx::read.xlsx(file)
   print(dim(conv))
   conv = conv[conv$order>0,]
   conv = conv[order(conv$term),]
@@ -158,7 +158,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_rac/missing_RAC_",source, " ",subsource,".xlsx") %>%
         gsub(" \\.xlsx", ".xlsx", .)
       if (!report.only) {
-        write.xlsx(temp,file)
+        openxlsx::write.xlsx(temp,file)
         cat("\n\n>>> ",source,subsource,"\nStopping here means that new values need to be added to the risk_assessment_class dictionary:\n",file,
             "\nFind the unique values of temp$study_type and enter them into the file.\nThen rerun the load.\n\n")
         browser()

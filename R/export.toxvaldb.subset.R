@@ -12,7 +12,7 @@ export.toxvaldb.subset <- function(toxval.db,filename) {
   dir = paste0(toxval.config()$datapath,"export_subset/")
   file = paste0(dir,filename)
   prefix = substr(filename,1,nchar(filename)-5)
-  chems = read.xlsx(file)
+  chems = openxlsx::read.xlsx(file)
   dlist = chems$dtxsid
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   res = NULL
@@ -85,7 +85,7 @@ export.toxvaldb.subset <- function(toxval.db,filename) {
       temp = mat[,nlist]
       mat$hashkey = NA
       mat$study_group = NA
-      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest(paste0(temp[i,],collapse=""), serialize = FALSE)
+      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest::digest(paste0(temp[i,],collapse=""), serialize = FALSE)
       hlist = unique(mat$hashkey)
       for(i in 1:length(hlist)) {
         sg = paste0(src,"_",i)
@@ -99,6 +99,6 @@ export.toxvaldb.subset <- function(toxval.db,filename) {
 
   res = subset(res,select= -c(hashkey))
   file = paste0(dir,prefix,"_toxval_",toxval.db," ",Sys.Date(),".xlsx")
-  sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+  sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   openxlsx::write.xlsx(res,file,firstRow=T,headerStyle=sty)
 }

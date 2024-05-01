@@ -27,5 +27,5 @@ toxval.summary.stats <- function(toxval.db) {
     res[i,"pass_percent"] = 100*res[i,"pass"]/res[i,"total"]
   }
   file = paste0(toxval.config()$datapath,"export/source_count ",Sys.Date(),".xlsx")
-  write.xlsx(res,file)
+  openxlsx::write.xlsx(res,file)
 }

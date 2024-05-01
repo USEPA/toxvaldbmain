@@ -148,7 +148,7 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
                   escaped=n1,
                   cleaned=n2,
                   checksum=cs) %>%
-    distinct()
+    dplyr::distinct()
 
   indir = paste0(toxval.config()$datapath,"chemcheck/")
   if(is.null(in_source)) {

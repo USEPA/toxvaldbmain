@@ -14,11 +14,11 @@
 fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2023-05-18") {
   printCurrentFunction()
   file =paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
-  dict = read.xlsx(file)
+  dict = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/ecotox_species_synonyms_",date_string,".xlsx")
-  synonyms = read.xlsx(file)
+  synonyms = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/toxvaldb_extra_species_",date_string,".xlsx")
-  extra = read.xlsx(file)
+  extra = openxlsx::read.xlsx(file)
 
   dict2 = extra[,c("species_id","common_name","latin_name","ecotox_group")]
   dict2 = dict2[!is.element(dict2$species_id,dict$species_id),]
@@ -109,7 +109,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
         cat(tag,sid,"\n")
         if(sid>=0) {
           count.good = count.good+1
-          query = paste0("update toxval set species_id=",sid," where source='",source,"'",query_addition," and species_original='",str_replace_all(tag0,"\\\'","\\\\'"),"'")
+          query = paste0("update toxval set species_id=",sid," where source='",source,"'",query_addition," and species_original='",stringr::str_replace_all(tag0,"\\\'","\\\\'"),"'")
           runQuery(query,toxval.db)
         }
         else {

@@ -76,7 +76,7 @@ export.for.toxval.qc <- function(toxval.db="res_toxval_v95",source=NULL) {
     cremove = c("cleaned_name","cleaned_casrn")
     mat = mat[ , !(names(mat) %in% cremove)]
     file = paste0(dir,"/toxval_for_qc_",src," ",toxval.db,"_",Sys.Date(),".xlsx")
-    sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-    write.xlsx(mat,file,firstRow=T,headerStyle=sty)
+    sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+    openxlsx::write.xlsx(mat,file,firstRow=T,headerStyle=sty)
   }
 }

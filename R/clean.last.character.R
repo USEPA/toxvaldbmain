@@ -6,14 +6,14 @@
 #--------------------------------------------------------------------------------------
 clean.last.character <- function(x) {
   ylist = c(";","/",".")
-  x = str_trim(x)
+  x = stringr::str_trim(x)
   for(i in 1:3) {
     for(y in ylist) {
       if(substr(x,nchar(x),nchar(x))==y) {
         x = substr(x,1,(nchar(x)-1))
       }
     }
-    x = str_trim(x)
+    x = stringr::str_trim(x)
   }
   return(x)
 }

@@ -66,10 +66,10 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
     for(i in seq_len(length(unit.list))) {
       input = unit.list[i]
       output = input
-      temp = str_replace_all(output,"\uFFFD","u")
+      temp = stringr::str_replace_all(output,"\uFFFD","u")
       #if(temp!=output) cat(output,":",temp,"\n")
       output = temp
-      output = str_trim(output)
+      output = stringr::str_trim(output)
       query <- paste0("update toxval set toxval_units_original='",output,"' where toxval_units_original='",input,"' and source = '",source,"'",query_addition)
       runInsert(query,toxval.db,T,F,T)
     }
@@ -85,7 +85,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
 
     # Convert units to standard denominator (e.g. ppb to ppm by dividing by 1000)
     cat(">>> Convert units that are simple multiples of standard units\n")
-    convos = read.xlsx(paste0(toxval.config()$datapath,"dictionary/toxval_units conversions 2022-08-22.xlsx"))
+    convos = openxlsx::read.xlsx(paste0(toxval.config()$datapath,"dictionary/toxval_units conversions 2022-08-22.xlsx"))
     #browser()
     query = paste0("select distinct toxval_units from toxval where source='",source,"'",query_addition)
     tulist = runQuery(query,toxval.db)[,1]
@@ -101,7 +101,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
 
     # Run conversions from molar to mg units, using MW
     cat(">>> Run conversions from molar to mg units, using MW\n")
-    convos <- read.xlsx(paste0(toxval.config()$datapath,"dictionary/MW conversions.xlsx"))
+    convos <- openxlsx::read.xlsx(paste0(toxval.config()$datapath,"dictionary/MW conversions.xlsx"))
     query = paste0("select distinct toxval_units from toxval where source='",source,"'",query_addition)
     tulist = runQuery(query,toxval.db)[,1]
     convos = convos[is.element(convos$toxval_units,tulist),]
@@ -127,7 +127,7 @@ fix.units.by.source <- function(toxval.db,source=NULL, subsource=NULL,do.convert
 
     # Do the conversion from ppm to mg/kg-day on a species-wise basis for oral exposures
     cat(">>> Do the conversion from ppm to mg/kg-day on a species-wise basis\n")
-    conv = read.xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx"))
+    conv = openxlsx::read.xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx"))
     for (i in seq_len(nrow(conv))){
       species <- conv[i,1]
       factor <- conv[i,2]

@@ -54,6 +54,6 @@ toxval_type.species.mismap <- function(toxval.db) {
     dplyr::bind_rows()
 
   file = paste0(dir, "/toxval_type.species.mismap_", toxval.db, "_", Sys.Date(), ".xlsx")
-  sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+  sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   openxlsx::write.xlsx(res, file, firstRow=TRUE, headerStyle=sty)
 }
