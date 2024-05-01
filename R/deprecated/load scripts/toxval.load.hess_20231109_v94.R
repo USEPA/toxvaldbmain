@@ -1,13 +1,14 @@
 #--------------------------------------------------------------------------------------
-#' Load the HEAST data from toxval_source to toxval
+#
+#' Load the HESS data from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "HEAST"
-  source_table = "source_heast"
+toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "HESS"
+  source_table = "source_hess"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -41,6 +42,7 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
+
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
@@ -51,13 +53,7 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Select higher value in ranged
-  res = res %>%
-    dplyr::mutate(
-      study_duration_value = study_duration_value %>%
-        gsub(".*\\-", "", .) %>%
-        as.numeric()
-    )
+  # Source-specific transformations handled in import script
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -68,14 +64,14 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","toxval_relationship_id"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
 
-  # Dynamically remove unused columns (remove relationship_id for now)
-  res = res %>% dplyr::select(-tidyselect::any_of(nlist))
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!tidyselect::any_of(nlist))
 
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","toxval_relationship_id"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
 
   if(length(nlist)>0) {
@@ -91,6 +87,7 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -113,48 +110,6 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
-
-  # #####################################################################
-  # cat("add record linkages to toxval_relationship\n")
-  # #####################################################################
-  # Add linkages connecting RfC/RfD to original test data
-  linkage_res = res %>%
-    # Expand collapsed toxval_relationship_id
-    tidyr::separate_rows(toxval_relationship_id, sep = " \\|::\\| ") %>%
-    dplyr::mutate(
-      toxval_relationship_id = toxval_relationship_id %>%
-        stringr::str_squish() %>%
-        as.numeric(),
-      # Add variable to ensure relationships are ordered as RfC/RfD - original data ("derived from")
-      sort_var = dplyr::case_when(
-        toxval_type %in% c("RfC", "RfD") ~ 0,
-        TRUE ~ 1
-      )
-    ) %>%
-    dplyr::select(toxval_id, toxval_relationship_id, toxval_type, sort_var) %>%
-    dplyr::group_by(toxval_relationship_id) %>%
-    # Ensure "derived from" ordering
-    dplyr::arrange(sort_var, .by_group=TRUE) %>%
-    # Build relationship
-    dplyr::mutate(toxval_relationship = paste0(toxval_id, collapse = ", "),
-                  relationship = paste("derived from") %>%
-                    stringr::str_squish()) %>%
-    dplyr::ungroup() %>%
-    # Remove entries where no linkage was fond
-    dplyr::filter(grepl(",", toxval_relationship)) %>%
-    # Convert to final linkage table format
-    dplyr::select(toxval_relationship, relationship) %>%
-    dplyr::distinct() %>%
-    tidyr::separate(col="toxval_relationship", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
-    dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
-
-  # Send linkage data to ToxVal
-  if(nrow(linkage_res)) {
-    runInsertTable(linkage_res, "toxval_relationship", toxval.db)
-  }
-
-  # Remove toxval_relationship_id column from res
-  res = res %>% dplyr::select(-toxval_relationship_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -184,8 +139,11 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
+  # res$source_url = "https://www.nite.go.jp/en/chem/qsar/hess-e.html"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
