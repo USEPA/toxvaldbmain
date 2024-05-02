@@ -90,7 +90,7 @@ toxval.load.all <- function(toxval.db,
     }
   }
   if(do.post) {
-    fix.study_type.manual(toxval.db,source=NULL)
+    fix.study_type.by.source(toxval.db, mode="import", source=NULL)
     fix.risk_assessment_class.by.source(toxval.db,restart=TRUE)
     load.dsstox()
   }

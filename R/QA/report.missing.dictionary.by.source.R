@@ -125,7 +125,9 @@ report.missing.dictionary.by.source <- function(toxval.db, source_name=NULL) {
     }
   }
 
-  missing_study_type = fix.study_type.manual(toxval.db, slist, report.only=TRUE)
+  missing_study_type = fix.study_type.by.source(toxval.db, mode="import",
+                                                source=NULL, report.only=TRUE)
+
   if(!is.null(missing_study_type)) {
     missing_sources = rbind(missing_sources,
                             missing_study_type %>%

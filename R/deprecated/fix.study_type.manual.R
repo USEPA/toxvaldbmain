@@ -3,12 +3,10 @@
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param source The source to be fixed
 #' @param subsource The subsource to be fixed
-#' @param dict.date The dated version of the dictionary to use
 #' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @return The database will be altered
-#' @export
 #--------------------------------------------------------------------------------------
-fix.study_type.manual = function(toxval.db, source=NULL, subsource=NULL, dict.date="2023-08-21", report.only=FALSE){
+fix.study_type.manual = function(toxval.db, source=NULL, subsource=NULL, report.only=FALSE){
   printCurrentFunction(toxval.db)
 
   # Handle addition of subsource for queries
@@ -17,7 +15,7 @@ fix.study_type.manual = function(toxval.db, source=NULL, subsource=NULL, dict.da
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
-  file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type ",toxval.db," ",dict.date,".xlsx")
+  file = paste0(toxval.config()$datapath,"dictionary/study_type/toxval_new_study_type.xlsx")
   print(file)
   mat = readxl::read_xlsx(file)
   mat = mat[mat$dtxsid!='NODTXSID',]
@@ -90,7 +88,7 @@ fix.study_type.manual = function(toxval.db, source=NULL, subsource=NULL, dict.da
       if(!is.null(subsource)) {
         query = paste0(query, " and b.subsource='",subsource,"'")
       }
-      
+
       replacements = runQuery(query,toxval.db,T,F)
       # Check if any returned from query
       if(nrow(replacements)){
@@ -100,7 +98,7 @@ fix.study_type.manual = function(toxval.db, source=NULL, subsource=NULL, dict.da
         # Check if any missing
         if(nrow(replacements)){
           if(!report.only) {
-            file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ",source," ",subsource," ",dict.date,".csv") %>%
+            file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ", source," ", subsource,".csv") %>%
             stringr::str_squish()
             write.csv(replacements,file,row.names=F)
           }

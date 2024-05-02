@@ -1,15 +1,14 @@
-#-------------------------------------------------------------------------------------
-#' Load pfas_150_sem from toxval_source to toxval
-#'
+#--------------------------------------------------------------------------------------
+#' Load HAWC PFAS 150 from toxval_source to toxval
 #' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The source database to use.
+#' @param source.db The version of toxval_source from which the tables are loaded.
 #' @param log If TRUE, send output to a log file
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
+toxval.load.hawc_pfas_150 <- function(toxval.db, source.db,log=F){
   printCurrentFunction(toxval.db)
-  source <- "PFAS 150 SEM v2"
-  source_table = "source_pfas_150_sem_v2"
+  source <- "HAWC PFAS 150"
+  source_table = "source_hawc_pfas_150"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -25,7 +24,6 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
-
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -42,9 +40,70 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   res$details_text = paste(source,"Details")
   print(dim(res))
 
-  cremove = c("hero_id","citation", "source_version_date")
-  res = res[ , !(names(res) %in% cremove)]
+  #####################################################################
+  cat("Add the code from the original version from Aswani\n")
+  #####################################################################
+  res$casrn <-  gsub("([a-zA-Z]+\\s+[a-zA-Z]*\\:*\\s*)(.*)","\\2",res$casrn)
+  res$exposure_route <- gsub("(^[a-zA-Z]+)(\\s*.*)","\\1", res$route_of_exposure)
+  res$exposure_method <- gsub("(^[a-zA-Z]+\\s*)(.*)","\\2", res$route_of_exposure)
+  res$exposure_method <- gsub("^\\-\\s+","", res$exposure_method)
 
+  # range values replaced with values from duration_value_original column
+  range_vals <- grep("\\b\\d+\\-\\d+\\b", res$study_duration_value)
+  res[range_vals,"study_duration_value"] <- res[range_vals,"exposure_duration_value_original"]
+
+  # range values in study_duration_value column that are not in duration_value_original column, assigned back to the text column value
+  missing_range_vals <- grep("^\\-$", res$study_duration_value)
+  res[missing_range_vals,"study_duration_value"] <- res[missing_range_vals,"exposure_duration_text"]
+  res[grep("^\\d+\\s*\\w+\\s+", res$study_duration_value),"study_duration_units"] <- gsub("(^[0-9]+\\s*)(\\w+)(.*)","\\2", res[grep("^\\d+\\s*\\w+\\s+", res$study_duration_value),"study_duration_value"])
+  res[grep("^\\d+\\s*\\w+\\s+", res$study_duration_value),"study_duration_value"] <- gsub("(^[0-9]+)(\\s*.*)","\\1", res[grep("^\\d+\\s*\\w+\\s+", res$study_duration_value),"study_duration_value"])
+
+  #premating-lactation units assigned as day
+  res[grep("premating", res$study_duration_value),"study_duration_units"] <- "day"
+  res[grep("premating", res$study_duration_value),"study_duration_value"] <- res[grep("premating", res$study_duration_value),"exposure_duration_value_original"]
+
+  # assigned units as day for GD 0-LD 13
+  res[grep("GD 0\\-LD", res$study_duration_value),"study_duration_units"] <- "day"
+  res[grep("GD 0\\-LD", res$study_duration_value),"study_duration_value"] <- res[grep("GD 0\\-LD", res$study_duration_value),"exposure_duration_value_original"]
+
+  #range values in study_duration_value column without corresponding value in duration_value_original column, assigned with highest duration
+  res[grep("PNW", res$study_duration_value),"study_duration_units"] <- "week"
+  res[grep("PNW", res$study_duration_value),"study_duration_value"] <- gsub("(.*PNW\\s*)(\\d+$)","\\2",res[grep("PNW", res$study_duration_value),"study_duration_value"])
+
+  # assigned units as day for 32-34 d & GD 10-20
+  res[grep("d|GD", res$study_duration_value),"study_duration_units"] <- "day"
+  res[grep("d|GD", res$study_duration_value),"study_duration_value"] <- gsub("(.*\\-)(\\d+)(.*)","\\2", res[grep("d|GD", res$study_duration_value),"study_duration_value"])
+  res$study_duration_units <- gsub("(^GD)(\\s+.*)","\\1",res$exposure_duration_text)
+  res$study_duration_units <- gsub("(^\\d+\\s+)(\\w+)(\\s*.*)","\\2",res$study_duration_units)
+  res$study_duration_units <- gsub("(.*)(\\d+\\s+)(\\w+)(\\s*.*)","\\3",res$study_duration_units)
+  res$study_duration_units <- gsub("(\\d+\\s*)(\\w+)(\\s*.*)","\\2",res$study_duration_units)
+  res[is.element(res$study_duration_units,"d"),"study_duration_units"] <- "day"
+  res[is.element(res$study_duration_units,"GD"),"study_duration_units"] <- "day"
+  res[is.element(res$study_duration_units,"wk"),"study_duration_units"] <- "week"
+  res[is.element(res$study_duration_units,"yr"),"study_duration_units"] <- "year"
+  res$study_type <- gsub("(.*)(\\s+\\(.*\\))","\\1",res$study_type_original)
+  res$study_duration_value <- as.numeric(res$study_duration_value)
+
+  # assign appropriate data types
+  res <- lapply(res, function(x) type.convert(as.character(x), as.is = T))
+  res <- data.frame(res, stringsAsFactors = F)
+
+  # convert na and empty values in character columns into hyphens
+  for (i in 1:ncol(res)) {
+    if (class(res[,i]) == "character") {
+      res[which(is.na(res[i])), names(res)[i]] <- "-"
+    }
+  }
+  res$bmd <- NA
+  res[,which(sapply(res, function(x)all(is.na(x)))) ] <- as.character(res[,which(sapply(res, function(x)all(is.na(x)))) ])
+
+  cremove = c("target","NOEL_original","LOEL_original",
+              "FEL_original","endpoint_url_original","bmd",
+              "study_id","authors_short","full_text_url",
+              "study_url_original","experiment_name","chemical_source",
+              "guideline_compliance","dosing_regime_id","route_of_exposure",
+              "exposure_duration_value_original","exposure_duration_text","doses"  )
+  res = res[ , !(names(res) %in% cremove)]
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -53,6 +112,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
+  res = res[ , !(names(res) %in% c("noel_original","loel_original","fel_original","data_location","doses_units"))]
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
@@ -71,6 +131,18 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("Generic steps \n")
   #####################################################################
   res = unique(res)
+  for(i in 1:nrow(res)) {
+    x = res[i,"toxval_numeric"]
+    if(length(grep(";",x))>0) {
+      y = str_split(x,";")[[1]]
+      z = as.numeric(y)
+      res[i,"toxval_numeric"] = min(z)
+    }
+    else res[i,"toxval_numeric"] = as.numeric(x)
+  }
+
+  res = res[!is.na(res$toxval_numeric),]
+  res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
@@ -132,7 +204,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
+  toxval.load.postprocess(toxval.db,source.db,source)
 
   if(log) {
     #####################################################################
@@ -150,5 +222,4 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
 }

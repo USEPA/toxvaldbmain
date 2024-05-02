@@ -1,15 +1,14 @@
-#-------------------------------------------------------------------------------------
-#' Load pfas_150_sem from toxval_source to toxval
-#'
+#--------------------------------------------------------------------------------------
+#' Load the HEAST data from toxval_source to toxval
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
+toxval.load.heast <- function(toxval.db,source.db,log=F) {
   printCurrentFunction(toxval.db)
-  source <- "PFAS 150 SEM v2"
-  source_table = "source_pfas_150_sem_v2"
+  source <- "HEAST"
+  source_table = "source_heast"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -25,7 +24,6 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
-
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -41,8 +39,15 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   res$source = source
   res$details_text = paste(source,"Details")
   print(dim(res))
+  res[is.element(res$toxval_type,c("RfD","RfC")),"human_ra"] = "Y"
+  res[is.element(res$toxval_type,c("RfD","RfC")),"target_species"] = "Human"
+  res[is.element(res$toxval_type,c("RfD","RfC")),"species"] = "-"
+  res$human_eco = "human health"
 
-  cremove = c("hero_id","citation", "source_version_date")
+  #####################################################################
+  cat("Add the code from the original version from Aswani\n")
+  #####################################################################
+  cremove = c("row_id","comment","ornl_table","uf")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -120,7 +125,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://ehp.niehs.nih.gov/doi/full/10.1289/EHP10343"
+  res$source_url = "https://cfpub.epa.gov/ncea/risk/recordisplay.cfm?deid=2877"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
@@ -132,7 +137,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
+  toxval.load.postprocess(toxval.db,source.db,source)
 
   if(log) {
     #####################################################################
@@ -150,5 +155,4 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
 }

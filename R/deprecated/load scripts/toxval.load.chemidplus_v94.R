@@ -1,16 +1,16 @@
 #-------------------------------------------------------------------------------------
-#' Load pfas_150_sem from toxval_source to toxval
-#'
+#' Load ChemID Plus Acute data data to toxval
 #' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The source database to use.
+#' @param verbose Whether the loaded rows should be printed to the console.
 #' @param log If TRUE, send output to a log file
+#' @param do.init if TRUE, read the data in from the file and set up the matrix
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
+toxval.load.chemidplus <- function(toxval.db,source.db,log=F,do.init=F) {
   printCurrentFunction(toxval.db)
-  source <- "PFAS 150 SEM v2"
-  source_table = "source_pfas_150_sem_v2"
-  verbose = log
+  source <- "ChemIDPlus"
+  source_table = "direct load"
+  verbose=F
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
   #####################################################################
@@ -25,7 +25,6 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
-
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -34,16 +33,120 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  query = paste0("select * from ",source_table)
-  res = runQuery(query,source.db,T,F)
-  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
-  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
-  res$source = source
-  res$details_text = paste(source,"Details")
-  print(dim(res))
+  if(!exists("CHEMIDPLUS")) do.init=T
+  if(do.init) {
+    file = paste0(toxval.config()$datapath,"ChemIDPlus/ChemIDplus Toxicity Experimental Records.xlsx")
+    mat = read.xlsx(file)
+    nlist = c("casrn",
+              "chemical_name",
+              "source_name",
+              "property_name",
+              "property_value_numeric_qualifier",
+              "property_value_point_estimate_final",
+              "property_value_units_final",
+              "reference",
+              "url")
+    mat = mat[,nlist]
+    nlist = c("casrn",
+              "name",
+              "source",
+              "property_name",
+              "toxval_numeric_qualifier",
+              "toxval_numeric",
+              "toxval_units",
+              "long_ref",
+              "url")
+    names(mat) = nlist
+    mat$study_type = "acute"
+    mat$species = NA
+    mat$exposure_route = NA
+    mat$toxval_type = NA
 
-  cremove = c("hero_id","citation", "source_version_date")
-  res = res[ , !(names(res) %in% cremove)]
+    plist = unique(mat$property_name)
+    for(pn in plist) {
+      temp = str_split(pn,"_")[[1]]
+      toxval_type = temp[length(temp)]
+      exposure_route = temp[length(temp)-1]
+      if(exposure_route=="skin") exposure_route = "dermal"
+      species = temp[1]
+      if(species=="guinea") species = "guinea pig"
+      mat[is.element(mat$property_name,pn),"species"] = species
+      mat[is.element(mat$property_name,pn),"exposure_route"] = exposure_route
+      mat[is.element(mat$property_name,pn),"toxval_type"] = toxval_type
+
+    }
+    mat[is.na(mat$toxval_numeric_qualifier),"toxval_numeric_qualifier"] = "="
+    res = mat
+    res = subset(res,select = -c(property_name))
+    CHEMIDPLUS <<- res
+  }
+  res = CHEMIDPLUS
+
+  # Perform deduping
+  res = toxval.load.dedup(res)
+
+  cat("set the source_hash\n")
+  #res = fix.non_ascii.v2(res,source)
+  res$source_hash = NA
+  for (i in 1:nrow(res)){
+    row <- res[i,]
+    res[i,"source_hash"] = digest(paste0(row,collapse=""), serialize = FALSE)
+    if(i%%1000==0) cat(i," out of ",nrow(res),"\n")
+  }
+
+  res = source_chemical.chemidplus(toxval.db,source.db,res,source,chem.check.halt=FALSE,
+                                 casrn.col="casrn",name.col="name",verbose=F)
+  # nlist = names(res)
+  # nlist = nlist[!is.element(nlist,"dtxsid")]
+  # res = res[,nlist]
+  # res <- res[!is.na(res[,"toxval_units"]),]
+  # res[,"toxval_type"] <- toupper(res[,"toxval_type"])
+  # x <- res[,"toxval_numeric_qualifier"]
+  # x[is.element(x,"'='")] <- "="
+  # res[,"toxval_numeric_qualifier"] <- x
+  #
+  # x <- res[,"toxval_units"]
+  # x[is.element(x,"mg/kg/day")] <- "mg/kg-day"
+  # x[is.element(x,"mg/kg/wk")] <- "mg/kg-wk"
+  # x[is.element(x,"mg/m^3")] <- "mg/m3"
+  # x[is.element(x,"mg/L/day")] <- "mg/L"
+  # res[,"toxval_units"] <- x
+  # res[,"exposure_route"] <- tolower(res[,"exposure_route"])
+  # res[,"exposure_method"] <- tolower(res[,"exposure_method"])
+
+  # x <- res[,"study_type"]
+  # x[is.element(x,"DEV")] <- "developmental"
+  # x[is.element(x,"MGR")] <- "reproductive"
+  # x[is.element(x,"CHR")] <- "chronic"
+  # x[is.element(x,"DNT")] <- "developmental neurotoxicity"
+  # x[is.element(x,"SUB")] <- "subchronic"
+  # x[is.element(x,"NEU")] <- "neurotoxicity"
+  # x[is.element(x,"REP")] <- "reproductive"
+  # x[is.element(x,"OTH")] <- "other"
+  # x[is.element(x,"SAC")] <- "subacute"
+  # x[is.element(x,"ACU")] <- "acute"
+  # res[,"study_type"] <- x
+  #
+  # x <- res[,"study_duration_units"]
+  # x[is.element(x,"GD")] <- "days"
+  # x[is.element(x,"PND")] <- "days"
+  # x[is.element(x," day (PND)")] <- "days"
+  # x[is.element(x,"days (premating)")] <- "days"
+  # x[is.element(x,"weeks (premating)")] <- "weeks"
+  # res[,"study_duration_units"] <- x
+  # res[,"study_duration_value"] <- as.numeric(res[,"study_duration_value"])
+
+  # name.list <- names(res)
+  # name.list[is.element(name.list,"dose_end_unit")] <- "study_duration_units"
+  # name.list[is.element(name.list,"dose_end")] <- "study_duration_value"
+  # names(res) <- name.list
+
+  #####################################################################
+  cat("Add the code from the original version from Aswani\n")
+  #####################################################################
+  #browser()
+  # cremove = c("study_source","chemical_index")
+  # res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -71,6 +174,8 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("Generic steps \n")
   #####################################################################
   res = unique(res)
+  res = res[!is.na(res$toxval_numeric),]
+  res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
@@ -120,7 +225,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://ehp.niehs.nih.gov/doi/full/10.1289/EHP10343"
+  res$source_url = "-"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
@@ -150,5 +255,5 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
 }
+

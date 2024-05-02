@@ -1,15 +1,15 @@
 #-------------------------------------------------------------------------------------
-#' Load pfas_150_sem from toxval_source to toxval
+#' Load opp from toxval_source to toxval
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The source database to use.
+#' @param source.db The version of toxval_source from which the tables are loaded.
 #' @param log If TRUE, send output to a log file
 #' @export
-#--------------------------------------------------------------------------------------
-toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
+#-------------------------------------------------------------------------------------
+toxval.load.opp <- function(toxval.db, source.db,log=F){
   printCurrentFunction(toxval.db)
-  source <- "PFAS 150 SEM v2"
-  source_table = "source_pfas_150_sem_v2"
+  source <- "EPA OPP"
+  source_table = "source_opp"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -25,7 +25,6 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
-
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -42,8 +41,11 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   res$details_text = paste(source,"Details")
   print(dim(res))
 
-  cremove = c("hero_id","citation", "source_version_date")
-  res = res[ , !(names(res) %in% cremove)]
+  #####################################################################
+  cat("Add the code from the original version from Aswani\n")
+  #####################################################################
+  res = res[ , !(names(res) %in% c("sensitive_lifestage"))]
+  #browser()
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -70,7 +72,17 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
+  res = res[!is.element(res$toxval_numeric,"-"),]
   res = unique(res)
+  for(i in 1:nrow(res)) {
+    x = res[i,"toxval_numeric"]
+    if(length(grep("-",x))>0) {
+      y = str_split(x,"-")[[1]]
+      z = as.numeric(y)
+      res[i,"toxval_numeric"] = min(z)
+    }
+    else res[i,"toxval_numeric"] = as.numeric(x)
+  }
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
@@ -108,9 +120,9 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "-"
-  refs$record_source_note = "-"
-  refs$record_source_level = "-"
+  refs$record_source_type = "website"
+  refs$record_source_note = "to be cleaned up"
+  refs$record_source_level = "primary (risk assessment values)"
   print(dim(res))
 
   #####################################################################
@@ -120,19 +132,19 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://ehp.niehs.nih.gov/doi/full/10.1289/EHP10343"
+  res$source_url = "https://ordspub.epa.gov/ords/pesticides/f?p=HHBP:home"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
+
   runInsertTable(res, "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))
-
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
+  toxval.load.postprocess(toxval.db,source.db,source)
 
   if(log) {
     #####################################################################
@@ -150,5 +162,4 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
 }

@@ -3,11 +3,10 @@
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param verbose Whether the loaded rows should be printed to the console.
 #' @param log If TRUE, send output to a log file
-#' @param do.init if TRUE, read the data in from the toxrefdb database and set up the matrix
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRUE, remove_null_dtxsid=TRUE) {
+toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE) {
   printCurrentFunction(toxval.db)
   source <- "ToxRefDB"
   source_table = "direct load"
@@ -17,7 +16,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -26,6 +25,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
+
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -131,10 +131,13 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
     )
 
   # View(res %>% select(admin_route, admin_method, vehicle, exposure_route, exposure_method, exposure_form) %>% distinct())
-
   cat("set the source_hash\n")
   # Add source_hash_temp column
   res[, toxval.config()$hashing_cols[!toxval.config()$hashing_cols %in% names(res)]] <- "-"
+
+  # Perform deduping
+  res = toxval.load.dedup(res)
+
   hashing_cols = c(toxval.config()$hashing_cols)
   res.temp = source_hash_vectorized(res, hashing_cols)
   res$source_hash = res.temp$source_hash
@@ -151,7 +154,6 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
     left_join(chem_map %>%
                 dplyr::select(-chemical_index, -dtxsid),
               by = c("name", "casrn"))
-
   # Remove intermediate
   rm(chem_map)
 
@@ -165,6 +167,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
 
   res = res[ , !(names(res) %in% cremove)]
 
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -176,6 +179,14 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
+
+  # Dynamically remove unused columns
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+
+  nlist = names(res)
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,cols)]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -191,9 +202,10 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res$species_original = tolower(res$species_original)
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
+
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(dim(res))
+  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
@@ -250,8 +262,6 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   res$source_url = "-"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
@@ -267,7 +277,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
@@ -278,4 +288,5 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, do.init=TRU
   #####################################################################
   cat("finish\n")
   #####################################################################
+  return(0)
 }

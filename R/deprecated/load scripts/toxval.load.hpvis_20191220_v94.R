@@ -1,15 +1,15 @@
 #-------------------------------------------------------------------------------------
-#' Load pfas_150_sem from toxval_source to toxval
+#' Load HPVIS from toxval_source to toxval
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The source database to use.
+#' @param source.db The source databse from which data should be loaded
 #' @param log If TRUE, send output to a log file
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
+toxval.load.hpvis <- function(toxval.db,source.db,log=F) {
   printCurrentFunction(toxval.db)
-  source <- "PFAS 150 SEM v2"
-  source_table = "source_pfas_150_sem_v2"
+  source <- "HPVIS"
+  source_table = "source_hpvis"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -42,9 +42,58 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   res$details_text = paste(source,"Details")
   print(dim(res))
 
-  cremove = c("hero_id","citation", "source_version_date")
+  #####################################################################
+  cat("Trim leading and trailing spaces\n")
+  #####################################################################
+  res = fix.trim_spaces(res)
+
+  #####################################################################
+  cat("Add the code from the original version from Aswani\n")
+  #####################################################################
+  res$long_ref = res$study_reference
+  res$quality = res$reliability
+
+  cremove = c("toxval_basis_for_concentration","toxval_upper_range","duration_index_name","program_flag",
+              "consortium_name","reliability","study_reference","hpvis_source_key",
+              "dose_remarks","key_study_sponsor_indicator","method_guideline_followed","reliability_remarks",
+              "results_remarks","sponsor_name","sponsored_chemical_result_type","submission_name",
+              "submitter_s_name","test_conditions_remarks","test_substance_purity","hpvis_id")
   res = res[ , !(names(res) %in% cremove)]
 
+  #####################################################################
+  cat("fix repeat dose study type\n")
+  #####################################################################
+  x = res[res$study_type=="repeat-dose",]
+  y = res[res$study_type!="repeat-dose",]
+  x[is.element(x$study_duration_units,"Years"),"study_type"] = "chronic"
+  x[is.element(x$study_duration_units,"Hours"),"study_type"] = "acute"
+  x[is.element(x$study_duration_units,"Minutes"),"study_type"] = "acute"
+  x = x[is.element(x$study_type,"repeat-dose"),]
+  x1 = x[is.element(x$study_duration_units,"Weeks"),]
+  x2 = x[is.element(x$study_duration_units,"Days"),]
+  x3 = x[is.element(x$study_duration_units,"Months"),]
+  x4 = x[is.element(x$study_duration_units,""),]
+  x5 = x[is.element(x$study_duration_units,"Other"),]
+
+  x1a = x1[!is.na(x1$study_duration_value),]
+  x1b = x1[is.na(x1$study_duration_value),]
+  x1a$study_type = "chronic"
+  x1a[x1a$study_duration_value<14,"study_type"] = "subchronic"
+  x1a[x1a$study_duration_value<4,"study_type"] = "subacute"
+
+  x2a = x2[!is.na(x2$study_duration_value),]
+  x2b = x2[is.na(x2$study_duration_value),]
+  x2a$study_type = "chronic"
+  x2a[x2a$study_duration_value<100,"study_type"] = "subchronic"
+  x2a[x2a$study_duration_value<28,"study_type"] = "subacute"
+
+  x3a = x3[!is.na(x3$study_duration_value),]
+  x3b = x3[is.na(x3$study_duration_value),]
+  x3a$study_type = "chronic"
+  x3a[x3a$study_duration_value<14,"study_type"] = "subchronic"
+  x3a[x3a$study_duration_value<4,"study_type"] = "subacute"
+
+  res = rbind(x1a,x1b,x2a,x2b,x3a,x3b,x4,x5,y)
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -54,7 +103,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","raw_input_file"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -62,6 +111,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
     browser()
   }
   print(dim(res))
+  res[is.na(res$toxval_numeric_qualifier),"toxval_numeric_qualifier"] = "="
 
   # examples ...
   # names(res)[names(res) == "source_url"] = "url"
@@ -71,6 +121,8 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("Generic steps \n")
   #####################################################################
   res = unique(res)
+  res = res[!is.na(res$toxval_numeric),]
+  res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
@@ -120,7 +172,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://ehp.niehs.nih.gov/doi/full/10.1289/EHP10343"
+  res$source_url = "https://chemview.epa.gov/chemview/"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
@@ -132,7 +184,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
+  toxval.load.postprocess(toxval.db,source.db,source)
 
   if(log) {
     #####################################################################
@@ -150,5 +202,4 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
 }
