@@ -1,15 +1,15 @@
-#-------------------------------------------------------------------------------------
-#' Load pfas_150_sem from toxval_source to toxval
+#--------------------------------------------------------------------------------------
+#' Load Copper Manufacturers daa from toxval_source to toxval
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
+toxval.load.copper <- function(toxval.db,source.db, log=F){
   printCurrentFunction(toxval.db)
-  source <- "PFAS 150 SEM v2"
-  source_table = "source_pfas_150_sem_v2"
+  source <- "Copper Manufacturers"
+  source_table = "source_copper"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -25,7 +25,6 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
-
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -37,13 +36,22 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   query = paste0("select * from ",source_table)
   res = runQuery(query,source.db,T,F)
   res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
-  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
+  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version"))]
   res$source = source
   res$details_text = paste(source,"Details")
   print(dim(res))
 
-  cremove = c("hero_id","citation", "source_version_date")
-  res = res[ , !(names(res) %in% cremove)]
+  res[which(!is.na(res[,"toxval_subtype1"])),"toxval_subtype"] <- res[which(!is.na(res[,"toxval_subtype1"])),"toxval_subtype1"]
+  res <- res[ , !(names(res) %in% c("toxval_id","toxval_subtype1","year1"))]
+  res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric_qualifier"] <- res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric"]
+  res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric_qualifier"] <- gsub("(^[^[:alnum:]])(.*)","\\1",res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric_qualifier"])
+  res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric"] <- gsub("(^[^[:alnum:]])(.*)","\\2",res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric"])
+  res[grep("\\-",res$toxval_numeric), "toxval_numeric"] <- gsub("(.*)(\\s*\\-\\s*)(.*)","\\1",res[grep("\\-",res$toxval_numeric), "toxval_numeric"])
+
+  res[grep("^[a-zA-Z]+",res$study_duration_value), "study_duration_value"] <- gsub("(^[a-zA-Z]+\\s*[a-zA-Z]+\\s*)(.*)","\\2",res[grep("^[a-zA-Z]+",res$study_duration_value), "study_duration_value"])
+  res[grep("\\-",res$study_duration_value), "study_duration_value"] <- gsub("(.*)(\\s*\\-\\s*)(.*)","\\3",res[grep("\\-",res$study_duration_value), "study_duration_value"])
+  res[which(res$volume == "-"),"volume"] <- ""
+
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -54,7 +62,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","parent_chemical_id"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -62,7 +70,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
     browser()
   }
   print(dim(res))
-
+  res$toxval_numeric_qualifier = "="
   # examples ...
   # names(res)[names(res) == "source_url"] = "url"
   # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
@@ -108,9 +116,9 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "-"
-  refs$record_source_note = "-"
-  refs$record_source_level = "-"
+  refs$record_source_type = "website"
+  refs$record_source_note = "to be cleaned up"
+  refs$record_source_level = "primary (risk assessment values)"
   print(dim(res))
 
   #####################################################################
@@ -120,7 +128,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://ehp.niehs.nih.gov/doi/full/10.1289/EHP10343"
+  res$source_url = "-"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
@@ -132,7 +140,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=F)
+  toxval.load.postprocess(toxval.db,source.db,source)
 
   if(log) {
     #####################################################################
@@ -150,5 +158,4 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   #####################################################################
   cat("finish\n")
   #####################################################################
-  return(0)
 }

@@ -58,7 +58,8 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                        'data_confidence',
                        # 'overall_confidence',
                        'dose_type',
-                       "endpoint", "principal_study", "study_duration_qualifier")
+                       "endpoint", "principal_study", "study_duration_qualifier",
+                       "full_reference")
   # Rename non-toxval columns
   res <- res %>%
     dplyr::rename(# risk_assessment_class = risk_assessment_duration,
