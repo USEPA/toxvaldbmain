@@ -27,7 +27,7 @@ source_chemical.toxrefdb <- function(toxval.db,
   res = res %>%
     tidyr::unite(col="chemical_index", all_of(c(casrn.col, name.col)), sep=" ", remove=FALSE)
   # result = chem.check(res,name.col=name.col,casrn.col=casrn.col,verbose=verbose,source)
-  result = chem.check.v2(res0=res, source=source, verbose=verbose)
+  result = chem.check.v2(res0=res, in_source=source, verbose=verbose)
   if(chem.check.halt) if(!result$name.OK || !result$casrn.OK || !result$checksum.OK) browser()
 
   #####################################################################
