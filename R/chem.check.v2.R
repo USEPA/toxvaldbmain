@@ -6,27 +6,27 @@
 #' One option for using this is to edit the source file until no errors are found
 #'
 #' @param res0  The data frame in which chemicals names and CASRN will be replaced
-#' @param source The source to be processed. If source=NULL, process all sources
+#' @param in_source The source to be processed. If source=NULL, process all sources
 #' @param verbose If TRUE, print diagnostic messages
 #' @return Return a list with fixed CASRN and name and flags indicating if fixes were made:
 #' res0=res0,name.OK=name.OK,casrn.OK=casrn.OK,checksum.OK=checksum.OK
 #'
 #--------------------------------------------------------------------------------------
-chem.check.v2 <- function(res0,source=NULL,verbose=FALSE) {
-  printCurrentFunction(source)
+chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
+  printCurrentFunction(in_source)
   name.OK = TRUE
   casrn.OK = TRUE
   checksum.OK = TRUE
 
   cat(">>> Deal with name\n")
-  chem.check.name <- function(in_name, source, verbose){
+  chem.check.name <- function(in_name, in_source, verbose){
     n0 = in_name %>%
       # Replace zero width space unicode
       gsub("\u200b", "", .)
 
     if(is.na(n0)) {
       cat("NA name found...\n")
-      browser()
+      return(n0)
     }
     n1 = n0 %>%
       iconv(.,from="UTF-8",to="ASCII//TRANSLIT")
@@ -36,27 +36,27 @@ chem.check.v2 <- function(res0,source=NULL,verbose=FALSE) {
       stringr::str_replace_all("\\\\'","\'") %>%
       stringr::str_squish()
 
-    if(source %in% c("Alaska DEC",
-                     "California DPH",
-                     "EPA AEGL",
-                     "Mass. Drinking Water Standards",
-                     "OSHA Air contaminants",
-                     "OW Drinking Water Standards",
-                     "Pennsylvania DEP MCLs",
-                     "USGS HBSL",
-                     "WHO IPCS",
-                     "ATSDR MRLs",
-                     "Cal OEHHA",
-                     "Chiu",
-                     "COSMOS",
-                     "DOD ERED",
-                     "DOE Wildlife Benchmarks",
-                     "DOE Protective Action Criteria",
-                     "IRIS",
-                     "EPA OPP",
-                     "Pennsylvania DEP ToxValues",
-                     "EnviroTox_v2",
-                     "HEAST")) {
+    if(in_source %in% c("Alaska DEC",
+                        "California DPH",
+                        "EPA AEGL",
+                        "Mass. Drinking Water Standards",
+                        "OSHA Air contaminants",
+                        "OW Drinking Water Standards",
+                        "Pennsylvania DEP MCLs",
+                        "USGS HBSL",
+                        "WHO IPCS",
+                        "ATSDR MRLs",
+                        "Cal OEHHA",
+                        "Chiu",
+                        "COSMOS",
+                        "DOD ERED",
+                        "DOE Wildlife Benchmarks",
+                        "DOE Protective Action Criteria",
+                        "IRIS",
+                        "EPA OPP",
+                        "Pennsylvania DEP ToxValues",
+                        "EnviroTox_v2",
+                        "HEAST")) {
       # Only take first name stem before ";"
       if(grepl(";", n2)) {
         n2 = sub(';.*', '', n2)
@@ -74,7 +74,7 @@ chem.check.v2 <- function(res0,source=NULL,verbose=FALSE) {
   res0 = res0 %>%
     dplyr::rowwise() %>%
     dplyr::mutate(name_check = chem.check.name(in_name=name,
-                                               source=source,
+                                               in_source=in_source,
                                                verbose=verbose)) %>%
     dplyr::ungroup() %>%
     tidyr::separate(name_check,
@@ -99,8 +99,12 @@ chem.check.v2 <- function(res0,source=NULL,verbose=FALSE) {
   chem.check.casrn <- function(in_cas, verbose){
     n0 = in_cas
     if(!is.na(n0)) {
+      n0 = n0 %>%
+        # Replace NO-BREAK SPACE unicode
+        gsub("\u00a0", "", .)
       n1 = iconv(n0,from="UTF-8",to="ASCII//TRANSLIT")
-      n2 = stri_escape_unicode(n1) %>%
+      n2 = n1 %>%
+        stringi::stri_escape_unicode() %>%
         fix.casrn()
       cs = cas_checkSum(n2)
       if(is.na(cs)) cs = 0
@@ -147,10 +151,10 @@ chem.check.v2 <- function(res0,source=NULL,verbose=FALSE) {
     distinct()
 
   indir = paste0(toxval.config()$datapath,"chemcheck/")
-  if(is.null(source)) {
+  if(is.null(in_source)) {
     file = paste0(indir,"chemcheck no source.xlsx")
   } else {
-    file = paste0(indir,"chemcheck ",source,".xlsx")
+    file = paste0(indir,"chemcheck ",in_source,".xlsx")
   }
   if(!is.null(ccheck)) if(nrow(ccheck)>0) writexl::write_xlsx(ccheck,file)
 
