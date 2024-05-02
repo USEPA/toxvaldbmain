@@ -18,13 +18,16 @@ source_chemical.toxrefdb <- function(toxval.db,
                                      chem.check.halt=FALSE,
                                      casrn.col="casrn",
                                      name.col="name",
-                                     verbose=F) {
-  printCurrentFunction(paste0(db,"\n",source))
+                                     verbose=FALSE) {
+  printCurrentFunction(paste0(toxval.db,"\n",source))
   #####################################################################
   cat("Do the chemical checking\n")
   #####################################################################
-  res$chemical_index = paste(res[,casrn.col],res[,name.col])
-  result = chem.check(res,name.col=name.col,casrn.col=casrn.col,verbose=verbose,source)
+  # res$chemical_index = paste(res[,casrn.col],res[,name.col])
+  res = res %>%
+    tidyr::unite(col="chemical_index", all_of(c(casrn.col, name.col)), sep=" ", remove=FALSE)
+  # result = chem.check(res,name.col=name.col,casrn.col=casrn.col,verbose=verbose,source)
+  result = chem.check.v2(res0=res, source=source, verbose=verbose)
   if(chem.check.halt) if(!result$name.OK || !result$casrn.OK || !result$checksum.OK) browser()
 
   #####################################################################
@@ -34,11 +37,12 @@ source_chemical.toxrefdb <- function(toxval.db,
   names(chems) = c("dtxsid","raw_casrn","raw_name","cleaned_casrn","cleaned_name")
   chems = unique(chems)
   chems$source = source
+
   prefix = runQuery(paste0("select chemprefix from chemical_source_index where source='",source,"'"),source.db)[1,1]
   ilist = seq(from=1,to=nrow(chems))
   chems$chemical_id = "-"
   for(i in 1:nrow(chems)) {
-    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name","cleaned_casrn","cleaned_name")],collapse=""),algo="xxhash64", serialize = FALSE))
+    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name")],collapse=""),algo="xxhash64", serialize = FALSE))
   }
   # check for duplicates
   x = chems$chemical_id
@@ -67,6 +71,6 @@ source_chemical.toxrefdb <- function(toxval.db,
   cat("chem matching: original,new,match:",n0,n1,n01," new percent: ",format(newfrac,digits=2),"\n")
   cat("**************************************************************************\n")
   #browser()
-  runInsertTable(chems.new,"source_chemical",source.db,do.halt=T,verbose=F)
+  runInsertTable(chems.new,"source_chemical",source.db,do.halt=TRUE,verbose=FALSE)
   return(res)
 }
