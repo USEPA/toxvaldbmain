@@ -1,7 +1,8 @@
-#-------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
+#
 #' Load ToxRefdb data to toxval
-#' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param verbose Whether the loaded rows should be printed to the console.
+#' @param toxval.db The database version to use
+#' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #' @export
@@ -137,7 +138,6 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
 
   # Perform deduping
   res = toxval.load.dedup(res)
-
   hashing_cols = c(toxval.config()$hashing_cols)
   res.temp = source_hash_vectorized(res, hashing_cols)
   res$source_hash = res.temp$source_hash
@@ -154,6 +154,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
     left_join(chem_map %>%
                 dplyr::select(-chemical_index, -dtxsid),
               by = c("name", "casrn"))
+
   # Remove intermediate
   rm(chem_map)
 
@@ -166,7 +167,6 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
               "dose_level", "vehicle", "study_duration_qualifier")
 
   res = res[ , !(names(res) %in% cremove)]
-
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
