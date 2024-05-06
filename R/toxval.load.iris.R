@@ -64,9 +64,12 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   # Rename non-toxval columns
   res <- res %>%
     dplyr::rename(# risk_assessment_class = risk_assessment_duration,
-                  quality = overall_confidence) %>%
+                  quality = overall_confidence,
+                  subsource = document_type) %>%
     select(-dplyr::any_of(non_toxval_cols)) %>%
-    dplyr::filter(toxval_numeric != "-")
+    dplyr::filter(toxval_numeric != "-",
+                  # Filter only to IRIS Summary data
+                  subsource %in% c("IRIS Summary"))
 
   # Fill in long_ref where missing
   res$long_ref[res$long_ref == "-"] = res$study_reference[res$long_ref == "-"]
