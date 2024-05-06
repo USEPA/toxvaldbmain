@@ -35,7 +35,6 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
                     b.study_duration_value,
                     b.study_duration_units,
                     b.study_duration_class,
-                    b.target_species,
                     d.species_id,d.common_name,d.latin_name,d.ecotox_group,
                     b.strain,
                     b.strain_group,
