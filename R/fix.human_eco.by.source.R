@@ -56,10 +56,6 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=T
     if(is.element(source,human.list)) {
       query = paste0("update toxval set human_eco='human health' where source='",source,"'",query_addition)
       runQuery(query,toxval.db)
-      if(is.element(source,hra.list)) {
-        query = paste0("update toxval set human_ra='Y' where source='",source,"'",query_addition)
-        runQuery(query,toxval.db)
-      }
       # some of these human sources have some ECO records
       query = paste0("update toxval set human_eco='eco' where species_id in
                      (select species_id from species where ecotox_group not in
