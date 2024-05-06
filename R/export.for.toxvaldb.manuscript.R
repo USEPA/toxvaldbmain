@@ -28,7 +28,6 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
                     b.toxval_numeric_original,
                     b.toxval_units_original,
                     b.risk_assessment_class,
-                    b.human_ra,
                     b.study_type,
                     b.study_type as study_type_corrected,
                     b.study_type_original,
