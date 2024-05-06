@@ -71,7 +71,6 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   cat("add extra columns to refs\n")
   #####################################################################
   res$human_ra = "Y"
-  res$target_species = "Human"
   res$human_eco = "human health"
   res$subsource = "California DPH"
   res$details_text = "Cal OEHHA Details"
