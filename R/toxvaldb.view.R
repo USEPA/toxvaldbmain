@@ -112,7 +112,8 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
                    "f.clowder_doc_metadata, ",
                    "f.qa_status, ",
                    "b.study_group, ",
-                   "b.qc_status ",
+                   "b.qc_status, ",
+                   "b.qc_category ",
                    "FROM ",
                    "toxval b ",
                    "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
@@ -120,7 +121,7 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
                    "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                    "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
                    "WHERE ",
-                   "b.source='",src,"'and f.priority=1 ",
+                   "b.source='",src,"'and f.priority=1 and b.qc_status = 'pass'",
                    "ORDER BY DTXSID, Source")
     # Add limiter if provided
     if(is.numeric(count) && count > 0) {
