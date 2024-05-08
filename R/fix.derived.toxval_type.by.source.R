@@ -18,7 +18,8 @@ fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=
   blank_hash_cols = c("exposure_method", "exposure_form", "media",
                       "generation", "lifestage", "population",
                       "study_duration_qualifier", "study_duration_value", "study_duration_units",
-                      "sex", "strain")
+                      "sex", "strain") %>%
+    c(., paste0(., "_original"))
 
   # Check fields in toxval table
   toxval_tbl = runQuery(paste0("SELECT COLUMN_NAME, COLUMN_DEFAULT, DATA_TYPE ",
