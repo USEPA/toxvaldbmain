@@ -47,7 +47,6 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
                         "WHO IPCS",
                         "ATSDR MRLs",
                         "Cal OEHHA",
-                        "Chiu",
                         "COSMOS",
                         "DOD ERED",
                         "DOE Wildlife Benchmarks",
