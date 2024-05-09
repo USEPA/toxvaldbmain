@@ -51,7 +51,7 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("target_organ","severity", "human_data", "study_duration_qualifier", "species")
+  cremove = c("target_organ","severity", "human_data", "study_duration_qualifier", "species", "experimental_records")
   res$species_original = res$species
   res = res[ , !(names(res) %in% cremove)]
   ##########################################################
