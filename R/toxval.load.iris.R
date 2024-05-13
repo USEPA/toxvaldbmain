@@ -59,13 +59,17 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                        # 'overall_confidence',
                        'dose_type',
                        "endpoint", "principal_study", "study_duration_qualifier",
-                       "full_reference")
+                       "full_reference",
+                       "target_species")
   # Rename non-toxval columns
   res <- res %>%
     dplyr::rename(# risk_assessment_class = risk_assessment_duration,
-                  quality = overall_confidence) %>%
-    dplyr::select(-dplyr::any_of(non_toxval_cols)) %>%
-    dplyr::filter(toxval_numeric != "-")
+                  quality = overall_confidence,
+                  subsource = document_type) %>%
+    select(-dplyr::any_of(non_toxval_cols)) %>%
+    dplyr::filter(toxval_numeric != "-",
+                  # Filter only to IRIS Summary data
+                  subsource %in% c("IRIS Summary"))
 
   # Fill in long_ref where missing
   res$long_ref[res$long_ref == "-"] = res$study_reference[res$long_ref == "-"]
@@ -82,6 +86,26 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
               "assessment_type", "curator_notes", "risk_assessment_duration")
 
   res = res[ , !(names(res) %in% cremove)]
+
+  res = res %>% dplyr::mutate(
+    # Set NA study_duration for entries with multiple GD/PND/LD/PNW units
+    study_duration_value = dplyr::case_when(
+      grepl("[A-Za-z]", study_duration_value) ~ as.character(NA),
+      TRUE ~ study_duration_value
+    ),
+    # Set NA for units without values
+    study_duration_units = dplyr::case_when(
+      is.na(study_duration_value) ~ as.character(NA),
+      TRUE ~ study_duration_units
+    ),
+
+    # Select higher value in ranged study_duration
+    study_duration_value = study_duration_value %>%
+      gsub(".+\\-", "", .) %>%
+      tidyr::replace_na("-"),
+    study_duration_units = study_duration_units %>%
+      tidyr::replace_na("-")
+  )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

@@ -42,7 +42,7 @@ toxval.load.osha_air_limits <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c("","","","")
+  cremove = c("source_version_date","","","")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################

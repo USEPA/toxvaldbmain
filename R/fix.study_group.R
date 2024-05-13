@@ -37,11 +37,11 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, reset=FALSE)
                      "a.strain, b.year as record_year, b.long_ref, b.title ",
                      "from toxval a, record_source b, species c ",
                      "where a.species_id=c.species_id and a.toxval_id=b.toxval_id and a.source='",source,"'")
-      
+
       if(!is.null(subsource)) {
         query = paste0(query, " and a.subsource='",subsource,"'")
       }
-      
+
       # Pull data
       temp = runQuery(query,toxval.db)
       # Hash to identify duplicate groups
@@ -58,15 +58,24 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, reset=FALSE)
         dplyr::group_by(dplyr::across(c(-toxval_id))) %>%
         dplyr::summarise(toxval_id = toString(toxval_id)) %>%
         # Only account for those with duplicates
-        dplyr::filter(grepl(",", toxval_id)) %>%
-        # Assign study group
-        dplyr::mutate(study_group = 1:dplyr::n() %>%
-                        paste0(!!source, "_dup_", .)) %>%
-        dplyr::ungroup() %>%
-        dplyr::select(-source_hash) %>%
-        # Separate collapse toxval_id groups
-        tidyr::separate_rows(toxval_id, sep=", ") %>%
-        dplyr::mutate(toxval_id = as.numeric(toxval_id))
+        dplyr::filter(grepl(",", toxval_id))
+
+      if(nrow(temp_sg)){
+        temp_sg = temp_sg %>%
+          # Assign study group
+          dplyr::mutate(study_group = 1:n() %>%
+                          paste0(!!source, "_dup_", .)) %>%
+          dplyr::ungroup() %>%
+          dplyr::select(-source_hash) %>%
+          # Separate collapse toxval_id groups
+          tidyr::separate_rows(toxval_id, sep=", ") %>%
+          dplyr::mutate(toxval_id = as.numeric(toxval_id))
+      } else {
+        # Set up empty duplicate study_group dataframe
+        temp_sg = temp %>%
+          dplyr::mutate(study_group = NA) %>%
+          .[0,]
+      }
 
       # Check/report if any duplicates present
       nr = nrow(temp)

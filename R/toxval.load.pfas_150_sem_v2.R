@@ -42,7 +42,7 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=F) {
   res$details_text = paste(source,"Details")
   print(dim(res))
 
-  cremove = c("hero_id","citation")
+  cremove = c("hero_id","citation", "source_version_date")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################

@@ -12,7 +12,7 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=T
 
   human.list = c("Alaska DEC","ATSDR MRLs",
                  "ATSDR PFAS 2021","Cal OEHHA",
-                 "California DPH","ChemIDplus","Chiu",
+                 "California DPH","ChemIDplus",
                  "Copper Manufacturers","COSMOS","DOD",
                  "DOE Protective Action Criteria",
                  "ECHA IUCLID","EFSA",
@@ -54,14 +54,8 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=T
                        toxval.db)
 
     if(is.element(source,human.list)) {
-      query = paste0("update toxval set target_species='Human' where source='",source,"'",query_addition)
-      runQuery(query,toxval.db)
       query = paste0("update toxval set human_eco='human health' where source='",source,"'",query_addition)
       runQuery(query,toxval.db)
-      if(is.element(source,hra.list)) {
-        query = paste0("update toxval set human_ra='Y' where source='",source,"'",query_addition)
-        runQuery(query,toxval.db)
-      }
       # some of these human sources have some ECO records
       query = paste0("update toxval set human_eco='eco' where species_id in
                      (select species_id from species where ecotox_group not in
@@ -81,7 +75,6 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=T
                      ('Fungi','Virus','Bacteria','Microorganisms','Yeast','Bacteriophage')) and source='",source,"'",query_addition)
     runQuery(query,toxval.db)
     runQuery(paste0("update toxval set human_eco='eco' where species_id=23840 and source='",source,"'",query_addition),toxval.db)
-    runQuery(paste0("update toxval set target_species='-' where human_eco != 'human health' and source='",source,"'",query_addition),toxval.db)
 
     tvtlist = c("8-hr TWA","adequate intake","aesthetic objective",
                 "ALD","critical value","discriminating dose","drinking water quality guideline",
@@ -92,7 +85,7 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=T
     stvtlist = runQuery(paste0("select distinct toxval_type from toxval where source='",source,"'",query_addition),toxval.db)[,1]
     tvtlist = tvtlist[tvtlist %in% stvtlist]
     if(length(tvtlist)){
-      query = paste0("update toxval set species_id=1000000, target_species='Human' where source='",source,
+      query = paste0("update toxval set species_id=1000000 where source='",source,
                      "' and toxval_type in ('",paste0(tvtlist, collapse="', '"),"')",query_addition)
       runQuery(query,toxval.db)
     }

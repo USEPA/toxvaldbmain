@@ -24,6 +24,9 @@ toxval.load.postprocess <- function(toxval.db,
 
   do.convert.units = TRUE # override default because it is not specified in all toxval load functions
   if(source=="ECOTOX") do.convert.units = FALSE
+
+  fix.derived.toxval_type.by.source(toxval.db, source=source, subsource=subsource)
+
   #####################################################################
   cat("check that the dictionaries are loaded\n")
   #####################################################################

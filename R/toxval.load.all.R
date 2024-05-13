@@ -51,7 +51,6 @@ toxval.load.all <- function(toxval.db,
       # toxval.load.atsdr_mrl_2022(toxval.db,source.db,log)
       # toxval.load.atsdr_mrl(toxval.db,source.db,log) (TBD)
       toxval.load.caloehha(toxval.db,source.db,log)
-      toxval.load.chiu(toxval.db,source.db,log)
       toxval.load.copper(toxval.db,source.db,log)
       toxval.load.cosmos(toxval.db,source.db,log)
       toxval.load.dod(toxval.db,source.db,log)

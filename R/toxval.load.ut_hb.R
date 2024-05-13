@@ -176,19 +176,25 @@ toxval.load.ut_hb <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
     dplyr::distinct() %>%
     replace(is.na(.), "-")
 
+  # Fill blank hashing cols
+  res[, toxval.config()$hashing_cols[!toxval.config()$hashing_cols %in% names(res)]] <- "-"
+
   # Perform deduping
   res = toxval.load.dedup(res)
 
   # Maintained logic from old script - comment out if unnecessary
   cat("set the source_hash\n")
-  res$source_hash = NA
-  # Sort res columns before hashing for more consistent hashing
-  res = res[,sort(names(res))]
-  for (i in 1:nrow(res)){
-    row <- res[i,]
-    res[i,"source_hash"] = digest::digest(paste0(row,collapse=""), serialize = FALSE)
-    if(i%%1000==0) cat(i," out of ",nrow(res),"\n")
-  }
+  # Add source_hash_temp column
+  res.temp = source_hash_vectorized(res, hashing_cols=toxval.config()$hashing_cols)
+  res$source_hash = res.temp$source_hash
+  # res$source_hash = NA
+  # # Sort res columns before hashing for more consistent hashing
+  # res = res[,sort(names(res))]
+  # for (i in 1:nrow(res)){
+  #   row <- res[i,]
+  #   res[i,"source_hash"] = digest(paste0(row,collapse=""), serialize = FALSE)
+  #   if(i%%1000==0) cat(i," out of ",nrow(res),"\n")
+  # }
 
   # Clean name/casrn and set chemical_id in source_chemical table
   res = source_chemical.extra(toxval.db,source.db,res,source,chem.check.halt=FALSE,casrn.col="casrn", name.col="name",verbose=FALSE)

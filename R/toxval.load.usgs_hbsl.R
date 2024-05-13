@@ -43,7 +43,9 @@ toxval.load.usgs_hbsl <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c("","","","")
+  cremove = c("source_version_date", "chemical_name", "cas_registry_number",
+              "usgs_parameter_code", "chemical_class", "benchmark_remarks",
+              "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
