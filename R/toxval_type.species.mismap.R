@@ -12,6 +12,7 @@ toxval_type.species.mismap <- function(toxval.db) {
   dir = paste0(toxval.config()$datapath, "data/input/") # paste0(toxval.config()$datapath,"manuscript_data")
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
 
+  # Check for instances of mismatched species and toxval_type
   res = lapply(slist, function(src){
     cat(src,"\n")
     query = paste0("SELECT
@@ -53,6 +54,7 @@ toxval_type.species.mismap <- function(toxval.db) {
   }) %>%
     dplyr::bind_rows()
 
+  # Record instances of mismatches toxval_type and species
   file = paste0(dir, "/toxval_type.species.mismap_", toxval.db, "_", Sys.Date(), ".xlsx")
   sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   openxlsx::write.xlsx(res, file, firstRow=TRUE, headerStyle=sty)

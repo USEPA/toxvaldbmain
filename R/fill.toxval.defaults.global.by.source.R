@@ -23,6 +23,7 @@ fill.toxval.defaults.global.by.source <- function(toxval.db, source=NULL, subsou
   if(!is.null(source)) slist = source
   for(source in slist) {
     cat(source,"\n")
+    # For each column, set NA or empty values to "-"
     for(col in col.list){
       n <- runQuery(paste0("select count(*) from toxval where ",col," ='' and source = '",source,"'",query_addition) ,toxval.db)[1,1]
       if(n>0) {

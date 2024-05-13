@@ -7,9 +7,12 @@
 #' @export
 #--------------------------------------------------------------------------------------
 generate.originals <- function(toxval.db,mat){
+  # Get list of toxval fields and append _original
   defs = runQuery("desc toxval",toxval.db)[,1]
   defs = grep("_original",defs,value=TRUE)
   defs = gsub("_original","",defs)
+
+  # Add "_original" fields to current data
   targets = which(colnames(mat) %in% defs)
   for(i in targets){
     newname <- paste0(names(mat)[i],"_original")

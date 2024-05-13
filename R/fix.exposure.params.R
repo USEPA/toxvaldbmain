@@ -11,6 +11,7 @@
 #-------------------------------------------------------------------------------------
 fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.only=FALSE) {
   printCurrentFunction(toxval.db)
+  # Read dictionary
   file = paste0(toxval.config()$datapath,"dictionary/exposure_route_method_form.xlsx")
   dict = openxlsx::read.xlsx(file)
   dict$index1 = paste(dict[,1],dict[,2],dict[,3])
@@ -34,6 +35,7 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
                    toxval.db)
     res$index1 = paste(res[,3],res[,4],res[,5])
     ilist = unique(res$index1)
+    # Check each record for appropriate exposure parameters
     for(index in ilist) {
       temp1 = res[res$index1==index,]
       if(is.element(index,dict$index1)) {
@@ -44,6 +46,7 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
         eform = x[1,"exposure_form"]
         tlist = temp1$toxval_id
         tval = paste(tlist,collapse=",")
+        # Update exposure parameters if specified
         if (!report.only) {
           query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id in (",tval,")")
           runQuery(query,toxval.db)
@@ -56,6 +59,7 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
         # }
       }
       else {
+        # If report only, track missing entries but do not update toxval
         missing = rbind(missing,temp1)
         if (!report.only) {
           cat("Found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form.xlsx\n and add to the dictionary\n")
@@ -64,6 +68,7 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
       }
     }
   }
+  # Return or record missing entries
   if(!is.null(missing) & !report.only) {
     if(is.null(source)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form all source.xlsx")
     else {

@@ -7,6 +7,8 @@
 #--------------------------------------------------------------------------------------
 import.source.info.by.source <- function(toxval.db, source=NULL) {
   printCurrentFunction(toxval.db)
+
+  # Read latest source_info dictionary
   file = paste0(toxval.config()$datapath,"dictionary/source_info 2023-11-30.xlsx")
   print(file)
   mat = readxl::read_xlsx(file) %>% # openxlsx::read.xlsx(file)
@@ -20,11 +22,13 @@ import.source.info.by.source <- function(toxval.db, source=NULL) {
   }
   for(source in slist) {
     cat(source,"\n")
+    # Output any sources missing source_info data
     if(!source %in% mat$source) {
       cat("source info missing for ",source,"\n")
       cat("add to file:",file,"\n")
       browser()
     }
+    # Refresh source_info to be from latest dictionary
     runInsert(paste0("delete from source_info where source='",source,"'"), toxval.db)
     mat1 = mat[mat$source %in% source,]
     runInsertTable(mat1,"source_info",toxval.db,do.halt=T,verbose=T)

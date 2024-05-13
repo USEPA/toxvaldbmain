@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------------
-#' Extract the ECOTO species dictionary from the ECOTOX data
+#' Extract the ECOTOX species dictionary from the ECOTOX data
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The version of toxval source - used to manage chemicals
 #' @param verbose Whether the loaded rows should be printed to the console.

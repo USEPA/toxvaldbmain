@@ -34,6 +34,7 @@ fix.non_ascii.v2 <- function(df,source){
     #print( non_ascii_check[i] )
   }
   clist = names(df)[non_ascii_check==TRUE]
+  # Fix non-ASCII characters if identified
   if(length(clist)>0) {
     # file = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/unicode map.xlsx")
     # map = readxl::read_xlsx(file) %>%
@@ -45,8 +46,10 @@ fix.non_ascii.v2 <- function(df,source){
     # names(row) = c("raw","converted")
     # missing = NA
     for(col in clist) {
+      # Create list of all non-ASCII characters
       non_ascii_find = unique(df[[col]])[grep("NON_ASCII",
                                               iconv(unique(df[[col]]), "UTF-8", "ASCII", sub="NON_ASCII"))]
+      # Create list of Unicode characters identified
       unicode_find <- df %>%
         dplyr::select(!!col) %>%
         dplyr::distinct() %>%
@@ -54,9 +57,11 @@ fix.non_ascii.v2 <- function(df,source){
         dplyr::filter(!!rlang::sym(col) != uni_check) %>%
         dplyr::select(!!col) %>% unlist %>% unname()
 
+      # Create combined list of every non-ASCII character encountered
       non_ascii_find <- unique(c(non_ascii_find, unicode_find))
 
       for(i in non_ascii_find) {
+        # Fix each non-ASCII character, if possible
         tryCatch({
           n0 = i
           n1 = iconv(n0,from="UTF-8",to="ASCII//TRANSLIT")

@@ -26,6 +26,7 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
   for(source in slist) {
     res = NULL
     for(field in flist) {
+      # Get missing dictionary entries for each field
       field0 = paste0(field,"_original")
       tlist = runQuery(paste0("select term_original from toxval_fix where field='",field,"'"),toxval.db)[,1]
       res0 = runQuery(paste0("select distinct source,",field0," as term_original from toxval where source='",source,"'",query_addition),toxval.db)
@@ -44,6 +45,7 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
       nmiss = nrow(res)
       res.all = rbind(res.all,res)
       cat("Number of missing terms=",nmiss,"\n")
+      # Write output to file if not report.only
       if (!report.only) {
         file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries ",source," ",Sys.Date(),".xlsx")
         if(!is.null(subsource)) file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries ",source," ",subsource," ",Sys.Date(),".xlsx")
@@ -51,6 +53,7 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
       }
     }
   }
+  # Write output to file if not report.only
   if (!report.only) {
     if(!is.null(res.all)) {
       file = paste0(toxval.config()$datapath, "dictionary/missing/missing_dictionary_entries all sources ",Sys.Date(),".xlsx")

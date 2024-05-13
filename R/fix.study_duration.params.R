@@ -11,6 +11,7 @@
 #-------------------------------------------------------------------------------------
 fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, report.only=FALSE) {
   printCurrentFunction(toxval.db)
+  # Read and prepare study_duration dictionary
   file = paste0(toxval.config()$datapath,"dictionary/study_duration_params.xlsx")
   dict = openxlsx::read.xlsx(file) %>%
     dplyr::distinct() %>%
@@ -46,6 +47,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
     ilist = unique(res$index1)
     for(index in ilist) {
       temp1 = res[res$index1==index,]
+      # Get appropriate dictionary values for each entry
       if(is.element(index,dict$index1)) {
         x = dict[is.element(dict$index1,index),]
         x1 = x$study_duration_value
@@ -60,6 +62,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
         if(x1 %in% c(NA, "-")){
           x1 = "NULL"
         }
+        # Use dictionary to set appropriate study_duration values
         tlist = unique(temp1$toxval_id)
         tval = paste(tlist,collapse=",")
         if(!report.only) {
@@ -70,11 +73,13 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
           runQuery(query,toxval.db)
         }
       }
+      # Track values missing from dictionary
       else {
         missing = rbind(missing,temp1)
       }
     }
   }
+  # Record missing values
   if(nrow(missing)) {
     if(!report.only) {
       cat("Found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params.xlsx\n and add to the dictionary\n")

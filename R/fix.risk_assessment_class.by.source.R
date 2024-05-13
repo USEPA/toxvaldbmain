@@ -23,7 +23,6 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
   conv = conv[conv$useme==1,]
   conv = conv[!is.na(conv$source),]
 
-
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
@@ -39,7 +38,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     cat("----------------------------------------\n")
     cat(source,subsource,"\n")
     cat("----------------------------------------\n")
-    
+
     if(restart & !report.only) {
       query = paste0("update toxval set risk_assessment_class = '-'  where source like '",source,"'",query_addition)
       runInsert(query,toxval.db,T,F,T)
@@ -52,6 +51,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     }
     n1.0 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'",query_addition) ,toxval.db)[1,1]
     cat("Initial rows:",n1.0,"\n")
+    # Use dictionary to set appropriate RAC for each entry
     for(i in 1:nrow(dict)){
       term = dict[i,"term"]
       rac = dict[i,"risk_assessment_class"]
@@ -60,7 +60,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       order = dict[i,"order"]
       query = paste0("update toxval set risk_assessment_class = '",rac,"' where ",field," = '",term,"' and source = '",source,"' and risk_assessment_class='-'",query_addition)
       #cat(query,"\n")
-      
+
       if (!report.only) runQuery(query,toxval.db,T,F)
       n0 = runQuery(paste0("select count(*) from toxval where source = '",source,"'",query_addition),toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",source,"'",query_addition) ,toxval.db)[1,1]
@@ -68,6 +68,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       cat("RAC still missing: ",order," : ",n1," out of ",n0," from original:",field,":",term," to rac:",rac,"\n")
       if(n1==0) break()
     }
+    # Handle DOD ERED edge case
     if(source=="DOD ERED") {
       query = paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'ED%' and source = '",source,"' and risk_assessment_class='-'")
       if (!report.only) runQuery(query,toxval.db,T,F)
@@ -153,6 +154,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       if(!is.null(subsource)) {
         query = paste0(query, " and b.subsource='",subsource,"'")
       }
+      # Record missing RAC entries
       temp = runQuery(query,toxval.db)
       missing.all = rbind(missing.all, temp)
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_rac/missing_RAC_",source, " ",subsource,".xlsx") %>%

@@ -9,6 +9,7 @@ species.strain.mismap <- function(toxval.db) {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath, "data/input/") # paste0(toxval.config()$datapath,"manuscript_data")
 
+  # Identified mismapped species/strain in toxval
   query = paste0("SELECT
                   a.dtxsid,a.name,
                   b.source,
@@ -30,6 +31,7 @@ species.strain.mismap <- function(toxval.db) {
     dplyr::select(-dplyr::any_of(c("name", "dtxsid"))) %>%
     dplyr::distinct()
 
+  # Record instances of mismatches species/strain
   file = paste0(dir,"/species.strain.mismap_", toxval.db, "_", Sys.Date(), ".xlsx")
   sty = openxlsx::createStyle(halign="center", valign="center", textRotation=90, textDecoration = "bold")
   openxlsx::write.xlsx(mat, file, firstRow=TRUE, headerStyle=sty)

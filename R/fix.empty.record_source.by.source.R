@@ -20,7 +20,8 @@ fix.empty.record_source.by.source <- function(toxval.db, source=NULL){
   if(!is.null(source)) slist = source
   for(source in slist) {
     cat(source,"\n")
-      for(col in cols) {
+    # For each field, set empty values to "-"
+    for(col in cols) {
       print(col)
       query <- paste0("update record_source set ",col,"='-' where ",col,"='' and source like '",source,"'")
       runQuery(query,toxval.db)

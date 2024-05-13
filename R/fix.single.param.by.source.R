@@ -18,6 +18,7 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
+  # Read and prepare parameter dictionary
   file <- paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/",param,"_5.xlsx")
   mat <- openxlsx::read.xlsx(file, na.strings = "NOTHING")
   #print(View(mat))
@@ -52,6 +53,7 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
   #print(View(mat))
   cat("  final list: ",nrow(mat),"\n")
 
+  # Use parameter dictionary to update entries in toxval
   for(i in 1:dim(mat)[1]) {
     v0 <- mat[i,2]
     v1 <- mat[i,1]

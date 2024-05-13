@@ -13,6 +13,7 @@
 #--------------------------------------------------------------------------------------
 fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2023-05-18") {
   printCurrentFunction()
+  # Read species dictionary files
   file =paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
   dict = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/ecotox_species_synonyms_",date_string,".xlsx")
@@ -20,6 +21,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   file = paste0(toxval.config()$datapath,"species/toxvaldb_extra_species_",date_string,".xlsx")
   extra = openxlsx::read.xlsx(file)
 
+  # Prepare species dictionary
   dict2 = extra[,c("species_id","common_name","latin_name","ecotox_group")]
   dict2 = dict2[!is.element(dict2$species_id,dict$species_id),]
   dict2$kingdom = NA
@@ -63,6 +65,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
     count.good = 0
     cat("Start setting species_id:",length(so),"\n")
     if(length(so)>0) {
+      # Identify appropriate species_id values
       for(i in 1:length(so)) {
         tag = so[i]
         tag = tolower(tag)
@@ -107,6 +110,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
           sid = extra[is.element(extra$species_original,tag),"species_id"][1]
         }
         cat(tag,sid,"\n")
+        # Update toxval entries with identified species_id values
         if(sid>=0) {
           count.good = count.good+1
           query = paste0("update toxval set species_id=",sid," where source='",source,"'",query_addition," and species_original='",stringr::str_replace_all(tag0,"\\\'","\\\\'"),"'")
@@ -119,9 +123,10 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
         if(i%%100==0) cat("finished",i,"out of",length(so),":",count.good,"\n")
       }
     }
+    # Handle edge cases
     runQuery("update toxval set species_id=4510 where species_id=23410",toxval.db)
     runQuery("update toxval set species_id=1000000 where species_id=-1",toxval.db)
   }
-
+  # Handle cases where two entries with the same species_original have different species_id values
   fix.species.duplicates(toxval.db)
 }
