@@ -53,15 +53,23 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  res = res %>% dplyr::mutate(
-    # Select high value for study_duration_value
-    study_duration_value = study_duration_value %>%
-      gsub(".+\\-", "", .) %>%
-      as.numeric(),
+  res = res %>%
+    # Use only PPRTV Summary records
+    dplyr::filter(grepl("PPRTV Summary", document_type)) %>%
+    dplyr::mutate(
+      # Select high value for study_duration_value
+      study_duration_value = study_duration_value %>%
+        gsub(".*\\-", "", .) %>%
+        as.numeric(),
 
-    # Add human_eco field
-    human_eco = "human_health"
-  )
+      # Add human_eco field
+      human_eco = "human_health",
+
+      # Set subsource as document_type
+      subsource = document_type
+    ) %>%
+    # Set collapsed subsource values as "PPRTV Summary"
+    dplyr::mutate(subsource = "PPRTV Summary")
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
