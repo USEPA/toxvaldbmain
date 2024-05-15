@@ -44,6 +44,8 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
       dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2))
   },
   error = function(e){
+    cat("Error with relationships_adj_hec\n")
+    message(e)
     return(data.frame())
   })
 
@@ -64,12 +66,16 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
       dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2))
   },
   error = function(e){
+    cat("Error with relationships_adj_base\n")
+    message(e)
     return(data.frame())
   })
 
   # Identify and capture ex. NOAEL (HEC)/NOAEL (HED) -> NOAEL type relationship
   relationship_hec_base <- tryCatch({
     res1 %>%
+      # Keep only HEC/HED entries and entries without other parenthetic stems
+      dplyr::filter(grepl("\\(HEC\\)|\\(HED\\)", toxval_type) | !grepl("\\(", toxval_type)) %>%
       dplyr::group_by(study_reference, study_type, exposure_route, preceding_text) %>%
       dplyr::filter(
         any(grepl("\\(HEC\\)|\\(HED\\)", toxval_type)) & any(!grepl("\\(HEC\\)|\\(HED\\)", toxval_type))
@@ -84,6 +90,8 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
       dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2) & !(toxval_id_2 %in% relationships_adj_base$toxval_id_2))
   },
   error = function(e){
+    cat("Error with relationship_hec_base\n")
+    message(e)
     return(data.frame())
   })
 
