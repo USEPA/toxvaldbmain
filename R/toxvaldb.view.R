@@ -1,3 +1,4 @@
+
 #-----------------------------------------------------------------------------------
 #' Produce a view of the ToxValDB Data
 #'
@@ -25,7 +26,6 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
     cat(src,":",n,"\n")
     query = paste0("SELECT ",
                    # Main UI View columns
-                   "f.priority as Priority, ",
                    "b.source as Source, ",
                    "b.subsource as Subsource, ",
                    "e.toxval_type_supercategory as Supercategory, ",
@@ -51,18 +51,17 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
                    "b.study_duration_value, ",
                    "b.study_duration_units, ",
                    "b.study_duration_class, ",
-                   "b.sex, ",
 
                    "b.exposure_method, ",
                    "b.exposure_form, ",
-
-                   "b.generation, ",
                    "b.media, ",
+
+                   "b.sex, ",
+                   "b.generation, ",
                    "b.lifestage, ",
                    "b.population, ",
                    "b.strain, ",
                    "b.strain_group, ",
-                   "b.year, ",
 
                    "b.toxval_type_original, ",
                    "b.toxval_subtype_original, ",
@@ -70,22 +69,22 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
                    "b.toxval_numeric_original, ",
                    "b.toxval_units_original, ",
                    "b.study_type_original, ",
+                   "b.exposure_route_original, ",
+                   "b.critical_effect_original, ",
+                   "b.species_original, ",
                    "b.study_duration_value_original, ",
                    "b.study_duration_units_original, ",
                    "b.study_duration_class_original, ",
-                   "b.sex_original, ",
-                   "b.exposure_route_original, ",
-                   "b.critical_effect_original, ",
-                   "b.generation_original, ",
+                   "b.year_original, ",
                    "b.media_original, ",
+                   "b.sex_original, ",
+                   "b.generation_original, ",
                    "b.lifestage_original, ",
                    "b.population_original, ",
                    "b.strain_original, ",
-                   "b.year_original, ",
-                   "b.species_original, ",
                    "d.latin_name, ",
                    "d.ecotox_group, ",
-                   "d.habitat, ",
+
                    "b.human_eco, ",
                    "b.experimental_record, ",
 
@@ -103,15 +102,15 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
                    "f.doi, ",
                    "f.pmid, ",
                    # Additional metdata and flags
+                   "b.study_group, ",
                    "f.guideline, ",
                    "f.glp, ",
                    "f.quality, ",
+                   "b.key_finding, ",
                    "f.record_source_level, ",
                    "f.record_source_type, ",
                    "f.clowder_doc_id, ",
                    "f.clowder_doc_metadata, ",
-                   "f.qa_status, ",
-                   "b.study_group, ",
                    "b.qc_status, ",
                    "b.qc_category ",
                    "FROM ",
