@@ -25,25 +25,31 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
     n = runQuery(paste0("select count(*) from toxval where source='",src,"'"),toxval.db)[1,1]
     cat(src,":",n,"\n")
     query = paste0("SELECT ",
-                   # Main UI View columns
-                   "b.source as Source, ",
-                   "b.subsource as Subsource, ",
+                   #! used to map
                    "e.toxval_type_supercategory as Supercategory, ",
-                   "b.toxval_type as Type, ",
-                   "b.toxval_subtype as Subtype, ",
-                   "b.risk_assessment_class as `Risk Assessment`, ",
+
+                   # Main UI View columns
+                   "b.source as `Source`, ",
+                   "b.subsource as `Subsource`, ",
+                   "b.toxval_type as `Type`, ",
+                   "b.toxval_subtype as `Subtype`, ",
                    "b.toxval_numeric_qualifier as Qualifier, ",
-                   "b.toxval_numeric as Value, ",
-                   "b.toxval_units as Units, ",
+                   "b.toxval_numeric as `Value`, ",
+                   "b.toxval_units as `Units`, ",
                    "b.study_type as `Study Type`, ",
+                   "b.risk_assessment_class as `Risk Assessment`, ",
                    "b.exposure_route as `Exposure Route`, ",
                    "b.critical_effect as `Critical Effect`, ",
                    "d.common_name as Species, ",
                    "f.year as Year, ",
-                   # Chemical Identifiers
+                   "b.experimental_record, as `Experimental`, ",
+                   "b.subsource_url as `Subsource URL`, ",
+                   "f.clowder_doc_id as `Stored Source Record`, ",
+                   "b.qc_category as `QC Level`, ",
+
+                   # Chemical Identifiers #! used to map
                    "a.dtxsid as DTXSID, ",
-                   "a.casrn, ",
-                   "a.name, ",
+
                    # Database Identifiers
                    "b.toxval_id, ",
                    "b.source_hash, ",
@@ -86,11 +92,11 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
                    "d.ecotox_group, ",
 
                    "b.human_eco, ",
-                   "b.experimental_record, ",
+
 
                    # Reference Information
                    "b.source_url, ",
-                   "b.subsource_url, ",
+
                    "f.long_ref, ",
                    "f.url, ",
                    "f.title, ",
@@ -109,10 +115,10 @@ toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", passwor
                    "b.key_finding, ",
                    "f.record_source_level, ",
                    "f.record_source_type, ",
-                   "f.clowder_doc_id, ",
+
                    "f.clowder_doc_metadata, ",
                    "b.qc_status, ",
-                   "b.qc_category ",
+
                    "FROM ",
                    "toxval b ",
                    "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
