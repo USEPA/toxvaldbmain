@@ -82,8 +82,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
   cremove = c("uf_composite", "confidence", "extrapolation_method", "class",
-              "key_finding", "age",
-              "assessment_type", "curator_notes", "risk_assessment_duration",
+              "age", "assessment_type", "curator_notes", "risk_assessment_duration",
               "sex_new", "duration_orig", "duration_value", "duration_units", "new_entry")
 
   res = res[ , !(names(res) %in% cremove)]
