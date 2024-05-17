@@ -50,13 +50,20 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-
-  # Select higher value in ranged
   res = res %>%
     dplyr::mutate(
+      # Set NA for units without values
+      study_duration_units = dplyr::case_when(
+        is.na(study_duration_value) ~ as.character(NA),
+        TRUE ~ study_duration_units
+      ),
+
+      # Select higher value in ranged study_duration
       study_duration_value = study_duration_value %>%
-        gsub(".*\\-", "", .) %>%
-        as.numeric()
+        gsub(".+\\-", "", .) %>%
+        tidyr::replace_na("-"),
+      study_duration_units = study_duration_units %>%
+        tidyr::replace_na("-")
     )
 
   #####################################################################
