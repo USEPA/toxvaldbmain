@@ -51,29 +51,16 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("target_organ","severity", "human_data", "study_duration_qualifier", "species")
-  res$species_original = res$species
-  res = res[ , !(names(res) %in% cremove)]
-  ##########################################################
-  # cat("Convert multiple date formats present in year field to the corresponding year value,
-  #     then change the data type from character to integer \n ")
-  ###########################################################
-  # res = res[,(names(res) %in% c("source_hash","casrn","name","toxval_type","toxval_subtype","toxval_numeric","toxval_units","species_original","critical_effect",
-  #                               "risk_assessment_class","year","exposure_route","study_type","study_duration_class","study_duration_value", "study_duration_units",
-  #                               "record_url","toxval_type_original","toxval_subtype_original","toxval_numeric_original","toxval_units_original","critical_effect_original",
-  #                               "year_original","exposure_route_original","study_type_original","study_duration_value_original","study_duration_class_original",
-  #                               "study_duration_units_original","document_name","chemical_id"))]
-  # res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  # res = res[!is.na(res[,"casrn"]),]
-  # res[is.element(res$species_original,"Human"),"species_original"] = "-"
+  res = res %>%
+    dplyr::mutate(
+      # Select higher value in ranged study_duration
+      study_duration_value = study_duration_value %>%
+        gsub(".+\\-", "", .) %>%
+        tidyr::replace_na("-"),
+      study_duration_units = study_duration_units %>%
+        tidyr::replace_na("-")
+    )
 
-  #####################################################################
-  cat("add extra columns to refs\n")
-  #####################################################################
-  res$human_eco = "human health"
-  res$subsource = "California DPH"
-  res$details_text = "Cal OEHHA Details"
-  res$source_url = "https://oehha.ca.gov/chemicals"
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -82,8 +69,16 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   cols = unique(c(cols1,cols2))
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","document_type","study_reference"))]
   nlist = nlist[!is.element(nlist,cols)]
+
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+
+  nlist = names(res)
+  nlist = nlist[!is.element(nlist,c("casrn","name","document_type","study_reference"))]
+  nlist = nlist[!is.element(nlist,cols)]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -101,16 +96,16 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  # if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
+  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
+  print(paste0("Dimensions of source data: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
     dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
   res = distinct(res)
-  res = res[, !names(res) %in% c("casrn","name")]
-  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
+  res = res[,!is.element(names(res),c("casrn","name"))]
+  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
@@ -126,6 +121,15 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   print(dim(res))
 
   #####################################################################
+  cat("Set Summary record relationship/hierarchy\n")
+  #####################################################################
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res,
+                                         toxval.db=toxval.db)
+  res = res %>%
+    dplyr::select(-c("document_type", "study_reference"))
+
+  #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
   cols = runQuery("desc record_source",toxval.db)[,1]
@@ -138,13 +142,15 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   res = res[ , !(names(res) %in% c(remove))]
   print(dim(res))
 
-
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
   res = distinct(res)
   refs = distinct(refs)
   res$datestamp = Sys.Date()
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
   res$source_table = source_table
   res$subsource_url = "-"
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
