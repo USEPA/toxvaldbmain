@@ -30,9 +30,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("check that the dictionaries are loaded\n")
   #####################################################################
-  n1 = runQuery("select count(*) from toxval_dictionary",toxval.db)[1,1]
-  n2 = runQuery("select count(*) from toxval_type_dictionary",toxval.db)[1,1]
-  if(n1==0 || n2==0) import.dictionary(toxval.db)
+  import.dictionary(toxval.db)
 
   #####################################################################
   cat("load chemical info to source_chemical\n")
