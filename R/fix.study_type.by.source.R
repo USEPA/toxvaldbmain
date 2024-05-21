@@ -190,7 +190,10 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         if(nrow(replacements)){
           replacements$fixed = 0
           # Filter to entries from missing source_hash vector
-          replacements = replacements[is.element(replacements$source_hash,missing),]
+          replacements = replacements[is.element(replacements$source_hash,missing),] %>%
+            dplyr::mutate(
+              dplyr::across(tidyselect::where(is.character), ~stringr::str_trunc(., 32700, "right"))
+            )
           # Check if any missing
           if(nrow(replacements)){
             if(!report.only) {
