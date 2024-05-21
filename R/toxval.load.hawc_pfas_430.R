@@ -51,25 +51,26 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  res = res %>% dplyr::mutate(
-    # Set NA study_duration for entries with multiple GD/PND/LD/PNW units
-    study_duration_value = dplyr::case_when(
-      grepl("[A-Za-z]", study_duration_value) ~ as.character(NA),
-      TRUE ~ study_duration_value
-    ),
-    # Set NA for units without values
-    study_duration_units = dplyr::case_when(
-      is.na(study_duration_value) ~ as.character(NA),
-      TRUE ~ study_duration_units
-    ),
+  res = res %>%
+    dplyr::mutate(
+      # Set NA study_duration for entries with multiple GD/PND/LD/PNW units
+      study_duration_value = dplyr::case_when(
+        grepl("[A-Za-z]", study_duration_value) ~ as.character(NA),
+        TRUE ~ study_duration_value
+      ),
+      # Set NA for units without values
+      study_duration_units = dplyr::case_when(
+        is.na(study_duration_value) ~ as.character(NA),
+        TRUE ~ study_duration_units
+      ),
 
-    # Select higher value in ranged study_duration
-    study_duration_value = study_duration_value %>%
-      gsub(".+\\-", "", .) %>%
-      tidyr::replace_na("-"),
-    study_duration_units = study_duration_units %>%
-      tidyr::replace_na("-")
-  )
+      # Select higher value in ranged study_duration
+      study_duration_value = study_duration_value %>%
+        gsub(".+\\-", "", .) %>%
+        tidyr::replace_na("-"),
+      study_duration_units = study_duration_units %>%
+        tidyr::replace_na("-")
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -183,7 +184,6 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "-"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   runInsertTable(res, "toxval", toxval.db, verbose)
