@@ -111,6 +111,7 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   cat("Set the toxval_relationship for separated toxval_numeric range records")
   #####################################################################
   relationship_res = res %>%
+    dplyr::mutate(range_relationship_id = as.character(range_relationship_id)) %>%
     # Handle collapsed rows
     tidyr::separate_rows(range_relationship_id, sep=" \\|::\\| ") %>%
     dplyr::mutate(relationship = gsub(" \\|.+", "", relationship)) %>%
@@ -120,7 +121,8 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
     dplyr::rename(toxval_id_1 = `Lower Range`,
                   toxval_id_2 = `Upper Range`) %>%
     dplyr::mutate(relationship = "toxval_numeric range") %>%
-    dplyr::select(-range_relationship_id)
+    dplyr::select(-range_relationship_id) %>%
+    dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
   # Insert range relationships into toxval_relationship table
   if(nrow(relationship_res)){
     runInsertTable(mat=relationship_res, table='toxval_relationship', db=toxval.db)

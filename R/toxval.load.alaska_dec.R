@@ -43,10 +43,10 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
   colnames(res)[which(names(res) == "phenotype")] <- "critical_effect"
   res$details_text<-"-"
   res$human_eco <- "human health"
+  res$species = "human"
   res <- unique(res)
   res <- fill.toxval.defaults(toxval.db,res)
   res <- generate.originals(toxval.db,res)
-  res$species_original = "human"
   res$toxval_numeric <- as.numeric(res$toxval_numeric)
   print(dim(res))
 
