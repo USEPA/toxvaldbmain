@@ -6,11 +6,15 @@
 #' @param subsource The subsource to be fixed (NULL default)
 #' @param ignore If TRUE allow missing values to be ignored
 #' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
+#' @param report.units Set to TRUE to handle report creation when called in fix.units.by.source
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL, ignore = FALSE, report.only=FALSE) {
+fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL, ignore = FALSE, report.only=FALSE, report.units=FALSE) {
   printCurrentFunction(paste(toxval.db,":",param, ":", source,subsource))
+
+  # Track altered toxval_id values for report.units
+  changed_toxval_id = NULL
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -56,9 +60,29 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
     v0 <- mat[i,2]
     v1 <- mat[i,1]
     cat(v0,":",v1,"\n"); flush.console()
-    query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'",query_addition)
-    runInsert(query,toxval.db,T,F,T)
+    if(!report.units) {
+      query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'",query_addition)
+      runInsert(query,toxval.db,T,F,T)
+    } else {
+      # Track altered toxval_id values
+      changed_id_1 = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
+                                     param,"_original='",v0,"' and source like '",source,"'",query_addition),
+                              toxval.db)
+      changed_toxval_id = rbind(changed_toxval_id, changed_id_1) %>%
+        dplyr::distinct()
+    }
   }
-  query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'",query_addition)
-  runInsert(query,toxval.db,T,F,T)
+  if(!report.units) {
+    query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'",query_addition)
+    runInsert(query,toxval.db,T,F,T)
+  } else {
+    # Track altered toxval_id values
+    changed_id_2 = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
+                                   param,"_original is NULL and source like '",source,"'",query_addition),
+                            toxval.db)
+    changed_toxval_id = rbind(changed_toxval_id, changed_id_2) %>%
+      dplyr::distinct()
+
+    return(changed_toxval_id)
+  }
 }
