@@ -299,7 +299,17 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
       # Remove duplicate entries
       dplyr::distinct() %>%
       dplyr::left_join(changed_toxval_id,
-                       by="toxval_id")
+                       by="toxval_id") %>%
+      dplyr::group_by(toxval_id) %>%
+      dplyr::mutate(dplyr::across(change_made,
+                                  ~paste0(unique(.[!is.na(.)]), collapse="; ") %>%
+                                    dplyr::na_if("NA") %>%
+                                    dplyr::na_if("") %>%
+                                    dplyr::na_if("-")
+      )) %>%
+      dplyr::ungroup() %>%
+      dplyr::distinct()
+
 
     writexl::write_xlsx(unit_conversions_table, paste0(toxval.config()$datapath,
                                                        "dictionary/unit_conversion_check_",
