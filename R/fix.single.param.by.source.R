@@ -14,7 +14,7 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
   printCurrentFunction(paste(toxval.db,":",param, ":", source,subsource))
 
   # Track altered toxval_id values for report.units
-  changed_toxval_id = NULL
+  changed_toxval_id = data.frame()
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -62,26 +62,24 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
     cat(v0,":",v1,"\n"); flush.console()
     if(!report.units) {
       query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'",query_addition)
-      runInsert(query,toxval.db,T,F,T)
+      runQuery(query, toxval.db)
     } else {
       # Track altered toxval_id values
-      changed_id_1 = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
+      changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
                                      param,"_original='",v0,"' and source like '",source,"'",query_addition),
-                              toxval.db)
-      changed_toxval_id = rbind(changed_toxval_id, changed_id_1) %>%
-        dplyr::distinct()
+                              toxval.db) %>%
+        dplyr::bind_rows(changed_toxval_id, .)
     }
   }
   if(!report.units) {
     query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'",query_addition)
-    runInsert(query,toxval.db,T,F,T)
+    runQuery(query, toxval.db)
   } else {
     # Track altered toxval_id values
-    changed_id_2 = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
+    changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
                                    param,"_original is NULL and source like '",source,"'",query_addition),
-                            toxval.db)
-    changed_toxval_id = rbind(changed_toxval_id, changed_id_2) %>%
-      dplyr::distinct()
+                            toxval.db) %>%
+      dplyr::bind_rows(changed_toxval_id, .)
 
     return(changed_toxval_id)
   }
