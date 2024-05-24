@@ -58,7 +58,7 @@ toxval.load.healthcanada <- function(toxval.db,source.db, log=FALSE, remove_null
     study_duration_value = study_duration_value %>%
       # Select higher end of study_duration_value range
       gsub(".+\\-", "", .) %>%
-      as.numeric()
+      tidyr::replace_na("-")
   )
 
   #####################################################################
@@ -151,6 +151,17 @@ toxval.load.healthcanada <- function(toxval.db,source.db, log=FALSE, remove_null
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
+
+  #####################################################################
+  cat("Set Summary record relationship/hierarchy\n")
+  #####################################################################
+  # Set Summary record relationship/hierarchy
+  set_toxval_relationship_by_toxval_type(res=res %>%
+                                           dplyr::left_join(refs %>%
+                                                              dplyr::select(toxval_id, study_reference=long_ref),
+                                                            by = "toxval_id") %>%
+                                           dplyr::mutate(document_type = "Health Canada Export"),
+                                         toxval.db=toxval.db)
 
   #####################################################################
   cat("do the post processing\n")
