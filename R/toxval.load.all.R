@@ -73,7 +73,6 @@ toxval.load.all <- function(toxval.db,
       toxval.load.oppt(toxval.db,source.db,log)
       toxval.load.penn(toxval.db,source.db,log)
       toxval.load.pfas_150_sem_v2(toxval.db,source.db,log)
-      toxval.load.pprtv.ncea(toxval.db,source.db,log)
       toxval.load.pprtv.cphea(toxval.db,source.db,log)
       toxval.load.rsl(toxval.db,source.db,log)
       toxval.load.ut_hb(toxval.db,source.db,log)
