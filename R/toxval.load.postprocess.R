@@ -139,6 +139,11 @@ toxval.load.postprocess <- function(toxval.db,
   fix.study_group(toxval.db, source, subsource)
 
   #####################################################################
+  cat("set study_type based on study_group\n")
+  #####################################################################
+  set.study_type.by.study_group(toxval.db, source, subsource)
+
+  #####################################################################
   cat("fix risk assessment class by source\n")
   #####################################################################
   fix.risk_assessment_class.by.source(toxval.db, source, subsource)
