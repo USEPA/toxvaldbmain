@@ -144,9 +144,14 @@ toxval.load.postprocess <- function(toxval.db,
   fix.risk_assessment_class.by.source(toxval.db, source, subsource)
 
   #####################################################################
-  cat("fix qa status by source\n")
+  cat("fix QC status by source\n")
   #####################################################################
   fix.qc_status.by.source(toxval.db, source, subsource)
+
+  #####################################################################
+  cat("complete QC status checklist\n")
+  #####################################################################
+  check.toxval_type.route.units(toxval.db, source, subsource)
 
   #####################################################################
   #cat("set hash toxval by source\n")
