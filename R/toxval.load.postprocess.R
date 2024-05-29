@@ -149,6 +149,11 @@ toxval.load.postprocess <- function(toxval.db,
   fix.qc_status.by.source(toxval.db, source, subsource)
 
   #####################################################################
+  cat("fix deduping hierarchy by source\n")
+  #####################################################################
+  fix.dedup.hierarchy.by.source(toxval.db, source, subsource)
+
+  #####################################################################
   #cat("set hash toxval by source\n")
   # currently not set - may not be needed for future dashboard releases
   #####################################################################
