@@ -23,7 +23,7 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=T
                  "HPVIS","IRIS","Mass. Drinking Water Standards",
                  "NIOSH","OSHA Air contaminants","OW Drinking Water Standards",
                  "Pennsylvania DEP MCLs","Pennsylvania DEP ToxValues","PFAS 150 SEM v2",
-                 "PPRTV (CPHEA)","PPRTV (NCEA)","RSL",
+                 "PPRTV (CPHEA)","RSL",
                  "TEST","ToxRefDB",
                  "Uterotrophic Hershberger DB","WHO IPCS",
                  "USGS HBSL")

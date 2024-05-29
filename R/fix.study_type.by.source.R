@@ -79,7 +79,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                     "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
                     "LEFT JOIN species d on b.species_id=d.species_id ",
                     "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
-                    "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                    # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                     "WHERE b.source='", source, "'",
                     query_addition,
                     " and b.source_hash NOT IN ('", import_logged, "')")
@@ -153,7 +153,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       names(temp) = c("source_hash","study_type")
 
       temp.old = runQuery(paste0("SELECT b.source_hash, b.study_type from toxval b ",
-                                        "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                                        # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                                         "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
                                         query_addition), toxval.db)
 
@@ -177,7 +177,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                        "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
                        "LEFT JOIN species d on b.species_id=d.species_id ",
                        "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
-                       "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                       # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                        "WHERE b.source='", source, "'",
                        query_addition)
 
@@ -190,7 +190,10 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         if(nrow(replacements)){
           replacements$fixed = 0
           # Filter to entries from missing source_hash vector
-          replacements = replacements[is.element(replacements$source_hash,missing),]
+          replacements = replacements[is.element(replacements$source_hash,missing),] %>%
+            dplyr::mutate(
+              dplyr::across(tidyselect::where(is.character), ~stringr::str_trunc(., 32700, "right"))
+            )
           # Check if any missing
           if(nrow(replacements)){
             if(!report.only) {

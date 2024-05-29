@@ -62,12 +62,13 @@ toxval.load.hpvis <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
+  # nlist = nlist[!is.element(nlist,c("casrn","name","raw_input_file","source_version_date"))]
+
   nlist = nlist[!is.element(nlist,c("casrn","name","range_relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
 
-  # Dynamically remove unused OHT columns
+  # Dynamically remove unused columns
   res = res %>% dplyr::select(!dplyr::any_of(nlist))
-
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name","range_relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]

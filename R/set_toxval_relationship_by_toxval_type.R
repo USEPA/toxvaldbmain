@@ -32,18 +32,20 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
     res1 %>%
       dplyr::group_by(study_reference, preceding_text) %>%
       dplyr::filter(
-        any(grepl("\\(ADJ\\)", toxval_type)) & any(grepl("\\(HEC\\)", toxval_type))
+        any(grepl("\\(ADJ\\)", toxval_type, ignore.case=TRUE)) & any(grepl("\\(HEC\\)", toxval_type, ignore.case=TRUE))
       ) %>%
       dplyr::reframe(
-        toxval_id_1 = toxval_id[grepl("\\(ADJ\\)", toxval_type)],
-        toxval_id_2 = toxval_id[grepl("\\(HEC\\)", toxval_type)],
-        toxval_type_1 = toxval_type[grepl("\\(ADJ\\)", toxval_type)],
-        toxval_type_2 = toxval_type[grepl("\\(HEC\\)", toxval_type)],
+        toxval_id_1 = toxval_id[grepl("\\(ADJ\\)", toxval_type, ignore.case=TRUE)],
+        toxval_id_2 = toxval_id[grepl("\\(HEC\\)", toxval_type, ignore.case=TRUE)],
+        toxval_type_1 = toxval_type[grepl("\\(ADJ\\)", toxval_type, ignore.case=TRUE)],
+        toxval_type_2 = toxval_type[grepl("\\(HEC\\)", toxval_type, ignore.case=TRUE)],
         relationship = "derived from"
       ) %>%
       dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2))
   },
   error = function(e){
+    cat("Error with relationships_adj_hec\n")
+    message(e)
     return(data.frame())
   })
 
@@ -52,38 +54,44 @@ set_toxval_relationship_by_toxval_type <- function(res, toxval.db){
     res1 %>%
       dplyr::group_by(study_reference, preceding_text) %>%
       dplyr::filter(
-        any(grepl("\\(ADJ\\)", toxval_type)) & any(!grepl("\\(HEC\\)|\\(ADJ\\)", toxval_type))
+        any(grepl("\\(ADJ\\)", toxval_type, ignore.case=TRUE)) & any(!grepl("\\(HEC\\)|\\(ADJ\\)", toxval_type, ignore.case=TRUE))
       ) %>%
       dplyr::reframe(
-        toxval_id_1 = toxval_id[!grepl("\\(ADJ\\)|\\(HEC\\)", toxval_type)],
-        toxval_id_2 = toxval_id[grepl("\\(ADJ\\)", toxval_type)],
-        toxval_type_1 = toxval_type[!grepl("\\(ADJ\\)|\\(HEC\\)", toxval_type)],
-        toxval_type_2 = toxval_type[grepl("\\(ADJ\\)", toxval_type)],
+        toxval_id_1 = toxval_id[!grepl("\\(ADJ\\)|\\(HEC\\)", toxval_type, ignore.case=TRUE)],
+        toxval_id_2 = toxval_id[grepl("\\(ADJ\\)", toxval_type, ignore.case=TRUE)],
+        toxval_type_1 = toxval_type[!grepl("\\(ADJ\\)|\\(HEC\\)", toxval_type, ignore.case=TRUE)],
+        toxval_type_2 = toxval_type[grepl("\\(ADJ\\)", toxval_type, ignore.case=TRUE)],
         relationship = "derived from"
       ) %>%
       dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2))
   },
   error = function(e){
+    cat("Error with relationships_adj_base\n")
+    message(e)
     return(data.frame())
   })
 
   # Identify and capture ex. NOAEL (HEC)/NOAEL (HED) -> NOAEL type relationship
   relationship_hec_base <- tryCatch({
     res1 %>%
+      # Keep only HEC/HED entries and entries without other parenthetic stems
+      dplyr::filter(grepl("\\(HEC\\)|\\(HED\\)", toxval_type, ignore.case=TRUE) | !grepl("\\(", toxval_type)) %>%
       dplyr::group_by(study_reference, study_type, exposure_route, preceding_text) %>%
       dplyr::filter(
-        any(grepl("\\(HEC\\)|\\(HED\\)", toxval_type)) & any(!grepl("\\(HEC\\)|\\(HED\\)", toxval_type))
+        any(grepl("\\(HEC\\)|\\(HED\\)", toxval_type, ignore.case=TRUE)) & any(!grepl("\\(HEC\\)|\\(HED\\)", toxval_type, ignore.case=TRUE))
       ) %>%
       dplyr::reframe(
-        toxval_id_1 = toxval_id[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
-        toxval_id_2 = toxval_id[grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
-        toxval_type_1 = toxval_type[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
-        toxval_type_2 = toxval_type[grepl("\\(HED\\)|\\(HEC\\)", toxval_type)],
+        toxval_id_1 = toxval_id[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type, ignore.case=TRUE)],
+        toxval_id_2 = toxval_id[grepl("\\(HED\\)|\\(HEC\\)", toxval_type, ignore.case=TRUE)],
+        toxval_type_1 = toxval_type[!grepl("\\(HED\\)|\\(HEC\\)", toxval_type, ignore.case=TRUE)],
+        toxval_type_2 = toxval_type[grepl("\\(HED\\)|\\(HEC\\)", toxval_type, ignore.case=TRUE)],
         relationship = "derived from"
       ) %>%
       dplyr::filter(!is.na(toxval_id_1) & !is.na(toxval_id_2) & !(toxval_id_2 %in% relationships_adj_base$toxval_id_2))
   },
   error = function(e){
+    cat("Error with relationship_hec_base\n")
+    message(e)
     return(data.frame())
   })
 

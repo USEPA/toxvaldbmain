@@ -53,6 +53,9 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
   #####################################################################
   cremove = c("sources_of_contaminant_in_drinking_water", "subsource_type", "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
+
+  res <- res %>%
+    dplyr::rename(source_url = url)
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -133,7 +136,6 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()

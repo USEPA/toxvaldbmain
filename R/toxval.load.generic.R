@@ -6,7 +6,7 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = SOURCE_NAME
   source_table = "source_"
   verbose = log
@@ -66,6 +66,14 @@ toxval.load.generic <- function(toxval.db,source.db, log=FALSE, remove_null_dtxs
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
+
+  # Dynamically remove unused columns (remove relationship_id for now)
+  res = res %>% dplyr::select(-tidyselect::any_of(nlist))
+
+  nlist = names(res)
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,cols)]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)

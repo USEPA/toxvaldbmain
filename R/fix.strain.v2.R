@@ -8,7 +8,7 @@
 #' @param date_string The date of the latest dictionary version
 #' @export
 #--------------------------------------------------------------------------------------
-fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2023-04-03",reset=FALSE) {
+fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024-04-08",reset=FALSE) {
   printCurrentFunction()
   if(reset) runQuery("update toxval set strain='-', strain_group='-'",db5)
 
