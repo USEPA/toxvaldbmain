@@ -7,9 +7,10 @@
 #' @param subsource Subsource to be fixed (NULL default)
 #' @param priority_list Named list describing source priority, with low priority index and high priority value
 #' @param criteria List of parameters used to make deduping decisions
+#' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
 #' @export
 #-------------------------------------------------------------------------------------
-fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL, priority_list=NULL, criteria=c("dtxsid")) {
+fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL, priority_list=NULL, criteria=c("dtxsid"), report.only=FALSE) {
   printCurrentFunction(paste(toxval.db,":", source))
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
@@ -40,6 +41,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
 
   # Track sources already completed to ensure unnecessary work is not repeated
   already_finished = NULL
+  report.out = data.frame()
 
   for(source in slist) {
     if(source %in% already_finished) {
@@ -61,6 +63,12 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       low_priority = source
       high_priority = priority_list_low_high[[source]]
     }
+
+    if(any(!c(high_priority, low_priority) %in% runQuery("select distinct source from toxval",toxval.db)[,1])){
+      cat("...Priority source pair", high_priority, "and", low_priority, "missing data. Skipping...\n")
+      next
+    }
+
     already_finished = c(already_finished, high_priority, low_priority)
 
     cat("\nHandling dedup hierarchy for", low_priority, "and", high_priority, "\n")
@@ -79,22 +87,36 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
                                        dplyr::select(-toxval_id) %>%
                                        dplyr::distinct(),
                                      high_entries %>%
-                                       dplyr::distinct()) %>%
-      dplyr::mutate(intersect=TRUE)
+                                       dplyr::distinct(),
+                                     by=criteria) %>%
+      dplyr::pull(dtxsid)
 
     # Get toxval_id values to fail
     ids_to_fail = low_entries %>%
-      dplyr::left_join(intersection) %>%
-      tidyr::drop_na(intersect) %>%
+      dplyr::filter(dtxsid %in% intersection) %>%
       dplyr::pull(toxval_id) %>%
       unique() %>%
-      paste0("'", ., "'") %>%
-      paste(collapse=", ")
+      toString()
 
-    # Set qc_status="fail" for low priority source in appropriate entries
-    update_query = paste0("UPDATE toxval SET qc_status='fail' WHERE ",
-                          "source='", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
-    runQuery(update_query, toxval.db)
+    if(!report.only){
+      # Set qc_status="fail" for low priority source in appropriate entries
+      update_query = paste0("UPDATE toxval SET qc_status='fail' WHERE ",
+                            "source='", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
+      runQuery(update_query, toxval.db)
+    } else {
+      report.out = report.out %>%
+        dplyr::bind_rows(.,
+                         runQuery(paste0("SELECT * FROM toxval WHERE toxval_id in (", ids_to_fail, ")"),
+                                  toxval.db))
+    }
     cat("\n")
+  }
+  if(report.only){
+    cat("Exporting report...\n")
+    writexl::write_xlsx(report.out %>% dplyr::distinct(),
+                        paste0("Repo/QC Reports/fix_dedup_hierarchy_", source, "_", subsource, "_", Sys.Date(), ".xlsx") %>%
+                          gsub("__", "_", .) %>%
+                          stringr::str_squish())
+    return(report.out)
   }
 }
