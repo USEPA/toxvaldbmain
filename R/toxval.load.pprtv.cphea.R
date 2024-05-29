@@ -70,7 +70,7 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
     ) %>%
     # Set collapsed subsource values as "PPRTV Summary"
     dplyr::mutate(subsource = "PPRTV Summary")
-
+  
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
