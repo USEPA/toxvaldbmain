@@ -1,88 +1,100 @@
 #-----------------------------------------------------------------------------------
 #' Set the study_group field
-#' series of xlsx files
 #'
 #' @param toxval.db Database version
 #' @param source The source to be updated
-#' #' @return for each source writes an Excel file with the name
+#' @param subsource The subsource to be updated (NULL default)
+#' @param reset Whether or not to set entire study_group field to "-" before logic, default FALSE
+#' @return for each source writes an Excel file with the name
 #'  ../export/export_by_source_{data}/toxval_all_{toxval.db}_{source}.xlsx
-#'
+#' @export
 #-----------------------------------------------------------------------------------
-fix.study_group <- function(toxval.db, source=NULL,reset=F) {
+fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, reset=FALSE) {
   printCurrentFunction(toxval.db)
 
-  if(reset) runQuery("update toxval set study_group='-'",toxval.db)
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
-  slist = slist[!is.element(slist,c("ECOTOX"))]
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   for(source in slist) {
-    sglist = runQuery(paste0("select distinct study_group from toxval where source='",source,"'"),toxval.db)[,1]
-    doit = F
-    if(is.element("-",sglist)) doit = T
+    if(reset) runQuery(paste0("update toxval set study_group='-' where source='",source,"'"),toxval.db)
+    sglist = runQuery(paste0("select distinct study_group from toxval where source='",source,"'",query_addition),toxval.db)[,1]
+    doit = FALSE
+    # Check for unassigned study group values
+    if(is.element("-",sglist)) doit = TRUE
     if(doit) {
       cat(source,"\n")
-      runQuery(paste0("update toxval set study_group='-' where source='",source,"'"),toxval.db)
+      # Reset to "-"
+      runQuery(paste0("update toxval set study_group='-' where source='",source,"'",query_addition),toxval.db)
+      # Query unique study fields
+      query = paste0("select a.toxval_id,a.dtxsid,c.common_name, a.toxval_units,  ",
+                     "a.study_type, a.exposure_route,a.exposure_method,a.exposure_form, ",
+                     "a.study_duration_value, a.study_duration_units, a.sex, a.lifestage, a.generation, a.year,",
+                     "a.strain, b.year as record_year, b.long_ref, b.title ",
+                     "from toxval a, record_source b, species c ",
+                     "where a.species_id=c.species_id and a.toxval_id=b.toxval_id and a.source='",source,"'")
 
-      query = paste0("select a.toxval_id,a.dtxsid,c.common_name, a.toxval_units,
-                      a.target_species, a.study_type, a.exposure_route,a.exposure_method,
-                      a.study_duration_value, a.study_duration_units,
-                      a.strain,
-                      b.year, b.long_ref, b.title, b.author
-                      from toxval a, record_source b, species c where a.species_id=c.species_id and a.toxval_id=b.toxval_id and a.source='",source,"'")
-      temp = runQuery(query,toxval.db)
-      temp$key = NA
-      temp$study_group = NA
-      gtemp = subset(temp, select = -c(toxval_id) )
-      for(i in 1:nrow(gtemp)) temp[i,"key"] = digest(paste0(gtemp[i,],collapse=""), serialize = FALSE)
-      hlist = unique(temp$key)
-      for(i in 1:length(hlist)) {
-        sg = paste0(source,"_dup_",i)
-        temp[temp$key==hlist[i],"study_group"] = sg
+      if(!is.null(subsource)) {
+        query = paste0(query, " and a.subsource='",subsource,"'")
       }
 
+      # Pull data
+      temp = runQuery(query,toxval.db)
+      # Hash to identify duplicate groups
+      temp.temp = temp %>%
+        tidyr::unite(hash_col, all_of(sort(names(.)[!names(.) %in% c("toxval_id")])), sep="") %>%
+        dplyr::rowwise() %>%
+        dplyr::mutate(source_hash = paste0("ToxValhc_", digest(hash_col, serialize = FALSE))) %>%
+        dplyr::ungroup()
+
+      temp_sg = temp %>%
+        dplyr::mutate(source_hash = temp.temp$source_hash) %>%
+        dplyr::select(toxval_id, source_hash) %>%
+        # Collapse toxval_id for duplicate hashes
+        dplyr::group_by(dplyr::across(c(-toxval_id))) %>%
+        dplyr::summarise(toxval_id = toString(toxval_id)) %>%
+        # Only account for those with duplicates
+        dplyr::filter(grepl(",", toxval_id))
+
+      if(nrow(temp_sg)){
+        temp_sg = temp_sg %>%
+          # Assign study group
+          dplyr::mutate(study_group = 1:n() %>%
+                          paste0(!!source, "_dup_", .)) %>%
+          dplyr::ungroup() %>%
+          dplyr::select(-source_hash) %>%
+          # Separate collapse toxval_id groups
+          tidyr::separate_rows(toxval_id, sep=", ") %>%
+          dplyr::mutate(toxval_id = as.numeric(toxval_id))
+      } else {
+        # Set up empty duplicate study_group dataframe
+        temp_sg = temp %>%
+          dplyr::mutate(study_group = NA) %>%
+          .[0,]
+      }
+
+      # Check/report if any duplicates present
       nr = nrow(temp)
-      nsg = length(unique(temp$study_group))
+      nsg = length(unique(temp_sg$study_group)) + length(temp$toxval_id[!temp$toxval_id %in% temp_sg$toxval_id])
       cat("  nrow:",nr," unique values:",nsg,"\n")
-      query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'")
+      # Set default study group to toxval_id
+      # query = paste0("update toxval set study_group=CONCAT(source,'_',toxval_id) where source='",source,"'")
+      query = paste0("update toxval set study_group=CONCAT(source,':',toxval_id,':',sex,':',generation,lifestage) where source='",source,"'")
       runQuery(query,toxval.db)
 
+      # If duplicate groups, set to generated study group
       if(nsg!=nr) {
-        dups = sort(unique(temp[duplicated(temp$study_group),"study_group"]))
-        cat("   Number of dups:",length(dups),"\n")
-        chunk = ""
-        for(i in 1:length(dups)) {
-          sg = dups[i]
-          tids = temp[is.element(temp$study_group,sg),"toxval_id"]
-          for(tid in tids) {
-            chunk = paste0(chunk,"(",tid,",'",sg,"'),")
-          }
-        }
-        chunk = substr(chunk,1,(nchar(chunk)-1))
-        query = paste0("INSERT INTO toxval (toxval_id,study_group) VALUES ",chunk," ON DUPLICATE KEY UPDATE study_group=VALUES(study_group)")
-        #browser()
-        runQuery(query,toxval.db)
-        #browser()
-        # INSERT INTO students
-        # (id, score1, score2)
-        # VALUES
-        # (1, 5, 8),
-        # (2, 10, 8),
-        # (3, 8, 3),
-        # (4, 10, 7)
-        # ON DUPLICATE KEY UPDATE
-        # score1 = VALUES(score1),
-        # score2 = VALUES(score2);
-
-
-        # for(i in 1:length(dups)) {
-        #   sg = dups[i]
-        #   tids = temp[is.element(temp$study_group,sg),"toxval_id"]
-        #   for(tid in tids) {
-        #     query = paste0("update toxval set study_group='",sg,"' where toxval_id='",tid,"'")
-        #     runQuery(query,toxval.db)
-        #   }
-        #   if(i%%1000==0) cat("   finished",i," out of",length(dups),"\n")
-        # }
+        cat("   Number of dups:", length(unique(temp_sg$study_group)),"\n")
+        # Query to inner join and make updates with mw dataframe (temp table added/dropped)
+        updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
+                             "ON (a.toxval_id = b.toxval_id) SET a.study_group = CONCAT(b.study_group,':',a.sex,':',a.generation,a.lifestage) ",
+                             "WHERE a.study_group IS NOT NULL")
+        # Run update query
+        runUpdate(table="toxval", updateQuery=updateQuery, updated_df=temp_sg, db=toxval.db)
       }
     }
   }

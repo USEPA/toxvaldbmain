@@ -51,7 +51,6 @@ toxval.load.all <- function(toxval.db,
       # toxval.load.atsdr_mrl_2022(toxval.db,source.db,log)
       # toxval.load.atsdr_mrl(toxval.db,source.db,log) (TBD)
       toxval.load.caloehha(toxval.db,source.db,log)
-      toxval.load.chiu(toxval.db,source.db,log)
       toxval.load.copper(toxval.db,source.db,log)
       toxval.load.cosmos(toxval.db,source.db,log)
       toxval.load.dod(toxval.db,source.db,log)
@@ -74,7 +73,6 @@ toxval.load.all <- function(toxval.db,
       toxval.load.oppt(toxval.db,source.db,log)
       toxval.load.penn(toxval.db,source.db,log)
       toxval.load.pfas_150_sem_v2(toxval.db,source.db,log)
-      toxval.load.pprtv.ncea(toxval.db,source.db,log)
       toxval.load.pprtv.cphea(toxval.db,source.db,log)
       toxval.load.rsl(toxval.db,source.db,log)
       toxval.load.ut_hb(toxval.db,source.db,log)
@@ -90,7 +88,7 @@ toxval.load.all <- function(toxval.db,
     }
   }
   if(do.post) {
-    fix.study_type.manual(toxval.db,source=NULL)
+    fix.study_type.by.source(toxval.db, mode="import", source=NULL)
     fix.risk_assessment_class.by.source(toxval.db,restart=TRUE)
     load.dsstox()
   }

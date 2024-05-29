@@ -42,9 +42,8 @@ toxval.load.epa_ow_nrwqc_hhc <- function(toxval.db,source.db, log=FALSE, remove_
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in%
-              toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
-                                              c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -55,7 +54,8 @@ toxval.load.epa_ow_nrwqc_hhc <- function(toxval.db,source.db, log=FALSE, remove_
   cremove = c("table_title","priority_pollutant","notes","")
   res = res[ , !(names(res) %in% cremove)]
   res <- res %>%
-    dplyr::rename(year = publication_year)
+    dplyr::rename(year = publication_year,
+                  source_url = url)
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -136,7 +136,6 @@ toxval.load.epa_ow_nrwqc_hhc <- function(toxval.db,source.db, log=FALSE, remove_
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()

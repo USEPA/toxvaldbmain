@@ -55,7 +55,7 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   cremove = c('route', 'duration', 'mrl', 'total_factors', 'endpoint', 'status',
               'cover_date', 'cas_number', 'doc_status', 'doc_cover_date',
               'study_duration_qualifier', 'study_duration_class', 'age_original',
-              'origin_document_date', 'curator_notes')
+              'origin_document_date', 'curator_notes', 'target_species')
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################

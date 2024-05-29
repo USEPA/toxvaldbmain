@@ -58,13 +58,18 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                        'data_confidence',
                        # 'overall_confidence',
                        'dose_type',
-                       "endpoint", "principal_study", "study_duration_qualifier")
+                       "endpoint", "principal_study", "study_duration_qualifier",
+                       "full_reference",
+                       "target_species")
   # Rename non-toxval columns
   res <- res %>%
     dplyr::rename(# risk_assessment_class = risk_assessment_duration,
                   quality = overall_confidence) %>%
+    dplyr::mutate(subsource = document_type) %>%
     select(-dplyr::any_of(non_toxval_cols)) %>%
-    dplyr::filter(toxval_numeric != "-")
+    dplyr::filter(toxval_numeric != "-",
+                  # Filter only to IRIS Summary data
+                  subsource %in% c("IRIS Summary"))
 
   # Fill in long_ref where missing
   res$long_ref[res$long_ref == "-"] = res$study_reference[res$long_ref == "-"]
@@ -77,10 +82,30 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
   cremove = c("uf_composite", "confidence", "extrapolation_method", "class",
-              "key_finding", "age",
-              "assessment_type", "curator_notes", "risk_assessment_duration")
+              "age", "assessment_type", "curator_notes", "risk_assessment_duration",
+              "sex_new", "duration_orig", "duration_value", "duration_units", "new_entry")
 
   res = res[ , !(names(res) %in% cremove)]
+
+  res = res %>% dplyr::mutate(
+    # Set NA study_duration for entries with multiple GD/PND/LD/PNW units
+    study_duration_value = dplyr::case_when(
+      grepl("[A-Za-z]", study_duration_value) ~ as.character(NA),
+      TRUE ~ study_duration_value
+    ),
+    # Set NA for units without values
+    study_duration_units = dplyr::case_when(
+      is.na(study_duration_value) ~ as.character(NA),
+      TRUE ~ study_duration_units
+    ),
+
+    # Select higher value in ranged study_duration
+    study_duration_value = study_duration_value %>%
+      gsub(".+\\-", "", .) %>%
+      tidyr::replace_na("-"),
+    study_duration_units = study_duration_units %>%
+      tidyr::replace_na("-")
+  )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -94,6 +119,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   # Custom ignore "document_type" for later relationship processing
   nlist = nlist[!is.element(nlist,c("casrn","name", "document_type", "study_reference",
                                     "numeric_relationship_description","numeric_relationship_id"))]
+
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -155,7 +181,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   }
   # Remove range_relationship_id
   res <- res %>%
-    dplyr::select(-tidyselect::any_of(c("numeric_relationship_id", "numeric_relationship_description")))
+    dplyr::select(-dplyr::any_of(c("numeric_relationship_id", "numeric_relationship_description")))
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -192,7 +218,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   # Push res except for set_toxval_relationship_by_toxval_type needed columns
   runInsertTable(res %>%
-                   dplyr::select(-document_type, -study_reference),
+                   dplyr::select(-dplyr::any_of(c("document_type", "study_reference"))),
                  "toxval", toxval.db, verbose)
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(dim(res))
