@@ -112,6 +112,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
     cat("\n")
   }
   if(report.only){
+    if(length(slist) > 1) source = "all sources"
     cat("Exporting report...\n")
     writexl::write_xlsx(report.out %>% dplyr::distinct(),
                         paste0("Repo/QC Reports/fix_dedup_hierarchy_", source, "_", subsource, "_", Sys.Date(), ".xlsx") %>%
