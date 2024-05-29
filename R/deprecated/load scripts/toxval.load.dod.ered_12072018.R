@@ -149,7 +149,7 @@ toxval.load.dod.ered <- function(toxval.db,source.db,log=F) {
   for(i in 1:length(sdv)) {
     val0 = sdv[i]
     for(ccar in c("(","-",";")) {
-      if(contains(val0,ccar)) {
+      if(grepl(ccar, val0, fixed = TRUE)) {
         sccar = ccar
         if(ccar=="(") sccar="\\("
         val1 = str_split(val0,sccar)[[1]][1]

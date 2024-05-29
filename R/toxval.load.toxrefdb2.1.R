@@ -198,6 +198,8 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
   cat("Generic steps \n")
   #####################################################################
   res = dplyr::distinct(res)
+  res = res[!is.na(res$toxval_numeric),]
+  res = res[res$toxval_numeric>0,]
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
@@ -207,8 +209,13 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
-  res = dplyr::distinct(res)
+    dplyr::mutate(dplyr::across(where(is.character),
+                                ~stringr::str_squish(.) %>%
+                                  dplyr::na_if("NA")
+                                )
+                  ) %>%
+    dplyr::distinct()
+
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 

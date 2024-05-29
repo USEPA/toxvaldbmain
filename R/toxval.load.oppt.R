@@ -188,20 +188,21 @@ toxval.load.oppt <- function(toxval.db, source.db, log=F){
     else if(new_res[i,"exposure_route"]=="Other") {new_res[i,"exposure_route"] <- "other"; new_res[i,"exposure_method"] <- "other"}
 
     tvt <- new_res[i,"toxval_type"]
-    if(tidyselect::contains(tvt,"LD50")) tvt <- "LD50"
-    else if(tidyselect::contains(tvt,"LC50")) tvt <- "LC50"
-    else if(tidyselect::contains(tvt,"LOAEC")) tvt <- "LOAEC"
-    else if(tidyselect::contains(tvt,"LOAEL")) tvt <- "LOAEL"
-    else if(tidyselect::contains(tvt,"NOAEC")) tvt <- "NOAEC"
-    else if(tidyselect::contains(tvt,"NOAEL")) tvt <- "NOAEL"
+    if(grepl("LD50", tvt)) tvt <- "LD50"
+    else if(grepl("LC50", tvt)) tvt <- "LC50"
+    else if(grepl("LOAEC", tvt)) tvt <- "LOAEC"
+    else if(grepl("LOAEL", tvt)) tvt <- "LOAEL"
+    else if(grepl("NOAEC", tvt)) tvt <- "NOAEC"
+    else if(grepl("NOAEL", tvt)) tvt <- "NOAEL"
     new_res[i,"toxval_type"] <- tvt
 
     tvu <- new_res[i,"toxval_units"]
-    if(tidyselect::contains(tvu,"mg/L")) tvu <- "mg/L"
-    else if(tidyselect::contains(tvu,"mg/kg")) tvu <- "mg/kg-day"
-    else if(tidyselect::contains(tvu,"ppm")) tvu <- "ppm"
+    if(grepl("mg/L", tvu, fixed=TRUE)) tvu <- "mg/L"
+    else if(grepl("mg/kg-day", tvu, fixed=TRUE)) tvu <- "mg/kg-day"
+    else if(grepl("ppm", tvu)) tvu <- "ppm"
     new_res[i,"toxval_units"] <- tvu
-    if(tidyselect::contains(new_res[i,"sex"],"sex")) new_res[i,"sex"] <- "male and female"
+
+    if(grepl("sex", new_res[i,"sex"])) new_res[i,"sex"] <- "male and female"
   }
   res = new_res
   res = res[is.element(res$toxval_type,c("NOAEC","LOAEL","NOAEL","LD50","LC50","LOAEC")),]
@@ -209,12 +210,11 @@ toxval.load.oppt <- function(toxval.db, source.db, log=F){
   slist = unique(res$species)
   res$strain = res$species
   for(species in slist) {
-    if(tidyselect::contains(species,"rabbit")) res[is.element(res$species,species),"species"] = "rabbit"
-    else if(tidyselect::contains(species,"mouse")) res[is.element(res$species,species),"species"] = "mouse"
-    else if(tidyselect::contains(species,"mice")) res[is.element(res$species,species),"species"] = "mouse"
-    else if(tidyselect::contains(species,"Guinea pig")) res[is.element(res$species,species),"species"] = "guinea pig"
-    else if(tidyselect::contains(species,"rat")) res[is.element(res$species,species),"species"] = "rat"
-    else if(tidyselect::contains(species,"dog")) res[is.element(res$species,species),"species"] = "dog"
+    if(grepl("rabbit", species)) res[is.element(res$species,species),"species"] = "rabbit"
+    else if(grepl("mouse|mice", species)) res[is.element(res$species,species),"species"] = "mouse"
+    else if(grepl("Guinea pig", species)) res[is.element(res$species,species),"species"] = "guinea pig"
+    else if(grepl("rat", species)) res[is.element(res$species,species),"species"] = "rat"
+    else if(grepl("dog", species)) res[is.element(res$species,species),"species"] = "dog"
     else res[is.element(res$species,species),"species"] = "unknown"
   }
 

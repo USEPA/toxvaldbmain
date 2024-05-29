@@ -12,8 +12,7 @@ fix.empty.by.source <- function(toxval.db,source=NULL,subsource=NULL){
   mask <- vector(mode="integer",length=dim(res)[1])
   mask[] <- 0
   for(i in 1:dim(res)[1]) {
-    if(tidyselect::contains(res[i,"Type"],"varchar")) mask[i] <- 1
-    if(tidyselect::contains(res[i,"Type"],"text")) mask[i] <- 1
+    if(grepl("varchar|text", res$Type[i])) mask[i] <- 1
   }
   cols <- res[mask==1,"Field"]
 
