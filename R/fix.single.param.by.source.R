@@ -22,11 +22,12 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
+  # Read and prepare parameter dictionary
   file <- paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/",param,"_5.xlsx")
-  mat <- read.xlsx(file, na.strings = "NOTHING")
+  mat <- openxlsx::read.xlsx(file, na.strings = "NOTHING")
   #print(View(mat))
   mat_flag_change <- grep('\\[\\.\\.\\.\\]',mat[,2])
-  mat[mat_flag_change,2] <- str_replace_all(mat[mat_flag_change,2],'\\[\\.\\.\\.\\]','XXX')
+  mat[mat_flag_change,2] <- stringr::str_replace_all(mat[mat_flag_change,2],'\\[\\.\\.\\.\\]','XXX')
   print(dim(mat))
 
   db.values <- runQuery(paste0("select distinct ",param,"_original from toxval where source like '",source,"'",query_addition),
@@ -56,10 +57,12 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
   #print(View(mat))
   cat("  final list: ",nrow(mat),"\n")
 
+  # Use parameter dictionary to update entries in toxval
   for(i in 1:dim(mat)[1]) {
     v0 <- mat[i,2]
     v1 <- mat[i,1]
-    cat(v0,":",v1,"\n"); flush.console()
+
+    cat(v0,":",v1,"\n"); utils::flush.console()
     if(!report.units) {
       query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'",query_addition)
       runQuery(query, toxval.db)

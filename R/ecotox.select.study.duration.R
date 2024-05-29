@@ -8,7 +8,7 @@ ecotox.select.study.duration <- function(in_data){
   # Track original rows to ensure all remain at end
   orig_n <- nrow(in_data)
   in_data <- in_data %>%
-    dplyr::mutate(tmp_id = 1:n())
+    dplyr::mutate(tmp_id = 1:dplyr::n())
   ### First, select observed_duration_std (standardized study duration mean value) without issues
   out_ls$observed_duration_std <- in_data %>%
     dplyr::rename(study_duration_units = observed_duration_units_std) %>%

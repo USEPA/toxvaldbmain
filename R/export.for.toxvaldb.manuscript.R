@@ -80,7 +80,7 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
       temp = mat[,nlist]
       mat$hashkey = NA
       mat$study_group_2 = NA
-      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest(paste0(temp[i,],collapse=""), serialize = FALSE)
+      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest::digest(paste0(temp[i,],collapse=""), serialize = FALSE)
       hlist = unique(mat$hashkey)
       for(i in 1:length(hlist)) {
         sg = paste0(src,"_",i)
@@ -97,14 +97,14 @@ export.for.toxvaldb.manuscript <- function(toxval.db) {
   resa = res[is.element(res$toxval_type_supercategory,c("Point of Departure","Lethality Effect Level")),]
   resb = res[is.element(res$toxval_type_supercategory,c("Toxicity Value")),]
 
-  sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+  sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
   file = paste0(dir,"/toxval_all_for_manuscript_PODs_",toxval.db," ",Sys.Date(),".xlsx")
   openxlsx::write.xlsx(resa,file,firstRow=T,headerStyle=sty)
   file = paste0(dir,"/toxval_all_for_manuscript_RAvals_",toxval.db," ",Sys.Date(),".xlsx")
   openxlsx::write.xlsx(resb,file,firstRow=T,headerStyle=sty)
 
   file = paste0(dir,"/toxval_all_for_manuscript_PODs_",toxval.db," ",Sys.Date(),".csv")
-  write.csv(resa,file=file,row.names=F)
+  utils::write.csv(resa,file=file,row.names=F)
   file = paste0(dir,"/toxval_all_for_manuscript_RAvals_",toxval.db," ",Sys.Date(),".csv")
-  write.csv(resb,file=file,row.names=F)
+  utils::write.csv(resb,file=file,row.names=F)
 }

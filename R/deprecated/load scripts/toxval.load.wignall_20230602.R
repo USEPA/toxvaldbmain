@@ -83,7 +83,7 @@ toxval.load.wignall <- function(toxval.db,source.db, log=F){
 
   for(i in 1:nrow(res)) {
     x = res[i,"toxval_numeric"]
-    if(contains(x,";")) {
+    if(grepl(";", x, fixed=TRUE)) {
       y = str_split(x,";")[[1]]
       z = min(y)
       #cat(x,z,"\n")
@@ -109,7 +109,7 @@ toxval.load.wignall <- function(toxval.db,source.db, log=F){
     val <- res[i,"long_ref"]
     for(year in 1980:2018) {
       syear <- as.character(year)
-      if(contains(val,syear)) res[i,"year"] <- year
+      if(grepl(syear, val, fixed=TRUE)) res[i,"year"] <- year
     }
   }
   #fix species

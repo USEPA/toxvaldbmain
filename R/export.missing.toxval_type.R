@@ -8,17 +8,20 @@
 #-------------------------------------------------------------------------------------
 export.missing.toxval_type <- function(toxval.db, report.only=FALSE) {
   printCurrentFunction(toxval.db)
+  # Get all toxval_type values from toxval
   res = runQuery("select source,toxval_type from toxval",toxval.db)
   res = unique(res)
 
+  # Compare toxval_type values in toxval to toxval_type values currently handled in dictionary
   tlist2 = runQuery("select toxval_type from toxval_type_dictionary",toxval.db)[,1]
   res = res[!is.element(res$toxval_type,tlist2),]
   cat("missing values:",nrow(res),"\n")
-  
+
+  # Write/return results
   if (!report.only) {
     if(nrow(res)>0) {
       file = paste0(toxval.config()$datapath,"/dictionary/missing/missing_toxval_type ",Sys.Date(),".xlsx")
-      write.xlsx(res,file)
+      openxlsx::write.xlsx(res,file)
     }
   } else {
     return(res)

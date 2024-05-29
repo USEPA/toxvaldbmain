@@ -53,8 +53,8 @@ toxval.load.chiu <- function(toxval.db, source.db, log=F){
   res <- res[!is.na(res[,"casrn"]),]
 
   for(i in 1:nrow(res)) {
-    if(contains(res[i,"toxval_type"],"RfD")) res[i,"toxval_type"] <- "RfD"
-    if(contains(res[i,"toxval_type"],"MRL")) res[i,"toxval_type"] <- "MRL"
+    if(grepl("RfD", res[i,"toxval_type"])) res[i,"toxval_type"] <- "RfD"
+    if(grepl("MRL", res[i,"toxval_type"])) res[i,"toxval_type"] <- "MRL"
 
     res[i,"study_duration_units"] <- tolower(res[i,"study_duration_units"])
     res[i,"species"] <- tolower(res[i,"species"])

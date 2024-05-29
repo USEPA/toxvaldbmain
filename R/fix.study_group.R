@@ -46,9 +46,9 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, reset=FALSE)
       temp = runQuery(query,toxval.db)
       # Hash to identify duplicate groups
       temp.temp = temp %>%
-        tidyr::unite(hash_col, all_of(sort(names(.)[!names(.) %in% c("toxval_id")])), sep="") %>%
+        tidyr::unite(hash_col, dplyr::all_of(sort(names(.)[!names(.) %in% c("toxval_id")])), sep="") %>%
         dplyr::rowwise() %>%
-        dplyr::mutate(source_hash = paste0("ToxValhc_", digest(hash_col, serialize = FALSE))) %>%
+        dplyr::mutate(source_hash = paste0("ToxValhc_", digest::digest(hash_col, serialize = FALSE))) %>%
         dplyr::ungroup()
 
       temp_sg = temp %>%

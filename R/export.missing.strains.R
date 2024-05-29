@@ -9,7 +9,7 @@
 export.missing.strains <- function(toxval.db,date_string="2024-02-27") {
   printCurrentFunction()
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
-  dict = read.xlsx(file)
+  dict = openxlsx::read.xlsx(file)
 
   cat("original:",nrow(dict),"\n")
   missing = runQuery("select distinct strain_original from toxval",toxval.db)[,1]
@@ -28,6 +28,6 @@ export.missing.strains <- function(toxval.db,date_string="2024-02-27") {
     }
     dict = rbind(dict,temp)
     file = paste0(toxval.config()$datapath,"species/strain_dictionary_",Sys.Date(),".xlsx")
-    write.xlsx(dict,file)
+    openxlsx::write.xlsx(dict,file)
   }
 }

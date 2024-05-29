@@ -17,6 +17,7 @@ fix.priority_id.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
+  # Set appropriate priority ID in toxval using source_info table
   for(source in slist) {
     cat(source,"\n")
     query = paste0("update toxval set priority_id=-1 where source like '",source,"'",query_addition)

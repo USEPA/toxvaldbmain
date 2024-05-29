@@ -29,9 +29,9 @@ source_hash_vectorized <- function(res, hashing_cols){
   # Different from previous in that Date columns aren't converted to numerics
   cat("Using vectorized hashing! \n")
   res %>%
-    tidyr::unite(hash_col, any_of(sort(names(.)[names(.) %in% hashing_cols])), sep="-") %>%
+    tidyr::unite(hash_col, tidyselect::any_of(sort(names(.)[names(.) %in% hashing_cols])), sep="-") %>%
     dplyr::rowwise() %>%
-    dplyr::mutate(source_hash = paste0("ToxValhc_", digest(hash_col, serialize = FALSE))) %>%
+    dplyr::mutate(source_hash = paste0("ToxValhc_", digest::digest(hash_col, serialize = FALSE))) %>%
     dplyr::ungroup() %>%
     return()
 }

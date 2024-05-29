@@ -6,6 +6,7 @@
 load.dsstox <- function(reprocess = FALSE) {
   printCurrentFunction()
 
+  # Check for existing DSSTOX data; otherwise, load from RData file
   if(!exists("DSSTOX")) {
     sys.date = "2022-07-20"
     if(!reprocess){

@@ -81,7 +81,7 @@ toxval.load.epa_ow_nrwqc_hhc <- function(toxval.db,source.db, log=FALSE, remove_
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
@@ -90,8 +90,8 @@ toxval.load.epa_ow_nrwqc_hhc <- function(toxval.db,source.db, log=FALSE, remove_
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -132,8 +132,8 @@ toxval.load.epa_ow_nrwqc_hhc <- function(toxval.db,source.db, log=FALSE, remove_
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$subsource_url = "-"

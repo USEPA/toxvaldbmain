@@ -26,7 +26,7 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
     names(qc) = nlist
     qc$source = slist
     file = paste0(dir,"/ToxValDB release QA ",toxval.db," ",Sys.Date(),".xlsx")
-    sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+    sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
     openxlsx::write.xlsx(qc,file,firstRow=T,headerStyle=sty)
   }
 
@@ -105,7 +105,7 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
     cat(src,nrow(mat),"\n")
     file = paste0(dir,"/toxval_all_",toxval.db,"_",src, " ", subsource, ".xlsx") %>%
       gsub(" \\.xlsx", ".xlsx", .)
-    sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+    sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
     openxlsx::write.xlsx(mat,file,firstRow=T,headerStyle=sty)
   }
 }

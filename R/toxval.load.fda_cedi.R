@@ -15,7 +15,7 @@ toxval.load.fda_cedi <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -75,7 +75,7 @@ toxval.load.fda_cedi <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
@@ -84,8 +84,8 @@ toxval.load.fda_cedi <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -126,8 +126,8 @@ toxval.load.fda_cedi <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   # res$source_url = "https://www.accessdata.fda.gov/scripts/sda/sdNavigation.cfm?sd=edisrev"
@@ -150,7 +150,7 @@ toxval.load.fda_cedi <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)

@@ -86,7 +86,7 @@ toxval.set.mw <- function(toxval.db, source=NULL, subsource=NULL){
         "')"
       )
       mw = runQuery(query,toxval.db) %>%
-        filter(!is.na(mw))
+        dplyr::filter(!is.na(mw))
     }
 
     # Only run if mw values are present for selected DTXSID values

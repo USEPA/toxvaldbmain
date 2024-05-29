@@ -20,7 +20,7 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source, subsource=NULL)
   #####################################################################
 
   file <- paste0(toxval.config()$datapath,"dictionary/icf_critical_effect.xlsx")
-  dict <- read.xlsx(file)
+  dict <- openxlsx::read.xlsx(file)
   print(dim(dict))
   print(names(dict))
   #####################################################################
@@ -56,7 +56,7 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source, subsource=NULL)
   cat("find missing icf dict values in existing critical effect dictionary \n")
   #####################################################################
   file <- paste0(toxval.config()$datapath,"dictionary/critical_effect_stage2_set_1234b2021-04-14.xlsx")
-  dict_current <- read.xlsx(file)
+  dict_current <- openxlsx::read.xlsx(file)
   print(dim(dict_current))
 
   z <- unique(dict_current$critical_effect_original_0)
@@ -67,7 +67,7 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source, subsource=NULL)
 
   dict_new2 <- dict_current[dict_current$critical_effect_original_0 %in% z,]
   # subset only the new value column and the original value column
-  dict_new2 <- dict_new2 %>% select(critical_effect=critical_effect_stage2,
+  dict_new2 <- dict_new2 %>% dplyr::select(critical_effect=critical_effect_stage2,
                                     critical_effect_original=critical_effect_original_0)
 
   # combine both dictionary(icf and current dictionary) values found in toxval to create new dictionary

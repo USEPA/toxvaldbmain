@@ -32,12 +32,12 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
   iuclid_source_tables = runQuery("SHOW TABLES", source.db) %>%
     dplyr::filter(grepl("source_iuclid", Tables_in_res_toxval_source_v5),
                   !grepl("_v94", Tables_in_res_toxval_source_v5)) %>%
-    pull(Tables_in_res_toxval_source_v5)
+    dplyr::pull(Tables_in_res_toxval_source_v5)
 
   # Get list of IUCLID OHTs represented in ToxVal
   iuclid_toxval_ohts = runQuery("SELECT DISTINCT source_table FROM toxval", toxval.db) %>%
     dplyr::filter(grepl("iuclid", source_table)) %>%
-    pull(source_table)
+    dplyr::pull(source_table)
 
   # Create translation dictionary to go from table name to human-readable name
   name_translator = c("source_iuclid_acutetoxicitydermal"="Acute Toxicity Dermal",
@@ -171,7 +171,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     #####################################################################
     cat("Generic steps \n")
     #####################################################################
-    res = distinct(res)
+    res = dplyr::distinct(res)
     res = fill.toxval.defaults(toxval.db,res)
     res = generate.originals(toxval.db,res)
     res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -179,8 +179,8 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     res=fix.non_ascii.v2(res,source)
     # Remove excess whitespace
     res = res %>%
-      dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-    res = distinct(res)
+      dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+    res = dplyr::distinct(res)
     res = res[, !names(res) %in% c("casrn","name")]
     print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -191,7 +191,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     cat("Max toxval_numeric: ",maxval," : Records above threshold - ",nrow(bad),"\n")
     if(nrow(bad)){
       file = paste0(toxval.config()$datapath,"echa_iuclid/bad values ",ohtname," ",Sys.Date(),".xlsx")
-      write.xlsx(bad, file)
+      openxlsx::write.xlsx(bad, file)
       # browser()
     }
     # Filter out
@@ -267,8 +267,8 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     #####################################################################
     cat("load res and refs to the database\n")
     #####################################################################
-    res = distinct(res)
-    refs = distinct(refs)
+    res = dplyr::distinct(res)
+    refs = dplyr::distinct(refs)
     res$datestamp = Sys.Date()
     res$source_table = source_table
     res$subsource_url = "-"

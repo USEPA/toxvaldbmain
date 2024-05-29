@@ -12,8 +12,7 @@ fix.empty.by.source <- function(toxval.db,source=NULL,subsource=NULL){
   mask <- vector(mode="integer",length=dim(res)[1])
   mask[] <- 0
   for(i in 1:dim(res)[1]) {
-    if(contains(res[i,"Type"],"varchar")) mask[i] <- 1
-    if(contains(res[i,"Type"],"text")) mask[i] <- 1
+    if(grepl("varchar|text", res$Type[i])) mask[i] <- 1
   }
   cols <- res[mask==1,"Field"]
 
@@ -27,6 +26,7 @@ fix.empty.by.source <- function(toxval.db,source=NULL,subsource=NULL){
   if(!is.null(source)) slist = source
   for(source in slist) {
     cat(source,"\n")
+    # For each field, set empty values to "-"
     for(col in cols) {
       print(col)
       query <- paste0("update toxval set ",col,"='-' where ",col,"='' and source like '",source,"'",query_addition)

@@ -97,8 +97,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       file = paste0(dir1,"/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
-      sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-      write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
+      sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+      openxlsx::write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
       # file = paste0(dir1,"/toxval_new_study_type ",source, " ", subsource) %>%
       #   stringr::str_squish() %>%
       #   paste0(".csv")
@@ -129,7 +129,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         mat = lapply(file_list, readxl::read_xlsx) %>%
           dplyr::bind_rows() %>%
           dplyr::filter(!dtxsid %in% c(NA, "NODTXSID", "-")) %>%
-          dplyr::mutate(dplyr::across(where(is.character), ~stringr::str_squish(.)))
+          dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~stringr::str_squish(.)))
       } else {
         # Create empty dataframe
         mat = data.frame(matrix(ncol=4,nrow=0,
