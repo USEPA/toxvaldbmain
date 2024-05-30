@@ -22,6 +22,11 @@ toxval.load.postprocess <- function(toxval.db,
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
+  #####################################################################
+  cat("fix deduping hierarchy by source\n")
+  #####################################################################
+  fix.dedup.hierarchy.by.source(toxval.db, source, subsource)
+
   do.convert.units = TRUE # override default because it is not specified in all toxval load functions
   if(source=="ECOTOX") do.convert.units = FALSE
 
@@ -147,11 +152,6 @@ toxval.load.postprocess <- function(toxval.db,
   cat("fix qa status by source\n")
   #####################################################################
   fix.qc_status.by.source(toxval.db, source, subsource)
-
-  #####################################################################
-  cat("fix deduping hierarchy by source\n")
-  #####################################################################
-  fix.dedup.hierarchy.by.source(toxval.db, source, subsource)
 
   #####################################################################
   #cat("set hash toxval by source\n")

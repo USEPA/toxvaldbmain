@@ -82,7 +82,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                     # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                     "WHERE b.source='", source, "'",
                     query_addition,
-                    " and b.source_hash NOT IN ('", import_logged, "')")
+                    " and b.source_hash NOT IN ('", import_logged, "')",
+                    " and b.qc_status!='fail'")
 
       cat("Pulling source_hash records not already accounted for...\n")
       mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
@@ -155,6 +156,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       temp.old = runQuery(paste0("SELECT b.source_hash, b.study_type from toxval b ",
                                         # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                                         "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
+                                        " and b.qc_status!='fail'",
                                         query_addition), toxval.db)
 
       shlist = unique(temp0$source_hash)
@@ -179,6 +181,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                        "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
                        # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                        "WHERE b.source='", source, "'",
+                       " and b.qc_status!='fail'",
                        query_addition)
 
         if(!is.null(subsource)) {
