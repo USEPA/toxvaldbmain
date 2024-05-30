@@ -17,9 +17,9 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
   changed_toxval_id = data.frame()
 
   # Handle addition of subsource for queries
-  query_addition = ""
+  query_addition = " and qc_status !='fail'"
   if(!is.null(subsource)) {
-    query_addition = paste0(" and subsource='", subsource, "'")
+    query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
 
   # Read and prepare parameter dictionary

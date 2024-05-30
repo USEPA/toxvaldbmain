@@ -31,7 +31,8 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
     cat("\n-----------------------------------------------------\n")
     cat(source,subsource,"\n")
     cat("-----------------------------------------------------\n")
-    res = runQuery(paste0("select source,toxval_id,exposure_route_original,exposure_method_original,exposure_form_original from toxval where source='",source,"'",query_addition),
+    res = runQuery(paste0("select source,toxval_id,exposure_route_original,exposure_method_original,exposure_form_original from toxval where source='",
+                          source,"' AND qc_status !='fail'",query_addition),
                    toxval.db)
     res$index1 = paste(res[,3],res[,4],res[,5])
     ilist = unique(res$index1)

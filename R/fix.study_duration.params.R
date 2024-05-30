@@ -26,9 +26,9 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
   if(!is.null(source)) slist = source
 
   # Handle addition of subsource for queries
-  query_addition = ""
+  query_addition = " and qc_status !='fail'"
   if(!is.null(subsource)) {
-    query_addition = paste0(" and subsource='", subsource, "'")
+    query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
 
   missing = data.frame()
