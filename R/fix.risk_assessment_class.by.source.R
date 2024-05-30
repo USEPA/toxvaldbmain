@@ -24,7 +24,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
   conv = conv[!is.na(conv$source),]
 
   # Handle addition of subsource for queries
-  query_addition = " and qc_status!='fail'"
+  query_addition = " and qc_status !='fail'"
   if(!is.null(subsource)) {
     query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
@@ -151,7 +151,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                       "WHERE ",
                       "b.source='",source,"' ",
                       "and b.risk_assessment_class='-' ",
-                      "and b.qc_status!='fail'")
+                      "and b.qc_status !='fail'")
       if(!is.null(subsource)) {
         query = paste0(query, " and b.subsource='",subsource,"'")
       }
