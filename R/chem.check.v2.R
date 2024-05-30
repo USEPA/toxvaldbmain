@@ -37,7 +37,6 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
       stringr::str_squish()
 
     if(in_source %in% c("Alaska DEC",
-                        "California DPH",
                         "EPA AEGL",
                         "Mass. Drinking Water Standards",
                         "OSHA Air contaminants",

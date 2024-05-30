@@ -12,7 +12,7 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL,reset=T
 
   human.list = c("Alaska DEC","ATSDR MRLs",
                  "ATSDR PFAS 2021","Cal OEHHA",
-                 "California DPH","ChemIDplus",
+                 "ChemIDplus",
                  "Copper Manufacturers","COSMOS","DOD",
                  "DOE Protective Action Criteria",
                  "ECHA IUCLID","EFSA",

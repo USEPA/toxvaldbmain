@@ -32,7 +32,6 @@ toxval.load.all <- function(toxval.db,
   if(do.load)  {
     #flex / actor
     toxval.load.alaska_dec(toxval.db,source.db,log)
-    toxval.load.cal_dph(toxval.db,source.db,log)
     toxval.load.epa_aegl(toxval.db,source.db,log)
     toxval.load.fda_cedi(toxval.db,source.db,log)
     toxval.load.mass_mmcl(toxval.db,source.db,log)
