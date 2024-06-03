@@ -180,7 +180,8 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                                        "Male fetus",
                                        "Female fetus") ~ paste0(result_sample_unit_desc, ": ", critical_effect),
         TRUE ~ critical_effect
-      ),
+      ) %>%
+        gsub("\\/$", "", .),
       # Extract generation from result_sample_unit_desc
       # https://regex101.com/r/JNxhAZ/1
       generation = stringr::str_extract(result_sample_unit_desc,
