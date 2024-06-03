@@ -50,7 +50,10 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
       cat("Checking old '", source,"'logged study_type already imported...\n")
       import_logged <- list.files(paste0(dir),
-                                  pattern = source,
+                                  pattern = source %>%
+                                    # Escape parentheses for regex
+                                    gsub("\\(", "\\\\(", .) %>%
+                                    gsub("\\)", "\\\\)", .),
                                   recursive = TRUE,
                                   full.names = TRUE) %>%
         # Ignore files in specific subfolders
@@ -119,7 +122,10 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
       file_list <- list.files(paste0(dir),
                         pattern = paste0(source, " ", subsource) %>%
-                          stringr::str_squish(),
+                          stringr::str_squish() %>%
+                          # Escape parentheses for regex
+                          gsub("\\(", "\\\\(", .) %>%
+                          gsub("\\)", "\\\\)", .),
                         recursive = TRUE,
                         full.names = TRUE) %>%
         # Ignore files in specific subfolders

@@ -24,7 +24,8 @@ Imports:
     miniUI,
     RCurl,
     gsubfn,
-    textclean
+    textclean,
+    magrittr
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
