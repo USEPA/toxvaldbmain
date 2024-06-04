@@ -9,7 +9,7 @@ import.source.info.by.source <- function(toxval.db, source=NULL) {
   printCurrentFunction(toxval.db)
 
   # Read latest source_info dictionary
-  file = paste0(toxval.config()$datapath,"dictionary/source_info 2023-11-30.xlsx")
+  file = paste0(toxval.config()$datapath,"dictionary/source_info 2024-05-31.xlsx")
   print(file)
   mat = readxl::read_xlsx(file) %>% # openxlsx::read.xlsx(file)
     dplyr::filter(!retired == 1)
