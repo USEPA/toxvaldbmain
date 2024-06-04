@@ -49,6 +49,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
   }
 
   for(source in slist) {
+    message("Working on source ", source, " ", match(c(source), slist), " of ", length(slist))
     if(source=="ECOTOX") do.convert.units=FALSE
     if(source=="ECOTOX") {
       # Handle special ECOTOX conversion case
@@ -220,13 +221,13 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           query = paste0("update toxval
                          set toxval_numeric = toxval_numeric_original*",factor,", toxval_units = 'mg/kg-day'
                          where exposure_route='oral'
-                         and toxval_units='ppm'
+                         and toxval_units_original='ppm'
                          and species_id = ",sid," and source = '",source,"'",query_addition)
           runQuery(query, toxval.db)
         } else {
           # Record ppm to mg/kg-day conversion info
           changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval ",
-                                            "where exposure_route='oral' and toxval_units='ppm' ",
+                                            "where exposure_route='oral' and toxval_units_original='ppm' ",
                                             "and species_id = ",sid," and source = '",source,"'",query_addition),
                                      toxval.db) %>%
             dplyr::mutate(change_made = paste0("ppm to mg/kg-day by species: ", species, " species_id: ", sid)) %>%
