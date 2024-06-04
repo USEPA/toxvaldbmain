@@ -10,7 +10,8 @@ set.supersource.export.names <- function(toxval.db, source=NULL, version_date="2
   printCurrentFunction()
   # Read source_info dictionary
   file = paste0(toxval.config()$datapath,"dictionary/source_info ", version_date, ".xlsx")
-  source_info = readxl::read_xlsx(file)
+  source_info = readxl::read_xlsx(file) %>%
+    dplyr::mutate(dplyr::across(dplyr::where(is.character), ~tidyr::replace_na(., "-")))
 
   # Get list of sources if NULL source provided
   slist = source
@@ -22,7 +23,7 @@ set.supersource.export.names <- function(toxval.db, source=NULL, version_date="2
     # Get relevant data for current source
     src_data = source_info %>%
       dplyr::filter(source == !!src) %>%
-      dplyr::select(source, export_source_name, supersource) %>%
+      dplyr::select(source, supersource) %>%
       dplyr::distinct()
 
     # Check for multiple mappings
@@ -32,19 +33,15 @@ set.supersource.export.names <- function(toxval.db, source=NULL, version_date="2
       browser()
     }
 
-    export_source_name = src_data %>%
-      dplyr::pull(export_source_name) %>%
-      .[[1]]
     supersource = src_data %>%
-      dplyr::pull(supersource) %>%
-      .[[1]]
-    cat("source:", src, "| export_source_name:", export_source_name, "| supersource:", supersource, "\n")
+      dplyr::pull(supersource)
+
+    cat("source:", src, "| supersource:", supersource, "\n")
 
     # Push export_source_name and supersource values to ToxVal
     query = paste0("UPDATE toxval SET ",
-                   "export_source_name='", export_source_name, "', ",
-                   "supersource='", supersource, "' ",
-                   "WHERE source='", src, "'")
+                   "supersource = '", supersource, "' ",
+                   "WHERE source = '", src, "'")
     runQuery(query, toxval.db)
   }
 }
