@@ -42,7 +42,7 @@ set.study_type.by.study_group <- function(toxval.db,
     dplyr::ungroup() %>%
     dplyr::distinct() %>%
     dplyr::group_by(study_group) %>%
-    dplyr::top_n(1, num_occurrences) %>%
+    dplyr::slice_max(n=1, order_by=num_occurrences) %>%
     # Do not record ties
     dplyr::mutate(num_mappings = dplyr::n()) %>%
     dplyr::ungroup() %>%
