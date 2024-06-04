@@ -162,6 +162,11 @@ toxval.load.postprocess <- function(toxval.db,
   #map.hash.record_source.by.source(toxval.db, source )
 
   #####################################################################
+  cat("set export_source_name and supersource by source\n")
+  #####################################################################
+  set.supersource.export.names(toxval.db, source)
+
+  #####################################################################
   cat("export by source\n")
   #####################################################################
   export.all.by.source(toxval.db, source, subsource)
