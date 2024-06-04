@@ -1,14 +1,14 @@
 #--------------------------------------------------------------------------------------
-#' Generic structure for loading to toxval from toxval_source
+#' Load EPA HHTV data to toxval from toxval_source
 #'
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = SOURCE_NAME
-  source_table = "source_"
+toxval.load.epa_hhtv <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "EPA HHTV"
+  source_table = "source_epa_hhtv"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -51,9 +51,8 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
-  cremove = c("","","","")
-  res = res[ , !(names(res) %in% cremove)]
+
+  # Source-specific transformations handled in import script
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -81,17 +80,12 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
   res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -143,7 +137,6 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
