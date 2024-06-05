@@ -19,6 +19,19 @@ fix.qc_status.by.source <- function(toxval.db,source=NULL, subsource=NULL, reset
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
+  # Check for qc_status_fail dictionary
+  qc_status_fail_dict = tibble::tibble(
+    source = character(),
+    subsource = character(),
+    source_hash = character(),
+    failure_reason = character()
+  )
+  dict_file = paste0(toxval.config()$datapath, "dictionary/qc_status_fail_by_source_hash.xlsx")
+  if(file.exists(dict_file)) {
+    cat("Reading qc_status updates from dictionary...\n")
+    qc_status_fail_dict = readxl::read_xlsx(dict_file)
+  }
+
   for(source in slist) {
     cat(source,"\n")
     if(reset) runQuery(paste0("update toxval set qc_status='pass' where source like '",source,"'",query_addition) ,toxval.db)
@@ -32,5 +45,33 @@ fix.qc_status.by.source <- function(toxval.db,source=NULL, subsource=NULL, reset
     #if(!is.element(source,"WHO IPCS")) runQuery(paste0("update toxval set qc_status='fail:species not specified' where species_id=1000000 and source = '",source,"'") ,toxval.db)
     runQuery(paste0("update toxval set qc_status='fail:human_eco not specified' where human_eco in ('-','not specified') and source = '",source,"'",query_addition),toxval.db)
     runQuery(paste0("update toxval set qc_status='fail:risk_assessment_class not specified' where risk_assessment_class in ('-','not specified') and source = '",source,"'",query_addition),toxval.db)
+
+    # Get qc_status for all current source_hashes
+    curr_hash_status = runQuery(paste0("SELECT DISTINCT source_hash, qc_status FROM toxval WHERE source='", source, "'",query_addition),
+                                toxval.db)
+
+    # Join dictionary entries with toxval entries
+    dict_update_queries = qc_status_fail_dict %>%
+      dplyr::inner_join(curr_hash_status, by=c("source_hash")) %>%
+      dplyr::mutate(
+        # Add new qc_status value
+        qc_status = dplyr::case_when(
+          grepl("\\bfail\\b", qc_status, ignore.case=TRUE) ~ stringr::str_c(qc_status, "; ", failure_reason),
+          TRUE ~ stringr::str_c("fail: ", failure_reason)
+        ),
+
+        # Use qc_status value to generate query
+        status_query = stringr::str_c("UPDATE toxval SET qc_status='", qc_status,
+                                      "' WHERE source_hash='", source_hash, "'")
+      ) %>%
+      tidyr::drop_na(status_query) %>%
+      # Pull list of new queries
+      dplyr::pull(status_query) %>%
+      unique()
+
+    # Set qc_status based on dictionary
+    for(status_query in dict_update_queries) {
+      runQuery(status_query, toxval.db)
+    }
   }
 }
