@@ -98,18 +98,20 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       unique() %>%
       toString()
 
-    if(!report.only){
-      # Set qc_status="fail" for low priority source in appropriate entries
-      update_query = paste0("UPDATE toxval SET qc_status='fail' WHERE ",
-                            "source='", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
-      runQuery(update_query, toxval.db)
-    } else {
-      report.out = report.out %>%
-        dplyr::bind_rows(.,
-                         runQuery(paste0("SELECT * FROM toxval WHERE toxval_id in (", ids_to_fail, ")"),
-                                  toxval.db))
+    if(ids_to_fail != ""){
+      if(!report.only){
+        # Set qc_status="fail" for low priority source in appropriate entries
+        update_query = paste0("UPDATE toxval SET qc_status='fail' WHERE ",
+                              "source='", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
+        runQuery(update_query, toxval.db)
+      } else {
+        report.out = report.out %>%
+          dplyr::bind_rows(.,
+                           runQuery(paste0("SELECT * FROM toxval WHERE toxval_id in (", ids_to_fail, ")"),
+                                    toxval.db))
+      }
+      cat("\n")
     }
-    cat("\n")
   }
   if(report.only){
     if(length(slist) > 1) source = "all sources"
