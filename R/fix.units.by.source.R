@@ -34,7 +34,6 @@
 #-------------------------------------------------------------------------------------
 fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.convert.units=FALSE, report.only=FALSE, report.extra=FALSE) {
   printCurrentFunction(paste(toxval.db,":", source))
-  dsstox.db <- toxval.config()$dsstox.db
 
   # Track affected toxval_id values
   changed_toxval_id = data.frame()
@@ -258,14 +257,14 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     # Loop through conversion dictionary and push conversions if specified
     for(i in seq_len(nrow(conv))) {
       if(!report.only) {
-        runquery(conv[i, "food_query", 1], toxval.db)
-        runQuery(conv[i, "water_query", 1], toxval.db)
+        runquery(conv$food_query[i], toxval.db)
+        runQuery(conv$water_query[i], toxval.db)
       } else {
         # Record species ppm to mg/kg-day conversion info
-        changed_toxval_id = runQuery(conv[i, "changed_query", 1], toxval.db) %>%
+        changed_toxval_id = runQuery(conv$changed_query[i], toxval.db) %>%
           dplyr::mutate(
-            change_made = paste0("ppm to mg/kg-day by species: ", conv[i, "animal_original", 1],
-                                 " species_id: (", conv[i, "species_id", 1], ")")
+            change_made = paste0("ppm to mg/kg-day by species: ", conv$animal_original[i],
+                                 " species_id: (", conv$species_id[i], ")")
           ) %>%
           dplyr::bind_rows(changed_toxval_id, .) %>%
           dplyr::distinct()
