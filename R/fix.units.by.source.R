@@ -47,6 +47,12 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
 
+  # Get list of species_id values per common_name (used for species ppm to mg/kg-day conversion)
+  species_ids = runQuery("SELECT DISTINCT species_id, common_name AS animal FROM species", toxval.db) %>%
+    # Standardize species case
+    dplyr::mutate(animal = toupper(animal)) %>%
+    toxval.load.dedup(., hashing_cols=c("animal"), delim=", ")
+
   for(source in slist) {
     message("Working on source ", source, " ", match(c(source), slist), " of ", length(slist))
     if(source=="ECOTOX") do.convert.units=FALSE
@@ -207,11 +213,6 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
 
     # Do the conversion from ppm to mg/kg-day on a species-wise basis for oral exposures
     cat(">>> Do the conversion from ppm to mg/kg-day on a species-wise basis\n")
-    # Get list of species_id values per common_name
-    species_ids = runQuery("SELECT DISTINCT species_id, common_name AS animal FROM species", toxval.db) %>%
-      # Standardize species case
-      dplyr::mutate(animal = toupper(animal)) %>%
-      toxval.load.dedup(., hashing_cols=c("animal"), delim=", ")
 
     # Get conversion dictionary with mapped species_id values
     conv = readxl::read_xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx")) %>%
