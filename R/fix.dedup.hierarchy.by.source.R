@@ -103,6 +103,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
         # Set qc_status="fail" for low priority source in appropriate entries
         # CONCAT reason if already has a fail status
         update_query = paste0("UPDATE toxval SET qc_status = CASE ",
+                              "WHEN qc_status like '%Duplicate of ", high_priority," chemical entry%' THEN qc_status ",
                               "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Duplicate of ", high_priority," chemical entry') ",
                               "ELSE 'fail:Duplicate of ", high_priority," chemical entry' ",
                               "END ",
