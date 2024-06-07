@@ -257,7 +257,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     # Loop through conversion dictionary and push conversions if specified
     for(i in seq_len(nrow(conv))) {
       if(!report.only) {
-        runquery(conv$food_query[i], toxval.db)
+        runQuery(conv$food_query[i], toxval.db)
         runQuery(conv$water_query[i], toxval.db)
       } else {
         # Record species ppm to mg/kg-day conversion info
