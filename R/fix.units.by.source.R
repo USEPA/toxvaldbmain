@@ -34,7 +34,6 @@
 #-------------------------------------------------------------------------------------
 fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.convert.units=FALSE, report.only=FALSE, report.extra=FALSE) {
   printCurrentFunction(paste(toxval.db,":", source))
-  dsstox.db <- toxval.config()$dsstox.db
 
   # Track affected toxval_id values
   changed_toxval_id = data.frame()
@@ -47,6 +46,12 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
   if(!is.null(subsource)) {
     query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
+
+  # Get list of species_id values per common_name (used for species ppm to mg/kg-day conversion)
+  species_ids = runQuery("SELECT DISTINCT species_id, common_name AS animal FROM species", toxval.db) %>%
+    # Standardize species case
+    dplyr::mutate(animal = toupper(animal)) %>%
+    toxval.load.dedup(., hashing_cols=c("animal"), delim=", ")
 
   for(source in slist) {
     message("Working on source ", source, " ", match(c(source), slist), " of ", length(slist))
@@ -208,31 +213,62 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
 
     # Do the conversion from ppm to mg/kg-day on a species-wise basis for oral exposures
     cat(">>> Do the conversion from ppm to mg/kg-day on a species-wise basis\n")
-    conv = openxlsx::read.xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx"))
-    for (i in seq_len(nrow(conv))){
-      species <- conv[i,1]
-      factor <- conv[i,2]
-      sid.list <- runQuery(paste0("select species_id from species where common_name ='",species,"'"),toxval.db)[,1]
-      for(sid in sid.list) {
-        cat(species, sid,":",length(sid.list),"\n")
 
-        # Update toxval with conversion
-        if(!report.only) {
-          query = paste0("update toxval
-                         set toxval_numeric = toxval_numeric_original*",factor,", toxval_units = 'mg/kg-day'
-                         where exposure_route='oral'
-                         and toxval_units_original='ppm'
-                         and species_id = ",sid," and source = '",source,"'",query_addition)
-          runQuery(query, toxval.db)
-        } else {
-          # Record ppm to mg/kg-day conversion info
-          changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval ",
-                                            "where exposure_route='oral' and toxval_units_original='ppm' ",
-                                            "and species_id = ",sid," and source = '",source,"'",query_addition),
-                                     toxval.db) %>%
-            dplyr::mutate(change_made = paste0("ppm to mg/kg-day by species: ", species, " species_id: ", sid)) %>%
-            dplyr::bind_rows(changed_toxval_id, .)
-        }
+    # Get conversion dictionary with mapped species_id values
+    conv = readxl::read_xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx")) %>%
+      # Standardize species case
+      dplyr::mutate(
+        animal_original = animal,
+        animal = dplyr::case_when(
+          animal == "Cow" ~ "COW FAMILY",
+          TRUE ~ animal
+        ) %>% toupper()
+      ) %>%
+      dplyr::left_join(species_ids, by=c("animal")) %>%
+      # Add query fields to dictionary
+      dplyr::mutate(
+        food_query = stringr::str_c(
+          "UPDATE toxval ",
+          "SET toxval_numeric=toxval_numeric_original*", food_conversion, ", toxval_units='mg/kg-day' ",
+          "WHERE source='", source, "' ",
+          "AND study_type='", study_type, "' ",
+          "AND species_id IN (", species_id, ") ",
+          "AND exposure_method IN ('feed', 'food', 'diet')",
+          !!query_addition
+        ),
+        water_query = stringr::str_c(
+          "UPDATE toxval ",
+          "SET toxval_numeric=toxval_numeric_original*", water_conversion, ", toxval_units='mg/kg-day' ",
+          "WHERE source='", source, "' ",
+          "AND study_type='", study_type, "' ",
+          "AND species_id IN (", species_id, ") ",
+          "AND exposure_method IN ('drinking_water', 'water')",
+          !!query_addition
+        ),
+        changed_query = stringr::str_c(
+          "SELECT DISTINCT toxval_id FROM toxval ",
+          "WHERE source='", source, "' ",
+          "AND study_type='", study_type, "' ",
+          "AND species_id IN (", species_id, ") ",
+          "AND exposure_method IN ('drinking_water', 'water', 'feed', 'food', 'diet')",
+          !!query_addition
+        )
+      )
+
+    # Loop through conversion dictionary and push conversions if specified
+    for(i in seq_len(nrow(conv))) {
+      if(!report.only) {
+        runQuery(conv$food_query[i], toxval.db)
+        runQuery(conv$water_query[i], toxval.db)
+      } else {
+        # Record species ppm to mg/kg-day conversion info
+        changed_toxval_id = runQuery(conv$changed_query[i], toxval.db) %>%
+          dplyr::mutate(
+            change_made = paste0("ppm to mg/kg-day by species: ", conv$animal_original[i],
+                                 " species_id: (", conv$species_id[i], ")")
+          ) %>%
+          dplyr::bind_rows(changed_toxval_id, .) %>%
+          dplyr::distinct()
       }
     }
   }
