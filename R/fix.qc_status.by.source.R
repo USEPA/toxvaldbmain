@@ -1,17 +1,17 @@
 #-------------------------------------------------------------------------------------
 #' Fix the qa_status flag
 #' @param toxval.db The version of toxval in which the data is altered.
+#' @param sourcedb The source database name
 #' @param source The source to be fixed
 #' @param subsource The subsource to be fixed (NULL default)
 #' @param reset If TRUE, reset all values to 'pass' before setting
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.qc_status.by.source <- function(toxval.db,source=NULL, subsource=NULL, reset=T){
-  printCurrentFunction(paste(toxval.db,":", source,subsource))
+fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource=NULL, reset=FALSE){
+  printCurrentFunction(paste(toxval.db,":", source, subsource))
   slist = source
   if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  cat("  set all to 'not classified'\n")
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -34,18 +34,81 @@ fix.qc_status.by.source <- function(toxval.db,source=NULL, subsource=NULL, reset
 
   for(source in slist) {
     cat(source,"\n")
-    if(reset) runQuery(paste0("update toxval set qc_status='pass' where source like '",source,"'",query_addition) ,toxval.db)
+    if(reset) {
+      src_tbl = runQuery(paste0("SELECT distinct source_table FROM toxval WHERE source = '",
+                                source, "'", query_addition), toxval.db) %>%
+        dplyr::pull(source_table)
 
-    runQuery(paste0("update toxval set qc_status='fail:toxval_numeric<0' where toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
-    runQuery(paste0("update toxval set qc_status='fail:toxval_numeric is null' where toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
-    runQuery(paste0("update toxval set qc_status='fail:toxval_type not specified' where toxval_type='-' and source = '",source,"'",query_addition) ,toxval.db)
-    runQuery(paste0("update toxval set qc_status='fail:toxval_units not specified' where toxval_units='-' and source = '",source,"'",query_addition),toxval.db)
-    #runQuery(paste0("update toxval set qc_status='fail:risk_assessment_class not specified' where risk_assessment_class='other' and source = '",source,"'"),toxval.db)
-    runQuery(paste0("update toxval set qc_status='fail:dtxsid not specified' where dtxsid='NODTXSID' and source = '",source,"'",query_addition),toxval.db)
-    #if(!is.element(source,"WHO IPCS")) runQuery(paste0("update toxval set qc_status='fail:species not specified' where species_id=1000000 and source = '",source,"'") ,toxval.db)
-    runQuery(paste0("update toxval set qc_status='fail:human_eco not specified' where human_eco in ('-','not specified') and source = '",source,"'",query_addition),toxval.db)
-    runQuery(paste0("update toxval set qc_status='fail:risk_assessment_class not specified' where risk_assessment_class in ('-','not specified') and source = '",source,"'",query_addition),toxval.db)
+      if(any(src_tbl %in% c("direct load", "direct_load"))) {
+        runQuery(paste0("update toxval set qc_status='pass' where source like '",source,"'",query_addition) ,toxval.db)
+        next
+      }
 
+      for(s_tbl in src_tbl){
+        cat("...resetting ", source, s_tbl, "\n")
+        # Reset to status from source table
+        paste0("UPDATE ", toxval.db, ".toxval a ",
+               "INNER JOIN ", source.db, ".", s_tbl, " b ",
+               "ON (a.source_hash = b.source_hash) ",
+               "SET a.qc_status = b.qc_status ",
+               "WHERE a.source = '",
+               source, "'", query_addition) %>%
+          runQuery(., toxval.db)
+      }
+    }
+
+    # Run through different Failure cases
+    runQuery(paste0("UPDATE toxval SET qc_status = CASE ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_numeric<0') ",
+                    "ELSE 'fail:toxval_numeric<0'",
+                    "END ",
+                    "WHERE toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_numeric is null') ",
+                    "ELSE 'fail:toxval_numeric is null'",
+                    "END ",
+                    "WHERE toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_type not specified') ",
+                    "ELSE 'fail:toxval_type not specified'",
+                    "END ",
+                    "WHERE toxval_type = '-' and source = '",source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_units not specified') ",
+                    "ELSE 'fail:toxval_units not specified'",
+                    "END ",
+                    "WHERE toxval_units = '-' and source = '",source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; dtxsid not specified') ",
+                    "ELSE 'fail:dtxsid not specified'",
+                    "END ",
+                    "WHERE dtxsid = 'NODTXSID' and source = '",source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; human_eco not specified') ",
+                    "ELSE 'fail:human_eco not specified'",
+                    "END ",
+                    "WHERE human_eco in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; risk_assessment_class not specified') ",
+                    "ELSE 'fail:risk_assessment_class not specified'",
+                    "END ",
+                    "WHERE risk_assessment_class in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
+
+    # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric<0' where toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
+    # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric is null' where toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
+    # runQuery(paste0("update toxval set qc_status='fail:toxval_type not specified' where toxval_type='-' and source = '",source,"'",query_addition) ,toxval.db)
+    # runQuery(paste0("update toxval set qc_status='fail:toxval_units not specified' where toxval_units='-' and source = '",source,"'",query_addition),toxval.db)
+    # runQuery(paste0("update toxval set qc_status='fail:dtxsid not specified' where dtxsid='NODTXSID' and source = '",source,"'",query_addition),toxval.db)
+    # runQuery(paste0("update toxval set qc_status='fail:human_eco not specified' where human_eco in ('-','not specified') and source = '",source,"'",query_addition),toxval.db)
+    # runQuery(paste0("update toxval set qc_status='fail:risk_assessment_class not specified' where risk_assessment_class in ('-','not specified') and source = '",source,"'",query_addition),toxval.db)
+
+    ### Handle dictionary source_hash values to fail with reason note
     # Get qc_status for all current source_hashes
     curr_hash_status = runQuery(paste0("SELECT DISTINCT source_hash, qc_status FROM toxval WHERE source='", source, "'",query_addition),
                                 toxval.db)
@@ -57,12 +120,12 @@ fix.qc_status.by.source <- function(toxval.db,source=NULL, subsource=NULL, reset
         # Add new qc_status value
         qc_status = dplyr::case_when(
           grepl("\\bfail\\b", qc_status, ignore.case=TRUE) ~ stringr::str_c(qc_status, "; ", failure_reason),
-          TRUE ~ stringr::str_c("fail: ", failure_reason)
+          TRUE ~ stringr::str_c("fail:", failure_reason)
         ),
 
         # Use qc_status value to generate query
-        status_query = stringr::str_c("UPDATE toxval SET qc_status='", qc_status,
-                                      "' WHERE source_hash='", source_hash, "'")
+        status_query = stringr::str_c('UPDATE toxval SET qc_status="', qc_status,
+                                      '" WHERE source_hash="', source_hash, '"')
       ) %>%
       tidyr::drop_na(status_query) %>%
       # Pull list of new queries
