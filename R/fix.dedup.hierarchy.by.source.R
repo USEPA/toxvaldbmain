@@ -101,7 +101,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
     if(ids_to_fail != ""){
       if(!report.only){
         # Set qc_status="fail" for low priority source in appropriate entries
-        update_query = paste0("UPDATE toxval SET qc_status='fail' WHERE ",
+        update_query = paste0("UPDATE toxval SET qc_status='fail:Duplicate of ", high_priority," chemical entry' WHERE ",
                               "source='", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
         runQuery(update_query, toxval.db)
       } else {
