@@ -51,7 +51,7 @@ clean.toxval.by.source <- function(toxval.db,source) {
         message("Truncating ", tbl_n, " table at: ", Sys.time())
         # Special case of handling foreign key checks
         if(tbl_n == "toxval"){
-          con <- dbConnect(drv=RMySQL::MySQL(),user=DB.USER,password=DB.PASSWORD,host=DB.SERVER,dbname=db)
+          con <- RPostgreSQL::dbConnect(drv=RMySQL::MySQL(),user=DB.USER,password=DB.PASSWORD,host=DB.SERVER,dbname=db)
           dbSendStatement(con, "SET FOREIGN_KEY_CHECKS = 0;")
           dbSendStatement(con, paste0("TRUNCATE TABLE ", tbl_n))
           dbDisconnectcon(con)

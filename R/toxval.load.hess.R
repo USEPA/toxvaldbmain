@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
 #
-#' Load the HESS data from toxval_source to toxval
+#' Load HESS data to ToxVal
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
@@ -42,7 +42,6 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
@@ -53,7 +52,13 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Source-specific transformations handled in import script
+  # Select higher value in ranged study_duration
+  res = res %>%
+    dplyr::mutate(
+      study_duration_value = study_duration_value %>%
+        gsub(".*\\-", "", .) %>%
+        as.numeric()
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -67,8 +72,8 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
 
-  # Remove columns that are not used in toxval
-  res = res %>% dplyr::select(!tidyselect::any_of(nlist))
+  # Dynamically remove unused columns (remove relationship_id for now)
+  res = res %>% dplyr::select(-tidyselect::any_of(nlist))
 
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
@@ -84,17 +89,16 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -135,11 +139,10 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  # res$source_url = "https://www.nite.go.jp/en/chem/qsar/hess-e.html"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()

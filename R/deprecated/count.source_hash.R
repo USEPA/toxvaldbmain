@@ -1,9 +1,8 @@
 #-------------------------------------------------------------------------------------
 #' Look for duplicated source_hash
 #' @param toxval.db The version of toxval in which the data is altered.
-#' @export
 #--------------------------------------------------------------------------------------
-count.source_hash = function(toxval.db){
+count.source_hash <- function(toxval.db){
   printCurrentFunction(toxval.db)
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   slist = sort(slist)

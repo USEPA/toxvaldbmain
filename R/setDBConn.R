@@ -1,14 +1,11 @@
-# library(RMySQL)
-# library(DBI)
-#--------------------------------------------------------------------------------------
 #' @description set SQL connection to the database
 #' @param server SQL server on which relevant database lives
 #' @param user SQL username to access database
 #' @param password SQL password corresponding to username
 #' @param api_auth API Key for CCTE API's
 #' @param port Port for the server connection. Default of 3306.
-#' @title FUNCTION_TITLE
-#' @return OUTPUT_DESCRIPTION
+#' @title setDBConn
+#' @return None
 #' @details DETAILS
 #' @examples
 #' \dontrun{
@@ -27,3 +24,14 @@ setDBConn <- function(server="ccte-mysql-res.epa.gov",user=NULL,password=NULL,ap
   DB.PORT <<- port
   API_AUTH <<- api_auth
 }
+
+
+
+
+
+
+
+
+
+
+

@@ -8,13 +8,13 @@ ecotox.select.toxval.numeric <- function(in_data){
   # Track original rows to ensure all remain at end
   orig_n <- nrow(in_data)
   in_data <- in_data %>%
-    dplyr::mutate(tmp_id = 1:n())
+    dplyr::mutate(tmp_id = 1:dplyr::n())
   ### First, select conc1_mean_std (standardized conc1 mean value) without issues
   out_ls$conc1_mean_std <- in_data %>%
     dplyr::rename(toxval_units = conc1_units_std) %>%
     dplyr::mutate(conc1_mean_std = gsub("\\*", "", conc1_mean_std)) %>%
     dplyr::mutate(toxval_numeric = suppressWarnings(as.numeric(conc1_mean_std)),
-                  toxval_numeric_qualifier = conc1_mean_op) %>%
+                  toxval_numeric_qualifier = as.character(conc1_mean_op)) %>%
     dplyr::filter(!is.na(toxval_numeric))
   # Filter out records
   in_data <- in_data %>%
@@ -25,7 +25,7 @@ ecotox.select.toxval.numeric <- function(in_data){
     dplyr::rename(toxval_units = conc1_units_author) %>%
     dplyr::mutate(conc1_mean = gsub("\\/NR|NR|\\/|\\*|>|<|>=|<=|=|~|ca|\\+|~-|,", "", conc1_mean)) %>%
     dplyr::mutate(toxval_numeric = suppressWarnings(as.numeric(conc1_mean)),
-                  toxval_numeric_qualifier = conc1_mean_op) %>%
+                  toxval_numeric_qualifier = as.character(conc1_mean_op)) %>%
     dplyr::filter(!is.na(toxval_numeric))
   # Filter out records
   in_data <- in_data %>%
@@ -35,7 +35,7 @@ ecotox.select.toxval.numeric <- function(in_data){
   out_ls$conc1_min <- in_data %>%
     dplyr::rename(toxval_units = conc1_units_author) %>%
     dplyr::mutate(toxval_numeric = suppressWarnings(as.numeric(conc1_min)),
-                  toxval_numeric_qualifier = conc1_min_op) %>%
+                  toxval_numeric_qualifier = as.character(conc1_min_op)) %>%
     dplyr::filter(!is.na(toxval_numeric))
   # Filter out records
   in_data <- in_data %>%
@@ -46,7 +46,7 @@ ecotox.select.toxval.numeric <- function(in_data){
     dplyr::rename(toxval_units = conc1_units_author) %>%
     dplyr::mutate(conc1_min = gsub("\\*|\\/", "", conc1_min)) %>%
     dplyr::mutate(toxval_numeric = suppressWarnings(as.numeric(conc1_min)),
-                  toxval_numeric_qualifier = conc1_min_op) %>%
+                  toxval_numeric_qualifier = as.character(conc1_min_op)) %>%
     dplyr::filter(!is.na(toxval_numeric))
   # Filter out records
   in_data <- in_data %>%
@@ -55,7 +55,7 @@ ecotox.select.toxval.numeric <- function(in_data){
   ### Lump remaining as NA
   out_ls$unhandled_na <- in_data %>%
     dplyr::mutate(toxval_numeric = NA,
-                  toxval_numeric_qualifier = NA,
+                  toxval_numeric_qualifier = as.character(NA),
                   toxval_units = NA)
 
   # Check remaining fixes

@@ -55,7 +55,7 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   cremove = c('route', 'duration', 'mrl', 'total_factors', 'endpoint', 'status',
               'cover_date', 'cas_number', 'doc_status', 'doc_cover_date',
               'study_duration_qualifier', 'study_duration_class', 'age_original',
-              'origin_document_date', 'curator_notes')
+              'origin_document_date', 'curator_notes', 'target_species')
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -79,7 +79,7 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -87,8 +87,8 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -129,8 +129,8 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$subsource_url = "-"

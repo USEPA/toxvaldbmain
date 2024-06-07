@@ -83,7 +83,7 @@ toxval.load.cosmos <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -91,8 +91,8 @@ toxval.load.cosmos <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -133,8 +133,8 @@ toxval.load.cosmos <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$subsource_url = "-"

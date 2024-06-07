@@ -10,17 +10,17 @@
 #' @param date_string The date of the dictionary versions
 #' @export
 #--------------------------------------------------------------------------------------
-species.mapper <- function(toxval.db,date_string="2023-02-14") {
+species.mapper <- function(toxval.db,date_string="2023-05-18") {
   printCurrentFunction()
   file =paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
   print(file)
-  dict = read.xlsx(file)
+  dict = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/ecotox_species_synonyms_",date_string,".xlsx")
   print(file)
-  synonyms = read.xlsx(file)
+  synonyms = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/toxvaldb_extra_species_",date_string,".xlsx")
   print(file)
-  extra = read.xlsx(file)
+  extra = openxlsx::read.xlsx(file)
 
   dict$latin_name = tolower(dict$latin_name)
   dict$common_name = tolower(dict$common_name)
@@ -44,7 +44,7 @@ species.mapper <- function(toxval.db,date_string="2023-02-14") {
     slist = c("other aquatic arthropod ","other aquatic crustacea: ","other aquatic mollusc: ",
               "other aquatic worm: ","other,","other,other algae: ","other: ")
     for(x in slist) {
-      if(contains(tag,x)) tag = str_replace(tag,x,"")
+      if(grepl(x, tag, fixed=TRUE)) tag = stringr::str_replace(tag,x,"")
     }
     sid = -1
     if(is.element(tag,dict$common_name)) {
@@ -100,9 +100,9 @@ species.mapper <- function(toxval.db,date_string="2023-02-14") {
 
   }
   file = paste0(toxval.config()$datapath,"species/all_species.xlsx")
-  write.xlsx(so,file)
+  openxlsx::write.xlsx(so,file)
   so = so[so$species_id<0,]
   cat("Number of missing species:",nrow(so),"\n")
   file = paste0(toxval.config()$datapath,"species/missing_species.xlsx")
-  write.xlsx(so,file)
+  openxlsx::write.xlsx(so,file)
 }

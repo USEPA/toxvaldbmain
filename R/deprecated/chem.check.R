@@ -47,7 +47,6 @@ chem.check <- function(res0,
                            "WHO IPCS",
                            "ATSDR MRLs",
                            "Cal OEHHA",
-                           "Chiu",
                            "COSMOS",
                            "DOD ERED",
                            "DOE Wildlife Benchmarks",
@@ -57,14 +56,14 @@ chem.check <- function(res0,
                            "Pennsylvania DEP ToxValues",
                            "EnviroTox_v2",
                            "HEAST")) {
-      if(contains(n2,";")) {
+      if(grepl(";", n2, fixed=TRUE)) {
         start = gregexpr(";",n2)[[1]][1]
         n3 = str_trim(substr(n2,1,start-1))
         string = paste0(source," [",n2,"] [",n3,"]")
         #cat(string,"\n")
         n2 = n3
       }
-      if(contains(n2," (")) {
+      if(grepl(" (", n2, fixed=TRUE)) {
         start = gregexpr(" \\(",n2)[[1]][1]
         n3 = str_trim(substr(n2,1,start-1))
         string = paste0(source," [",n2,"] [",n3,"]")

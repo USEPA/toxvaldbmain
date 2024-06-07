@@ -42,9 +42,8 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in%
-              toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
-                                              c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -55,7 +54,8 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   cremove = c("table_title")
   res = res[ , !(names(res) %in% cremove)]
   res <- res %>%
-    dplyr::rename(year = year_updated)
+    dplyr::rename(year = year_updated,
+                  source_url = url)
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -81,7 +81,7 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
@@ -90,8 +90,8 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -132,11 +132,10 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()

@@ -22,7 +22,9 @@ source_chemical.ecotox <- function(toxval.db,
   #####################################################################
   cat("Do the chemical checking\n")
   #####################################################################
-  res$chemical_index = paste(res[,casrn.col],res[,name.col])
+  # res$chemical_index = paste(res[,casrn.col],res[,name.col])
+  res = res %>%
+    tidyr::unite(col="chemical_index", dplyr::all_of(c(casrn.col, name.col)), sep=" ", remove=FALSE)
   result = chem.check.v2(res,verbose=verbose,source)
   if(chem.check.halt) if(!result$name.OK || !result$casrn.OK || !result$checksum.OK) browser()
 
@@ -31,14 +33,14 @@ source_chemical.ecotox <- function(toxval.db,
   #####################################################################
   chems = cbind(res$dtxsid,res[,c(casrn.col,name.col)], result$res0[,c(casrn.col,name.col)])
   names(chems) = c("dtxsid","raw_casrn","raw_name","cleaned_casrn","cleaned_name")
-  chems = distinct(chems)
+  chems = dplyr::distinct(chems)
   chems$source = source
 
   prefix = runQuery(paste0("select chemprefix from chemical_source_index where source='",source,"'"),source.db)[1,1]
   ilist = seq(from=1,to=nrow(chems))
   chems$chemical_id = "-"
   for(i in 1:nrow(chems)) {
-    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name")],collapse=""),algo="xxhash64", serialize = FALSE))
+    chems[i,"chemical_id"] = paste0(prefix,"_",digest::digest(paste0(chems[i,c("raw_casrn","raw_name")],collapse=""),algo="xxhash64", serialize = FALSE))
   }
   # check for duplicates
   x = chems$chemical_id

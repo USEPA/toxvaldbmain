@@ -1,12 +1,12 @@
 #--------------------------------------------------------------------------------------
-#
-#' Generic structure for laoding to toxval from toxval_source
+#' Generic structure for loading to toxval from toxval_source
+#'
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = SOURCE_NAME
   source_table = "source_"
   verbose = log
@@ -66,6 +66,14 @@ toxval.load.generic <- function(toxval.db,source.db, log=FALSE, remove_null_dtxs
   nlist = names(res)
   nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
+
+  # Dynamically remove unused columns
+  res = res %>% dplyr::select(-dplyr::any_of(nlist))
+
+  nlist = names(res)
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,cols)]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -80,7 +88,7 @@ toxval.load.generic <- function(toxval.db,source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
@@ -89,8 +97,8 @@ toxval.load.generic <- function(toxval.db,source.db, log=FALSE, remove_null_dtxs
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(dplyr::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -131,8 +139,8 @@ toxval.load.generic <- function(toxval.db,source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "source_url"

@@ -22,7 +22,7 @@ toxval.load.cancer <- function(toxval.db,source.db) {
 
   file = paste0(toxval.config()$datapath,"niosh/niosh_files/NIOSH Carcinogens.xlsx")
   print(file)
-  niosh <- read.xlsx(file)
+  niosh <- openxlsx::read.xlsx(file)
   niosh$exposure_route <- "inhalation"
   niosh$source <- "NIOSH"
   niosh$cancer_call <- "potential occupational carcinogen"
@@ -30,7 +30,7 @@ toxval.load.cancer <- function(toxval.db,source.db) {
 
   file <- paste0(toxval.config()$datapath,"cancer_summary/cancer/IRIS/IRIS cancer calls 2022-10-21.xlsx")
   print(file)
-  iris <- read.xlsx(file)
+  iris <- openxlsx::read.xlsx(file)
   iris$source <- "IRIS"
   iris$exposure_route <- "-"
   iris <- iris[,c("casrn","name","source","exposure_route","cancer_call","url")]
@@ -39,14 +39,14 @@ toxval.load.cancer <- function(toxval.db,source.db) {
 
   file <- paste0(toxval.config()$datapath,"cancer_summary/cancer/NTP/NTP ROC 2021.xlsx")
   print(file)
-  ntp <- read.xlsx(file)
+  ntp <- openxlsx::read.xlsx(file)
   ntp$exposure_route <- "-"
   ntp = ntp[!is.na(ntp$casrn),]
   ntp <- ntp[,c("casrn","name","source","exposure_route","cancer_call","url")]
 
   file <- paste0(toxval.config()$datapath,"cancer_summary/cancer/IARC/IARC cancer 2022-10-21.xlsx")
   print(file)
-  iarc <- read.xlsx(file)
+  iarc <- openxlsx::read.xlsx(file)
   name.list <- c("casrn","name","cancer_call")
   iarc <- iarc[,name.list]
   iarc$exposure_route <- "-"
@@ -58,7 +58,7 @@ toxval.load.cancer <- function(toxval.db,source.db) {
 
   file <- paste0(toxval.config()$datapath,"pprtv_ornl/pprtv_ornl_files/PPRTV_ORNL cancer calls 2018-10-25.xlsx")
   print(file)
-  pprtv_ornl <- read.xlsx(file)
+  pprtv_ornl <- openxlsx::read.xlsx(file)
   name.list <- c("casrn","name","cancer_call")
   pprtv_ornl <- pprtv_ornl[,name.list]
   pprtv_ornl$exposure_route <- "-"
@@ -69,7 +69,7 @@ toxval.load.cancer <- function(toxval.db,source.db) {
 
   file <- paste0(toxval.config()$datapath,"cancer_summary/cancer/HealthCanada/HealthCanada_TRVs_2010_AppendixA v2.xlsx")
   print(file)
-  hc <- read.xlsx(file)
+  hc <- openxlsx::read.xlsx(file)
   hc$source <- "Health Canada"
   hc$url <- "http://publications.gc.ca/collections/collection_2012/sc-hc/H128-1-11-638-eng.pdf"
   hc = hc[!is.na(hc$casrn),]
@@ -77,7 +77,7 @@ toxval.load.cancer <- function(toxval.db,source.db) {
 
   file <- paste0(toxval.config()$datapath,"cancer_summary/cancer/EPA_OPP_CARC/EPA_CARC.xlsx")
   print(file)
-  opp <- read.xlsx(file)
+  opp <- openxlsx::read.xlsx(file)
   name.list <- c("casrn","name","cancer_call")
   opp <- opp[,name.list]
   opp$exposure_route <- "-"
@@ -88,7 +88,7 @@ toxval.load.cancer <- function(toxval.db,source.db) {
 
   file <- paste0(toxval.config()$datapath,"cancer_summary/cancer/CalEPA/calepa_p65_cancer_only 2022-10-21.xlsx")
   print(file)
-  calepa <- read.xlsx(file)
+  calepa <- openxlsx::read.xlsx(file)
   name.list <- c("casrn","name","cancer_call")
   calepa <- calepa[,name.list]
   calepa$exposure_route <- "-"
@@ -101,8 +101,8 @@ toxval.load.cancer <- function(toxval.db,source.db) {
   mat <- mat[!is.na(mat[,"casrn"]),]
   for(i in 1:nrow(mat)) mat[i,"casrn"] <- fix.casrn(mat[i,"casrn"])
   file <- paste0(toxval.config()$datapath,"/cancer_summary/cancer_summary_",Sys.Date(),".xlsx")
-  sty <- createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-  write.xlsx(mat,file,firstRow=T,headerStyle=sty)
+  sty <- openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+  openxlsx::write.xlsx(mat,file,firstRow=T,headerStyle=sty)
 
   mat2 = source_chemical.extra(toxval.db,source.db,mat,"Cancer Summary")
   mat2 = subset(mat2,select=-c(casrn,name,chemical_index))

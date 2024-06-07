@@ -1,13 +1,14 @@
 #--------------------------------------------------------------------------------------
-#' Load PPRTV (NCEA) from toxval source to toxval
+#
+#' Load the HESS data from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source <- "PPRTV (NCEA)"
-  source_table = "source_pprtv_ncea"
+toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "HESS"
+  source_table = "source_hess"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -41,6 +42,7 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
+
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
@@ -51,13 +53,7 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Select higher value in ranged study_duration
-  res = res %>% dplyr::mutate(
-    study_duration_value = study_duration_value %>%
-      # Select higher end of study_duration_value range
-      gsub(".+\\-", "", .) %>%
-      as.numeric()
-  )
+  # Source-specific transformations handled in import script
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -68,14 +64,14 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","uf_a","uf_d","uf_h","uf_l","uf_s","uf_c"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
 
-  # Dynamically remove unused columns
-  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!tidyselect::any_of(nlist))
 
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","uf_a","uf_d","uf_h","uf_l","uf_s","uf_c"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name"))]
   nlist = nlist[!is.element(nlist,cols)]
 
   if(length(nlist)>0) {
@@ -91,6 +87,7 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_
   res = distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -117,16 +114,6 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_
   #####################################################################
   cat("pull out record source to refs\n")
   #####################################################################
-  colsuf = c("uf_a","uf_d","uf_h","uf_l","uf_s","uf_c")
-  cols = c("toxval_id",colsuf)
-  resuf = res[,cols] %>%
-    # Separate collapsed rows
-    tidyr::separate_rows(
-      uf_a, uf_d, uf_h, uf_s, uf_c,
-      sep = "\\|::\\|"
-    )
-  res = res[ , !(names(res) %in% c(colsuf))]
-
   cols = runQuery("desc record_source",toxval.db)[,1]
   nlist = names(res)
   keep = nlist[is.element(nlist,cols)]
@@ -152,54 +139,15 @@ toxval.load.pprtv.ncea <- function(toxval.db, source.db, log=FALSE, remove_null_
   refs = distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
+  # res$source_url = "https://www.nite.go.jp/en/chem/qsar/hess-e.html"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
   print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
-
-  #####################################################################
-  cat("load uf to the database\n")
-  #####################################################################
-  # Get UF data
-  toxids <- runQuery("select toxval_id, chemical_id from toxval where source = 'PPRTV (NCEA)' and toxval_type like '%Reference%'",toxval.db,T,F)
-  parids <- runQuery("select toxval_id as parent_id, chemical_id from toxval where source = 'PPRTV (NCEA)' and toxval_type not like '%Reference%'",toxval.db,T,F)
-  toxval_uf <- merge(toxids, parids)
-  toxval_uf <- merge(toxval_uf, unique(resuf))
-
-  toxval_uf = toxval_uf %>%
-    # Rename columns
-    dplyr::rename("UCF.interspecies"=uf_a,
-                  "UCF.database.incomplete"=uf_d,
-                  "UCF.intraspecies"=uf_h,
-                  "UCF.LOAEL.vs.NOAEL"=uf_l,
-                  "UCF.subchronic.to.chronic"=uf_s,
-                  "UCF.composite"=uf_c)
-
-  # Push toxval_uf data
-  toxval_uf <- toxval_uf %>%
-    tidyr::pivot_longer(cols=-c(toxval_id, chemical_id, parent_id),
-                        names_to = "uf_type", values_to = "uf") %>%
-    dplyr::select(toxval_id, parent_id, uf_type, uf) %>%
-    # Remove NA or blank entries
-    dplyr::filter(!uf %in% c("-", NA))
-
-  runInsertTable(toxval_uf,"toxval_uf",toxval.db)
-
-  # Push "RFD derived from" relationship data
-  toxval_relationship <- merge(toxids, parids)
-  toxval_relationship <- rbind(
-    data.frame(toxval_id_1 = toxval_relationship$toxval_id,
-               toxval_id_2 = toxval_relationship$parent_id,
-               relationship = "RFD derived from"
-    ),
-    data.frame(toxval_id_1 = toxval_relationship$parent_id,
-               toxval_id_2 = toxval_relationship$toxval_id,
-               relationship = "used to derive RFD"
-    )
-  )
-  runInsertTable(toxval_relationship,"toxval_relationship",toxval.db)
 
   #####################################################################
   cat("do the post processing\n")

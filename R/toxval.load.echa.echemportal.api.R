@@ -15,7 +15,7 @@ toxval.load.echa.echemportal.api <- function(toxval.db,source.db,log=F) {
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -74,7 +74,7 @@ toxval.load.echa.echemportal.api <- function(toxval.db,source.db,log=F) {
   cat("extract minimum of multiple years\n")
   #####################################################################
   res1$year <- sapply(
-    str_extract_all(res1$year, "[0-9]+"),
+    stringr::str_extract_all(res1$year, "[0-9]+"),
     function(x) min(as.integer(x))
   )
   # extract qualifier values
@@ -82,7 +82,7 @@ toxval.load.echa.echemportal.api <- function(toxval.db,source.db,log=F) {
   res1[grep("\\:", res1$toxval_numeric_qualifier),"toxval_numeric_qualifier"] <- gsub("(.*\\:)(.*)","\\2",res1[grep("\\:", res1$toxval_numeric_qualifier),"toxval_numeric_qualifier"])
   res1$toxval_numeric_qualifier <- gsub("^\\s+", "", res1$toxval_numeric_qualifier)
   # extract minimum numeric value
-  res1[grep("\\d+\\s+.*\\s+\\d+", res1$experimental_value), "toxval_numeric"] <- sapply( str_extract_all(res1[grep("\\d+\\s+.*\\s+\\d+", res1$experimental_value), "experimental_value"], "\\d+\\.*\\d*"),function(x) min(as.numeric(x)))
+  res1[grep("\\d+\\s+.*\\s+\\d+", res1$experimental_value), "toxval_numeric"] <- sapply( stringr::str_extract_all(res1[grep("\\d+\\s+.*\\s+\\d+", res1$experimental_value), "experimental_value"], "\\d+\\.*\\d*"),function(x) min(as.numeric(x)))
   res1$toxval_units <- res1$experimental_value
 
   #####################################################################
@@ -173,7 +173,7 @@ toxval.load.echa.echemportal.api <- function(toxval.db,source.db,log=F) {
   cat("fix toxval_type\n")
   #####################################################################
   res1$value_type <- enc2utf8(res1$value_type)
-  res1$toxval_type <- sapply(str_extract_all(res1$value_type, "^[A-Z]+[0-9]*$"), paste, collapse= ' ')
+  res1$toxval_type <- sapply(stringr::str_extract_all(res1$value_type, "^[A-Z]+[0-9]*$"), paste, collapse= ' ')
   type <- res1[which(res1$toxval_type == ""), "value_type"]
   type <- data.frame(unique(type), stringsAsFactors = F)
   names(type) <- "original_tox_type"
@@ -211,7 +211,7 @@ toxval.load.echa.echemportal.api <- function(toxval.db,source.db,log=F) {
   res1$property_name <- enc2utf8(res1$property_name)
   res1$endpoint_type <- enc2utf8(res1$endpoint_type)
   res1$study_type <- res1$endpoint_type
-  res1$study_type <- str_extract_all(res1$study_type, paste(c("chronic","sub-chronic","acute","short-term", "long-term","carcinogenicity","repeated dose",  "developmental","reproductive"), collapse="|")) %>%
+  res1$study_type <- stringr::str_extract_all(res1$study_type, paste(c("chronic","sub-chronic","acute","short-term", "long-term","carcinogenicity","repeated dose",  "developmental","reproductive"), collapse="|")) %>%
     sapply(., paste, collapse = ", ")
   #res1[which(res1$study_type == ""), "study_type"] <- res1[which(res1$study_type == ""),"property_name"]
   res1[grep("acute",res1$study_type, ignore.case = T),"study_type"] <- "acute"
@@ -257,7 +257,7 @@ toxval.load.echa.echemportal.api <- function(toxval.db,source.db,log=F) {
   res1$critical_effect <- res1$basis
   # # combine the column name to the values
   res1[which(res1$histopathological_findings_neoplastic != ""),names(res1)[ names(res1)%in% "histopathological_findings_neoplastic"]] <- paste(names(res1)[ names(res1)%in% "histopathological_findings_neoplastic"], res1[which(res1$histopathological_findings_neoplastic != ""),names(res1)[ names(res1)%in% "histopathological_findings_neoplastic"]], sep = ';')
-  res1 <- res1 %>% unite("critical_effect", names(res1)[ names(res1)%in% c("histopathological_findings_neoplastic","critical_effect")],sep = "|", na.rm = TRUE, remove = FALSE)
+  res1 <- res1 %>% tidyr::unite("critical_effect", names(res1)[ names(res1)%in% c("histopathological_findings_neoplastic","critical_effect")],sep = "|", na.rm = TRUE, remove = FALSE)
   res1$critical_effect <- gsub("^\\||\\|$","", res1$critical_effect)
   res1$critical_effect <- gsub("^\\|$","-", res1$critical_effect)
   res1$critical_effect[res1$critical_effect == ""] <- "-"
@@ -401,7 +401,7 @@ toxval.load.echa.echemportal.api <- function(toxval.db,source.db,log=F) {
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)

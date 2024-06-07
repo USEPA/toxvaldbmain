@@ -51,7 +51,26 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Source-specific transformations handled in import script
+  res = res %>%
+    dplyr::mutate(
+      # Set NA study_duration for entries with multiple GD/PND/LD/PNW units
+      study_duration_value = dplyr::case_when(
+        grepl("[A-Za-z]", study_duration_value) ~ as.character(NA),
+        TRUE ~ study_duration_value
+      ),
+      # Set NA for units without values
+      study_duration_units = dplyr::case_when(
+        is.na(study_duration_value) ~ as.character(NA),
+        TRUE ~ study_duration_units
+      ),
+
+      # Select higher value in ranged study_duration
+      study_duration_value = study_duration_value %>%
+        gsub(".+\\-", "", .) %>%
+        tidyr::replace_na("-"),
+      study_duration_units = study_duration_units %>%
+        tidyr::replace_na("-")
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -82,7 +101,7 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -90,8 +109,8 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -122,7 +141,7 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
     # Add linkages between every entry in group
     # Reference: https://stackoverflow.com/questions/67515989/report-all-possible-combinations-of-a-string-separated-vector
     dplyr::reframe(toxval_id = if(n() > 1)
-      combn(toxval_id, 2, paste0, collapse = ', ') else toxval_id) %>%
+      utils::combn(toxval_id, 2, paste0, collapse = ', ') else toxval_id) %>%
     tidyr::separate(col="toxval_id", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
 
     # Prepare tibble for ToxVal
@@ -161,11 +180,10 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "-"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   runInsertTable(res, "toxval", toxval.db, verbose)

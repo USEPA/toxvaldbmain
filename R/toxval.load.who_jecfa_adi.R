@@ -55,7 +55,7 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
               "meeting", "flavis_number", "mrl_code", "mrl_comment", "fema_number", "specs_code", "addendum_url", "chemical_url", "coe_number",
               "residues", "chemical_names", "ins", "intake", "report", "report_url", "addendum", "webpage_name", "evaluation_year",
               "specification_url", "ins_matches", "functional_class", "allergenicity", "residues_url", "treatment_level", "tolerable_intake", "comments",
-              "toxval_units_comments", "study_duration_qualifier", "specification")
+              "toxval_units_comments", "study_duration_qualifier", "specification", "source_version_date")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -67,7 +67,7 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","range_relationship_id","relationship"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -79,17 +79,9 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-
-  # Select minimum, non-zero toxval_numeric from range values
-  res = res %>%
-    dplyr::mutate(toxval_numeric = toxval_numeric %>%
-                    # Remove zero range
-                    gsub("0-", "", .) %>%
-                    # Select minimum from ranges
-                    sub('-.*', '', .))
 
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -97,8 +89,8 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -114,6 +106,30 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
+
+  #####################################################################
+  cat("Set the toxval_relationship for separated toxval_numeric range records")
+  #####################################################################
+  relationship_res = res %>%
+    dplyr::mutate(range_relationship_id = as.character(range_relationship_id)) %>%
+    # Handle collapsed rows
+    tidyr::separate_rows(range_relationship_id, sep=" \\|::\\| ") %>%
+    dplyr::mutate(relationship = gsub(" \\|.+", "", relationship)) %>%
+    dplyr::filter(grepl("Range", relationship)) %>%
+    dplyr::select(toxval_id, range_relationship_id, relationship) %>%
+    tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=relationship, values_from = toxval_id) %>%
+    dplyr::rename(toxval_id_1 = `Lower Range`,
+                  toxval_id_2 = `Upper Range`) %>%
+    dplyr::mutate(relationship = "toxval_numeric range") %>%
+    dplyr::select(-range_relationship_id) %>%
+    dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
+  # Insert range relationships into toxval_relationship table
+  if(nrow(relationship_res)){
+    runInsertTable(mat=relationship_res, table='toxval_relationship', db=toxval.db)
+  }
+  # Remove range_relationship_id
+  res <- res %>%
+    dplyr::select(-tidyselect::any_of(c("range_relationship_id", "relationship")))
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -140,15 +156,12 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://apps.who.int/food-additives-contaminants-jecfa-database/"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)

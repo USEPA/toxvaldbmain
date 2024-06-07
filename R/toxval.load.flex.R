@@ -15,7 +15,7 @@ toxval.load.flex <- function(toxval.db,verbose=F,only.new=F) {
   source.list <- runQuery("select distinct source from toxval",toxval.db)[,1]
   for(i in file.list){
     #Read it in
-    read.xlsx(paste0(target,i)) -> res
+    openxlsx::read.xlsx(paste0(target,i)) -> res
     res <- unique(res)
     if(verbose){cat(i,"\n")}
     carefulcheck <- nrow(res)
