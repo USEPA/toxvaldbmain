@@ -80,7 +80,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
                            toxval.db)
     high_entries = runQuery(paste0("SELECT DISTINCT ", criteria_string,
                                    " FROM toxval WHERE source='", high_priority, "'", query_addition),
-                           toxval.db)
+                            toxval.db)
 
     # Identify entries present in both sets of data
     intersection = dplyr::inner_join(low_entries %>%
@@ -101,8 +101,14 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
     if(ids_to_fail != ""){
       if(!report.only){
         # Set qc_status="fail" for low priority source in appropriate entries
-        update_query = paste0("UPDATE toxval SET qc_status='fail:Duplicate of ", high_priority," chemical entry' WHERE ",
-                              "source='", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
+        # CONCAT reason if already has a fail status
+        update_query = paste0("UPDATE toxval SET qc_status = CASE ",
+                              "WHEN qc_status like '%Duplicate of ", high_priority," chemical entry%' THEN qc_status ",
+                              "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Duplicate of ", high_priority," chemical entry') ",
+                              "ELSE 'fail:Duplicate of ", high_priority," chemical entry' ",
+                              "END ",
+                              "WHERE source = '", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
+
         runQuery(update_query, toxval.db)
       } else {
         report.out = report.out %>%
