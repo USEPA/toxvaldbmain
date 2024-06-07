@@ -32,6 +32,15 @@ set_experimental_record_flag_by_source <- function(toxval.db, source=NULL){
   if("Copper Manufacturers" %in% slist){
     res$experimental_record[res$source == "Copper Manufacturers"] <- "Yes"
   }
+  if("ECOTOX" %in% slist){
+    res$experimental_record[res$source == "ECOTOX"] <- "Yes"
+  }
+  if("ECHA IUCLID" %in% slist){
+    res$experimental_record[res$source == "ECHA IUCLID"] <- "Yes"
+  }
+  if("ToxRefDB" %in% slist){
+    res$experimental_record[res$source == "ToxRefDB"] <- "Yes"
+  }
 
   if(nrow(res)){
     # Query to inner join and update toxval with experimental_record tag (temp table added/dropped)
