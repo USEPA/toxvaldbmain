@@ -30,7 +30,7 @@ export.missing.dictionary.entries <- function(toxval.db,source=NULL,subsource=NU
       field0 = paste0(field,"_original")
       tlist = runQuery(paste0("select term_original from toxval_fix where field='",field,"'"),toxval.db)[,1]
       res0 = runQuery(paste0("select distinct source,",field0," as term_original from toxval where source='",source,
-                             "' AND qc_status !='fail'",query_addition),toxval.db)
+                             "' AND qc_status NOT LIKE '%fail%'",query_addition),toxval.db)
       n0 = nrow(res0)
       res0 = res0[!res0$term_original %in% tlist,]
       n1 = nrow(res0)

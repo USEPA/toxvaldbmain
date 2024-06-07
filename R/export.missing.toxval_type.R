@@ -9,7 +9,7 @@
 export.missing.toxval_type <- function(toxval.db, report.only=FALSE) {
   printCurrentFunction(toxval.db)
   # Get all toxval_type values from toxval
-  res = runQuery("select source,toxval_type from toxval WHERE qc_status !='fail'",toxval.db)
+  res = runQuery("select source,toxval_type from toxval WHERE qc_status NOT LIKE '%fail%'",toxval.db)
   res = unique(res)
 
   # Compare toxval_type values in toxval to toxval_type values currently handled in dictionary

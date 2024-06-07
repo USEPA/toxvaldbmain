@@ -43,7 +43,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
   if(!is.null(source)) slist = source
 
   # Handle addition of subsource for queries
-  query_addition = " and qc_status !='fail'"
+  query_addition = " and qc_status NOT LIKE '%fail%'"
   if(!is.null(subsource)) {
     query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
