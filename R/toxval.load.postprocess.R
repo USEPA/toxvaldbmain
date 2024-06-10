@@ -171,6 +171,9 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   set.supersource.export.names(toxval.db, source)
 
+  cat("set experimental_record tag\n")
+  set.experimental_record.by.source(toxval.db, source)
+
   #####################################################################
   cat("export by source\n")
   #####################################################################
