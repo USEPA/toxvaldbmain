@@ -159,7 +159,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix QC status by source\n")
   #####################################################################
-  fix.qc_status.by.source(toxval.db, source, subsource)
+  fix.qc_status.by.source(toxval.db, source.db, source, subsource)
 
   #####################################################################
   cat("export report to check toxval_type, exposure_route, units\n")

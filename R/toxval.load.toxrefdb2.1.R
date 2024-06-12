@@ -151,7 +151,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
 
   # Map back chemical information to all records
   res <- res %>%
-    left_join(chem_map %>%
+    dplyr::left_join(chem_map %>%
                 dplyr::select(-chemical_index, -dtxsid),
               by = c("name", "casrn"))
 
