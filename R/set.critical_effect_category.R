@@ -34,13 +34,13 @@ set.critical_effect_category <- function(toxval.db){
                       by = c("term", "study_type"))
 
   # Checks for records in terms table that aren't mapped to by categorizations table
-  non_mapped_terms <- runQuery("SELECT LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms", toxval.db) %>%
+  non_mapped_terms <- runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms", toxval.db) %>%
                        dplyr::anti_join(combined_df %>% dplyr::filter(!is.na(critical_effect_category)),
                                         by = c("term", "study_type"))
 
   # Export the missing files
   if(nrow(non_mapped_categorizations)){
-    file = paste0(toxval.config()$datapath, "dictionary/missing/existing_cateogrizations_no_terms ",Sys.Date(),".xlsx")
+    file = paste0(toxval.config()$datapath, "dictionary/missing/existing_categorizations_no_terms ",Sys.Date(),".xlsx")
     openxlsx::write.xlsx(non_mapped_categorizations,file)
   }
   if(nrow(non_mapped_terms)){
