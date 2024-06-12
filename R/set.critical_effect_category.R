@@ -6,6 +6,7 @@
 #-------------------------------------------------------------------------------------
 set.critical_effect_category <- function(toxval.db){
   message("Pulling critical_effect_category dictionary from critical_effect_categorizations table...")
+  # Gets the categorizations that have two non null categories of the same value
   query <- paste0("SELECT term, study_type, category, COUNT(*) as category_count ",
                   "FROM critical_effect_categorizations ",
                   "WHERE category IS NOT NULL ",
@@ -14,25 +15,30 @@ set.critical_effect_category <- function(toxval.db){
 
   pairs_set <- runQuery(query, toxval.db)
 
+  # Gets the categorizations that only have one row due to the 'oma_rule' (all of these are cancer)
   query <- paste0("SELECT term, study_type, category ",
                   "FROM critical_effect_categorizations ",
                   "WHERE lanid = 'oma_rule'")
 
   oma_pairs <- runQuery(query, toxval.db)
 
+  # Combine the oma data with the larger set
   combined_df <- pairs_set %>%
     dplyr::select(-category_count) %>%
     dplyr::bind_rows(oma_pairs) %>%
     dplyr::rename(critical_effect_category = category)
 
+  # Checks for records in categorizations table that don't have a mapping to terms table
   non_mapped_categorizations <- combined_df %>%
     dplyr::anti_join(runQuery("SELECT term, study_type FROM critical_effect_terms", toxval.db),
                       by = c("term", "study_type"))
 
+  # Checks for records in terms table that aren't mapped to by categorizations table
   non_mapped_terms <- runQuery("SELECT term, study_type FROM critical_effect_terms", toxval.db) %>%
                        dplyr::anti_join(combined_df %>% dplyr::filter(!is.na(critical_effect_category)),
                                         by = c("term", "study_type"))
 
+  # Export the missing files
   if(nrow(non_mapped_categorizations)){
     file = paste0(toxval.config()$datapath, "dictionary/missing/existing_cateogrizations_no_terms ",Sys.Date(),".xlsx")
     openxlsx::write.xlsx(non_mapped_categorizations,file)
@@ -42,9 +48,11 @@ set.critical_effect_category <- function(toxval.db){
     openxlsx::write.xlsx(non_mapped_terms,file)
   }
 
+  # Filter out cancer values
   filtered_df <- combined_df %>%
     dplyr::filter(critical_effect_category != 'cancer')
 
+  # Prepare update df
   out = runQuery("SELECT * FROM critical_effect_terms",
                  toxval.db) %>%
     dplyr::select(-critical_effect_category) %>%
