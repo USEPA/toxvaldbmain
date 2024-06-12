@@ -10,7 +10,8 @@ set.critical_effect_category <- function(toxval.db){
   query <- paste0("SELECT LOWER(term) AS term, LOWER(study_type) AS study_type, category, COUNT(*) as category_count ",
                   "FROM critical_effect_categorizations ",
                   "WHERE category IS NOT NULL ",
-                  "GROUP BY term, study_type, category ",
+                #  "AND (term, study_type) NOT IN (SELECT LOWER(term), LOWER(study_type) FROM critical_effect_categorizations WHERE lanid = 'resolution') ",
+                  "GROUP BY LOWER(term), LOWER(study_type), category ",
                   "HAVING category_count > 1")
 
   pairs_set <- runQuery(query, toxval.db)
@@ -22,11 +23,26 @@ set.critical_effect_category <- function(toxval.db){
 
   oma_pairs <- runQuery(query, toxval.db)
 
+  query <- paste0("SELECT LOWER(term) as term, LOWER(study_type) as study_type, category ",
+                  "FROM critical_effect_categorizations ",
+                  "WHERE lanid = 'resolution' AND term != '-' ")
+
+  resolution_pairs <- runQuery(query, toxval.db)
+
+
   # Combine the oma data with the larger set
   combined_df <- pairs_set %>%
     dplyr::select(-category_count) %>%
     dplyr::bind_rows(oma_pairs) %>%
-    dplyr::rename(critical_effect_category = category)
+    dplyr::distinct()
+
+  combined_df <- combined_df %>%
+    dplyr::anti_join(resolution_pairs, by = c("term", "study_type"))
+
+  combined_df <- combined_df %>%
+    dplyr::bind_rows(resolution_pairs) %>%
+    dplyr::rename(critical_effect_category = category) %>%
+    dplyr::distinct()
 
   # Checks for records in categorizations table that don't have a mapping to terms table
   non_mapped_categorizations <- combined_df %>%
@@ -51,6 +67,11 @@ set.critical_effect_category <- function(toxval.db){
   # Filter out cancer values
   filtered_df <- combined_df %>%
     dplyr::filter(critical_effect_category != 'cancer')
+
+#  duplicates <- filtered_df %>%
+#    dplyr::group_by(term, study_type) %>%
+#    dplyr::filter(n() > 1) %>%
+#    dplyr::ungroup()
 
   # Prepare update df
   out = runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) AS study_type FROM critical_effect_terms",
