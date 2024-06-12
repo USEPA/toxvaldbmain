@@ -34,5 +34,5 @@ duplicate.hunter <- function(toxval.db,source=NULL,source_table=NULL) {
   }
 
   file = paste0(dir,"duplicate.hunter ",Sys.Date(),".xlsx")
-  write.xlsx(res,file)
+  openxlsx::write.xlsx(res,file)
 }

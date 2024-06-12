@@ -25,7 +25,7 @@ species.qc <- function(toxval.db) {
   res = cbind(rownames(res),res)
   names(res)[1] = "source"
   file = paste0(dir,"source x human_eco.xlsx")
-  write.xlsx(res,file)
+  openxlsx::write.xlsx(res,file)
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   splist = runQuery("select distinct common_name from species where species_id in (select distinct species_id from toxval)",toxval.db)[,1]
@@ -42,7 +42,7 @@ species.qc <- function(toxval.db) {
   res = cbind(rownames(res),res)
   names(res)[1] = "species"
   file = paste0(dir,"source x species.xlsx")
-  write.xlsx(res,file)
+  openxlsx::write.xlsx(res,file)
 }
 
 

@@ -8,7 +8,7 @@
 #--------------------------------------------------------------------------------------
 fill.toxval.defaults <- function(toxval.db,mat){
   defs = runQuery("desc toxval",toxval.db) %>%
-    select(Field, Default)
+    dplyr::select(Field, Default)
   # defs = defs[,c(1,5)]
   # for(i in seq_along(names(mat))){
   #   if (names(mat)[i] %in% defs$Field){
@@ -16,6 +16,7 @@ fill.toxval.defaults <- function(toxval.db,mat){
   #   }
   # }
   for(field_name in names(mat)){
+    cat(field_name, "\n")
     if(field_name %in% defs$Field){
       na_fields_n <- mat %>% dplyr::filter(is.na(!!field_name)) %>% nrow()
       if(na_fields_n){

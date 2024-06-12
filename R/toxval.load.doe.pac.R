@@ -42,7 +42,8 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in% c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -74,15 +75,20 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
-  # Remove unnecessary columns ("columns to be dealt with)
+  # Remove columns that are not used in toxval
   res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
+  # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -105,7 +111,7 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
   res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))

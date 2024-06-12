@@ -51,7 +51,7 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Remove unnecessary cols (keep linkage_id for now)
+  # Remove unnecessary cols (keep species_relationship_id for now)
   cremove = c("source_name_sid", "data_collection", "source_name_cid", "analyte",
               "form", "species_type", "source_field", "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
@@ -65,7 +65,7 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","linkage_id"))]
+  nlist = nlist[!is.element(nlist,c("casrn","name","species_relationship_id"))]
   nlist = nlist[!is.element(nlist,cols)]
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -77,7 +77,7 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
@@ -85,8 +85,8 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -116,10 +116,10 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   # )
   #
   # # Build tibble with linkage data
-  # for (i in unique(res$linkage_id)) {
+  # for (i in unique(res$species_relationship_id)) {
   #   # Filter out entries with different linkage id
-  #   curr_linkage_tibble = dplyr::filter(res, linkage_id == i)
-  #   # curr_linkage_tibble = dplyr::filter(res, linkage_id == 1)
+  #   curr_linkage_tibble = dplyr::filter(res, species_relationship_id == i)
+  #   # curr_linkage_tibble = dplyr::filter(res, species_relationship_id == 1)
   #
   #   # Check for relationships
   #   test_noael = dplyr::filter(curr_linkage_tibble, toxval_subtype == "Test Species NOAEL")
@@ -156,11 +156,19 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
 
   # Faster dplyr/tidyr approach
   N2L = res %>%
-    dplyr::select(toxval_id, linkage_id, toxval_type, toxval_subtype) %>%
+    # Expand collapsed species_relationship_id
+    tidyr::separate_rows(species_relationship_id, sep = ", ") %>%
+    dplyr::mutate(species_relationship_id = species_relationship_id %>%
+                    stringr::str_squish() %>%
+                    as.numeric()) %>%
+    dplyr::select(toxval_id, species_relationship_id, toxval_type, toxval_subtype) %>%
     dplyr::mutate(toxval_subtype = toxval_subtype %>%
                     gsub("NOAEL|LOAEL|Species|Food|Water|Piscivore|,", "", .) %>%
+                    stringr::str_squish(),
+                  toxval_type = toxval_type %>%
+                    gsub("\\(ADJ\\)", "", .) %>%
                     stringr::str_squish()) %>%
-    dplyr::group_by(linkage_id, toxval_subtype) %>%
+    dplyr::group_by(species_relationship_id, toxval_subtype) %>%
     dplyr::mutate(toxval_relationship = paste0(toxval_id, collapse = ", "),
                   relationship = paste(toxval_subtype, "NOAEL", "to", toxval_subtype, "LOAEL", sep = " ") %>%
                     stringr::str_squish()) %>%
@@ -172,11 +180,19 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
     dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
 
   N2NL2L = res %>%
-    dplyr::select(toxval_id, linkage_id, toxval_type, toxval_subtype) %>%
+    # Expand collapsed species_relationship_id
+    tidyr::separate_rows(species_relationship_id, sep = ", ") %>%
+    dplyr::mutate(species_relationship_id = species_relationship_id %>%
+                    stringr::str_squish() %>%
+                    as.numeric()) %>%
+    dplyr::select(toxval_id, species_relationship_id, toxval_type, toxval_subtype) %>%
     dplyr::mutate(toxval_subtype = toxval_subtype %>%
                     gsub("NOAEL|LOAEL|Species|Food|Water|Piscivore|,", "", .) %>%
+                    stringr::str_squish(),
+                  toxval_type = toxval_type %>%
+                    gsub("\\(ADJ\\)", "", .) %>%
                     stringr::str_squish()) %>%
-    dplyr::group_by(linkage_id, toxval_type) %>%
+    dplyr::group_by(species_relationship_id, toxval_type) %>%
     dplyr::mutate(toxval_relationship = paste0(toxval_id, collapse = ", "),
                   relationship = paste("Test", toxval_type, "to", "Endpoint", toxval_type, sep = " ") %>%
                     stringr::str_squish()
@@ -188,7 +204,14 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
     tidyr::separate(col="toxval_relationship", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
     dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.)))
 
-  linkage_tibble2 = dplyr::bind_rows(N2L, N2NL2L)
+  linkage_tibble2 = dplyr::bind_rows(N2L, N2NL2L) %>%
+    # Add species terms to relationship text
+    dplyr::mutate(
+      relationship = relationship %>%
+        gsub("Test", "Test Species", .) %>%
+        gsub("(?:Target )?Endpoint", "Target Species Endpoint", .)
+    )
+
 
   # Prove both methods produce the same results
   # identical(linkage_tibble %>%
@@ -206,8 +229,8 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   # Send linkage data to ToxVal
   runInsertTable(linkage_tibble2, "toxval_relationship", toxval.db)
 
-  # Remove linkage_id column from res
-  res = res %>% dplyr::select(-linkage_id)
+  # Remove species_relationship_id column from res
+  res = res %>% dplyr::select(-species_relationship_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -233,8 +256,8 @@ toxval.load.doe.benchmarks <- function(toxval.db, source.db, log=FALSE, remove_n
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$subsource_url = "-"

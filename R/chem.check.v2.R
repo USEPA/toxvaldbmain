@@ -26,7 +26,7 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
 
     if(is.na(n0)) {
       cat("NA name found...\n")
-      browser()
+      return(n0)
     }
     n1 = n0 %>%
       iconv(.,from="UTF-8",to="ASCII//TRANSLIT")
@@ -37,26 +37,24 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
       stringr::str_squish()
 
     if(in_source %in% c("Alaska DEC",
-                     "California DPH",
-                     "EPA AEGL",
-                     "Mass. Drinking Water Standards",
-                     "OSHA Air contaminants",
-                     "OW Drinking Water Standards",
-                     "Pennsylvania DEP MCLs",
-                     "USGS HBSL",
-                     "WHO IPCS",
-                     "ATSDR MRLs",
-                     "Cal OEHHA",
-                     "Chiu",
-                     "COSMOS",
-                     "DOD ERED",
-                     "DOE Wildlife Benchmarks",
-                     "DOE Protective Action Criteria",
-                     "IRIS",
-                     "EPA OPP",
-                     "Pennsylvania DEP ToxValues",
-                     "EnviroTox_v2",
-                     "HEAST")) {
+                        "EPA AEGL",
+                        "Mass. Drinking Water Standards",
+                        "OSHA Air contaminants",
+                        "OW Drinking Water Standards",
+                        "Pennsylvania DEP MCLs",
+                        "USGS HBSL",
+                        "WHO IPCS",
+                        "ATSDR MRLs",
+                        "Cal OEHHA",
+                        "COSMOS",
+                        "DOD ERED",
+                        "DOE Wildlife Benchmarks",
+                        "DOE Protective Action Criteria",
+                        "IRIS",
+                        "EPA OPP",
+                        "Pennsylvania DEP ToxValues",
+                        "EnviroTox_v2",
+                        "HEAST")) {
       # Only take first name stem before ";"
       if(grepl(";", n2)) {
         n2 = sub(';.*', '', n2)
@@ -148,7 +146,7 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
                   escaped=n1,
                   cleaned=n2,
                   checksum=cs) %>%
-    distinct()
+    dplyr::distinct()
 
   indir = paste0(toxval.config()$datapath,"chemcheck/")
   if(is.null(in_source)) {

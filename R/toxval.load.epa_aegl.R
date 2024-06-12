@@ -62,15 +62,20 @@ toxval.load.epa_aegl <- function(toxval.db,source.db, log=FALSE, remove_null_dtx
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
-  # Remove unnecessary columns ("columns to be dealt with")
+  # Remove columns that are not used in toxval
   res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
+  # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
@@ -91,8 +96,8 @@ toxval.load.epa_aegl <- function(toxval.db,source.db, log=FALSE, remove_null_dtx
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -133,8 +138,8 @@ toxval.load.epa_aegl <- function(toxval.db,source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "https://www.epa.gov/aegl"

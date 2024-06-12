@@ -17,7 +17,7 @@ export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
   if(!is.na(file.name)) {
     file = paste0(dir,file.name,".xlsx")
     print(file)
-    chems = read.xlsx(file)
+    chems = openxlsx::read.xlsx(file)
     dlist = unique(chems$dtxsid)
   }
 
@@ -165,7 +165,7 @@ export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
       temp = mat[,nlist]
       mat$hashkey = NA
       mat$study_group = NA
-      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest(paste0(temp[i,],collapse=""), serialize = FALSE)
+      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest::digest(paste0(temp[i,],collapse=""), serialize = FALSE)
       hlist = unique(mat$hashkey)
       for(i in 1:length(hlist)) {
         sg = paste0(src,"_",i)
@@ -179,7 +179,7 @@ export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
   file <- paste0(dir,"/toxval_all_with_references_",toxval.db,"_",Sys.Date(),".xlsx")
   if(!is.na(file.name))
     file <- paste0(dir,"/toxval_all_with_references_",file.name,"_",toxval.db,"_",Sys.Date(),".xlsx")
-  sty <- createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-  write.xlsx(res,file,firstRow=T,headerStyle=sty)
+  sty <- openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+  openxlsx::write.xlsx(res,file,firstRow=T,headerStyle=sty)
 
 }

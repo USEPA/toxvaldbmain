@@ -14,7 +14,7 @@ toxval.load.osha_air_limits <- function(toxval.db, source.db,log=F){
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -42,7 +42,7 @@ toxval.load.osha_air_limits <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c("","","","")
+  cremove = c("source_version_date","","","")
   res = res[ , !(names(res) %in% cremove)]
 
   #####################################################################
@@ -140,7 +140,7 @@ toxval.load.osha_air_limits <- function(toxval.db, source.db,log=F){
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)

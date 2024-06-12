@@ -15,5 +15,5 @@ fix.trim_spaces <- function(res) {
   # return(res)
 
   res <- res %>%
-    dplyr::mutate(dplyr::across(where(is.character), ~stringr::str_squish(.)))
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~stringr::str_squish(.)))
 }

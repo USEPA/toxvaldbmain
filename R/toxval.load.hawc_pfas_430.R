@@ -3,11 +3,10 @@
 #' @param toxval.db The version of toxval into which the tables are loaded.
 #' @param source.db The version of toxval_source from which the tables are loaded.
 #' @param log If TRUE, send output to a log file
-#' @export
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
-  printCurrentFunction(toxval.db)
-  source <- "HAWC PFAS 430"
+toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "HAWC PFAS 430"
   source_table = "source_hawc_pfas_430"
   verbose = log
   #####################################################################
@@ -15,7 +14,7 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -24,6 +23,7 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
+
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -32,44 +32,45 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  query = paste0("select * from ",source_table)
-  res = runQuery(query,source.db,T,F)
-  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
-  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version","parent_chemical_id"))]
+  # Whether to remove records with NULL DTXSID values
+  if(!remove_null_dtxsid){
+    query = paste0("select * from ",source_table)
+  } else {
+    query = paste0("select * from ",source_table, " ",
+                   # Filter out records without curated chemical information
+                   "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
+  }
+  res = runQuery(query,source.db,TRUE,FALSE)
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(dim(res))
+  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
   #####################################################################
-  cat("Add the code from the original version from Aswani\n")
+  cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  res$casrn <-  gsub("([a-zA-Z]+\\s+[a-zA-Z]*\\:*\\s*)(.*)","\\2",res$casrn)
-  res$exposure_route <- gsub("(^[a-zA-Z]+)(\\s*.*)","\\1", res$route_of_exposure)
-  res$exposure_method <- gsub("(^[a-zA-Z]+\\s*)(.*)","\\2", res$route_of_exposure)
-  res$exposure_method <- gsub("^\\-\\s+","", res$exposure_method)
-  res$study_duration_value <- gsub("(^\\d+)(\\s+.*)","\\1",res$exposure_duration_text)
-  res$study_duration_value <- gsub("(^\\d+)(.*)","\\1",res$study_duration_value)
-  range_vals <- grep("\\-", res$study_duration_value)
-  res[range_vals,"study_duration_value"] <- res[range_vals,"exposure_duration_value_original"]
-  res$study_duration_units <- gsub("(^GD)(\\s+.*)","\\1",res$exposure_duration_text)
-  res$study_duration_units <- gsub("(^\\d+\\s+)(\\w+)(\\s*.*)","\\2",res$study_duration_units)
-  res$study_duration_units <- gsub("(.*)(\\d+\\s+)(\\w+)(\\s*.*)","\\3",res$study_duration_units)
-  res$study_duration_units <- gsub("(\\d+\\s*)(\\w+)(\\s*.*)","\\2",res$study_duration_units)
-  res[is.element(res$study_duration_units,"d"),"study_duration_units"] <- "day"
-  res[is.element(res$study_duration_units,"GD"),"study_duration_units"] <- "day"
-  res[is.element(res$study_duration_units,"wk"),"study_duration_units"] <- "week"
-  res[is.element(res$study_duration_units,"yr"),"study_duration_units"] <- "year"
 
-  res$study_type <- gsub("(^\\w+\\-*\\w*)(\\s*.*)","\\1",res$study_type_original)
-  res$study_duration_value <- as.numeric(res$study_duration_value)
+  res = res %>%
+    dplyr::mutate(
+      # Set NA study_duration for entries with multiple GD/PND/LD/PNW units
+      study_duration_value = dplyr::case_when(
+        grepl("[A-Za-z]", study_duration_value) ~ as.character(NA),
+        TRUE ~ study_duration_value
+      ),
+      # Set NA for units without values
+      study_duration_units = dplyr::case_when(
+        is.na(study_duration_value) ~ as.character(NA),
+        TRUE ~ study_duration_units
+      ),
 
-  cremove=c("target","noel_original","loel_original",
-            "fel_original","endpoint_url_original","bmd",
-            "study_id","authors_short","full_text_url",
-            "study_url_original","experiment_name","chemical_source",
-            "guideline_compliance","dosing_regime_id","route_of_exposure",
-            "exposure_duration_value_original","exposure_duration_text","doses")
-  res = res[ , !(names(res) %in% cremove)]
+      # Select higher value in ranged study_duration
+      study_duration_value = study_duration_value %>%
+        gsub(".+\\-", "", .) %>%
+        tidyr::replace_na("-"),
+      study_duration_units = study_duration_units %>%
+        tidyr::replace_na("-")
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -79,10 +80,22 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  res = res[ , !(names(res) %in% c("data_location","doses_units"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+
+  # Check if any non-toxval column still remaining in nlist
+  nlist = names(res)
+  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -90,46 +103,63 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = unique(res)
-  for(i in 1:nrow(res)) {
-    x = res[i,"toxval_numeric"]
-    if(length(grep(";",x))>0) {
-      y = str_split(x,";")[[1]]
-      z = as.numeric(y)
-      res[i,"toxval_numeric"] = min(z)
-    }
-    else res[i,"toxval_numeric"] = as.numeric(x)
-  }
-  res = unique(res)
-  res = res[!is.na(res$toxval_numeric),]
-  res = res[res$toxval_numeric>0,]
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(dim(res))
+  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
-  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  res = unique(res)
-  res = res[,!is.element(names(res),c("casrn","name"))]
-  print(dim(res))
+  # Remove excess whitespace
+  res = res %>%
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
+  res = res[, !names(res) %in% c("casrn","name")]
+  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
   #####################################################################
   count = runQuery("select count(*) from toxval",toxval.db)[1,1]
-  if(count==0) tid0 = 1
-  else tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  if(count==0) {
+    tid0 = 1
+  } else {
+    tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  }
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
+
+  #####################################################################
+  cat("Set the toxval_relationship for separated dose group unit conversion records\n")
+  #####################################################################
+
+  # Build tibble containing relationship linkages (potential for many entries in single group)
+  relationship_tibble = res %>%
+    # Get relevant data and group by relationship_id
+    dplyr::filter(relationship_id != "-") %>%
+    dplyr::select(toxval_id, relationship_id) %>%
+    dplyr::group_by(relationship_id) %>%
+
+    # Add linkages between every entry in group
+    # Reference: https://stackoverflow.com/questions/67515989/report-all-possible-combinations-of-a-string-separated-vector
+    dplyr::reframe(toxval_id = if(n() > 1)
+      utils::combn(toxval_id, 2, paste0, collapse = ', ') else toxval_id) %>%
+    tidyr::separate(col="toxval_id", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
+
+    # Prepare tibble for ToxVal
+    dplyr::mutate(relationship = "dose group unit conversion") %>%
+    dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.))) %>%
+    dplyr::select(-relationship_id)
+
+  # Send linkage data to ToxVal
+  runInsertTable(relationship_tibble, "toxval_relationship", toxval.db)
+
+  # Remove relationship_id
+  res = res %>%
+    dplyr::select(-relationship_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -147,41 +177,39 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = ""
-  refs$record_source_note = ""
-  refs$record_source_level = ""
-  print(dim(res))
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
+  print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = unique(res)
-  refs = unique(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "-"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
-  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
-  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
+  print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(dim(res))
+  print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
 
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source)
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    logr::log_close()
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))
@@ -189,4 +217,13 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("finish\n")
   #####################################################################
+  return(0)
+
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 }
