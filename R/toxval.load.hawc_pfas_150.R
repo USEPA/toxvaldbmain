@@ -79,19 +79,21 @@ toxval.load.hawc_pfas_150 <- function(toxval.db, source.db, log=FALSE, remove_nu
   cols2 = runQuery("desc toxval",toxval.db)[,1]
   cols = unique(c(cols1,cols2))
   colnames(res)[which(names(res) == "species")] = "species_original"
-  # res = res[ , !(names(res) %in% c("record_url","short_ref"))]
-  # res = res[ , !(names(res) %in% c("noel_original","loel_original","fel_original","data_location","doses_units","source_version_date"))]
-
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","relationship_id"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
-  # Remove unused columns ("columns to be dealt with)
-  res = res %>% dplyr::select(!tidyselect::any_of(nlist))
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
+  # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","relationship_id"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
