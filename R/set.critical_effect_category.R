@@ -25,6 +25,26 @@ set.critical_effect_category <- function(toxval.db){
     dplyr::bind_rows(oma_pairs) %>%
     dplyr::rename(critical_effect_category = category)
 
+  non_mapped_categorizations <- combined_df %>%
+    dplyr::anti_join(runQuery("SELECT term, study_type FROM critical_effect_terms", toxval.db),
+                      by = c("term", "study_type"))
+
+  non_mapped_terms <- runQuery("SELECT term, study_type FROM critical_effect_terms", toxval.db) %>%
+                       dplyr::anti_join(combined_df %>% dplyr::filter(!is.na(critical_effect_category)),
+                                        by = c("term", "study_type"))
+
+  if(nrow(non_mapped_categorizations)){
+    file = paste0(toxval.config()$datapath, "dictionary/missing/existing_cateogrizations_no_terms ",Sys.Date(),".xlsx")
+    openxlsx::write.xlsx(non_mapped_categorizations,file)
+  }
+  if(nrow(non_mapped_terms)){
+    file = paste0(toxval.config()$datapath, "dictionary/missing/existing_terms_no_categorizations ",Sys.Date(),".xlsx")
+    openxlsx::write.xlsx(non_mapped_terms,file)
+  }
+
+  filtered_df <- combined_df %>%
+    dplyr::filter(critical_effect_category != 'cancer')
+
   out = runQuery("SELECT * FROM critical_effect_terms",
                  toxval.db) %>%
     dplyr::select(-critical_effect_category) %>%
