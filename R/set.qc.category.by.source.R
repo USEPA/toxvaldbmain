@@ -18,27 +18,27 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   # Retrieve Jira ticket data and confluence page data
   jira_tickets <- pull_jira_info(in_file = NULL, auth_token = jira_access_token) #%>%
     #dplyr::filter(`Epic Link` == "TOXVAL-296")
-  response <- GET(url, add_headers(Authorization = paste("Bearer", confluence_access_token)))
+  response <- GET(url, httr::add_headers(Authorization = paste("Bearer", confluence_access_token)))
 
-  if (status_code(response) == 200) {
-    confluence_page <- read_html(content(response, "text"))
+  if (httr::status_code(response) == 200) {
+    confluence_page <- rvest::read_html(httr::content(response, "text"))
   } else{
     print('authentication failed')
   }
 
   # Derive the table and rows
-  tables <- html_nodes(confluence_page, "table")
+  tables <- rvest::html_nodes(confluence_page, "table")
   table <- tables[[2]]
-  header_row <- html_nodes(confluence_page, "tr:nth-child(1) th")
-  column_names <- html_text(header_row)
+  header_row <- rvest::html_nodes(confluence_page, "tr:nth-child(1) th")
+  column_names <- rvest::html_text(header_row)
   table_data <- list()
-  data_rows <- html_nodes(table, "tr:not(:first-child)")
+  data_rows <- rvest::html_nodes(table, "tr:not(:first-child)")
 
   # Read the rows into a list
   for(i in seq_along(data_rows)) {
     row <- data_rows[[i]]
-    cells <- html_nodes(row, "td")
-    row_data <- html_text(cells)
+    cells <- rvest::html_nodes(row, "td")
+    row_data <- rvest::html_text(cells)
     row_data <- gsub("[\r\n]", "", row_data)
     table_data <- c(table_data, list(row_data))
   }
@@ -52,7 +52,7 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
 
   in_data <- jira_tickets$in_data
   hashes <- jira_tickets$hashes
-  for (i in 1:nrow(old_qc_category)){
+  for (i in seq_len(nrow(old_qc_category))){
     source_table_qc <- paste0(old_qc_category$source_table[i], " QC")
     matching_rows <- in_data[in_data$Summary == source_table_qc | in_data$Summary == old_qc_category$source_table[i],]
     if(nrow(matching_rows) > 0){
@@ -63,13 +63,13 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   # Only consider valid, desired sources
   tables_names <- unique(table_df$`Source Name`)
   valid_sources <- old_qc_category %>%
-    filter(source %in% slist & source %in% tables_names)
+    dplyr::filter(source %in% slist & source %in% tables_names)
 
   res0 <- data.frame()
   # Determine qc_category for each source
   for(src in valid_sources$source) {
     source_df <- subset(table_df, `Source Name` == src)
-    existing_source <- old_qc_category %>% filter(source == src)
+    existing_source <- old_qc_category %>% dplyr::filter(source == src)
     query = paste0("select distinct source_hash, source, qc_category from toxval where source = '", src, "'")
     in_toxval = runQuery(query, toxval.db)
 
@@ -90,7 +90,7 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
 
     if(qc_stat == "LV 1- In Review" & is.na(existing_source$assignee)){
       # Set qc_category for entries present in QC sampling
-      src_records <- hashes %>% filter(source == src) %>%
+      src_records <- hashes %>% dplyr::filter(source == src) %>%
         dplyr::mutate(
           qc_category_new = paste0(!!qc_category_new, ", Source overall passed QC, and this record was manually checked")
         )
@@ -117,6 +117,8 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
       #                              paste0(qc_category_new, ", Source overall passed QC, but this record was not manually checked"))
       #   )
 
+    } else {
+      merged = in_toxval[0,]
     }
     #--------------------------------------------------------------------------------------
     # TODO: Incorporate logic for adding additional qc_categories

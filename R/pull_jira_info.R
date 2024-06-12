@@ -84,11 +84,11 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
                      by = "Issue key")
 
   res0 <- ticket_attachment_metadata %>%
-    filter(str_detect(Summary, " QC"))
+    dplyr::filter(stringr::str_detect(Summary, " QC"))
 
   # Use all QC files from Jira
   qc_files <- res0 %>%
-    filter(str_detect(jira_link, "toxval_qc")) #%>%
+    dplyr::filter(stringr::str_detect(jira_link, "toxval_qc")) #%>%
     # group_by(Summary) %>%
     # slice_max(date)
 
@@ -101,7 +101,7 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
     tryCatch({
       res0 <- df %>%
         select(source, source_hash, qc_status)
-      res <- bind_rows(res, res0) %>%
+      res <- dplyr::bind_rows(res, res0) %>%
         dplyr::distinct()
     }, error = function(e){
       print(paste("Error:", conditionMessage(e)))
