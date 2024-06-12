@@ -6,15 +6,13 @@
 #' @param subsource The subsource to be fixed (NULL default)
 #' @param ignore If TRUE allow missing values to be ignored
 #' @param report.only Whether to report or write/export data. Default is FALSE (write/export data)
-#' @param report.units Set to TRUE to handle report creation when called in fix.units.by.source
+#' @param units.data A dataframe containing current units data if units are to be reported (NULL default)
 #' @return The database will be altered
 #' @export
 #-------------------------------------------------------------------------------------
-fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL, ignore = FALSE, report.only=FALSE, report.units=FALSE) {
+fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL, ignore = FALSE,
+                                       report.only=FALSE, units.data=NULL) {
   printCurrentFunction(paste(toxval.db,":",param, ":", source,subsource))
-
-  # Track altered toxval_id values for report.units
-  changed_toxval_id = data.frame()
 
   # Handle addition of subsource for queries
   query_addition = " and qc_status NOT LIKE '%fail%'"
@@ -58,32 +56,60 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
   cat("  final list: ",nrow(mat),"\n")
 
   # Use parameter dictionary to update entries in toxval
-  for(i in 1:dim(mat)[1]) {
+  for(i in seq_len(dim(mat)[1])) {
     v0 <- mat[i,2]
     v1 <- mat[i,1]
 
     cat(v0,":",v1,"\n"); utils::flush.console()
-    if(!report.units) {
+    if(is.null(units.data)) {
       query <- paste0("update toxval set ",param,"='",v1,"' where ",param,"_original='",v0,"' and source like '",source,"'",query_addition)
       runQuery(query, toxval.db)
     } else {
-      # Track altered toxval_id values
-      changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
-                                     param,"_original='",v0,"' and source like '",source,"'",query_addition),
-                              toxval.db) %>%
-        dplyr::bind_rows(changed_toxval_id, .)
+      # Track altered values
+      change = "Transform variant unit names to standard ones"
+      current_changes = units.data %>%
+        dplyr::filter(toxval_units_original == !!v0) %>%
+        dplyr::mutate(
+          toxval_units = !!v1,
+          change_made = dplyr::case_when(
+            grepl(!!change, change_made) ~ change_made,
+            is.na(change_made) ~ !!change,
+            TRUE ~ paste0(change_made, "; ", !!change)
+          )
+        )
+      changed_ids = current_changes %>%
+        dplyr::pull(toxval_id) %>%
+        unique()
+      units.data = units.data %>%
+        dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+        dplyr::bind_rows(current_changes)
     }
   }
-  if(!report.units) {
+  if(is.null(units.data)) {
     query <- paste0("update toxval set ",param,"='-' where ",param,"_original is NULL and source like '",source,"'",query_addition)
     runQuery(query, toxval.db)
   } else {
-    # Track altered toxval_id values
-    changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval WHERE ",
-                                   param,"_original is NULL and source like '",source,"'",query_addition),
-                            toxval.db) %>%
-      dplyr::bind_rows(changed_toxval_id, .)
+    # Track altered values
+    change = "Set NULL toxval_units to '-'"
+    current_changes = units.data %>%
+      dplyr::filter(toxval_units_original %in% c(as.character(NA), "")) %>%
+      dplyr::mutate(
+        toxval_units = "-",
+        change_made = dplyr::case_when(
+          is.na(change_made) ~ !!change,
+          TRUE ~ paste0(change_made, "; ", !!change)
+        )
+      )
+    changed_ids = current_changes %>%
+      dplyr::pull(toxval_id) %>%
+      unique()
+    units.data = units.data %>%
+      dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+      dplyr::bind_rows(current_changes)
 
-    return(changed_toxval_id)
+    # Return only changed data
+    final_data = units.data %>%
+      tidyr::drop_na(change_made)
+    return(final_data)
   }
 }

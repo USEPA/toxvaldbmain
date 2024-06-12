@@ -34,13 +34,19 @@
 #-------------------------------------------------------------------------------------
 fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.convert.units=FALSE, report.only=FALSE, report.extra=FALSE) {
   printCurrentFunction(paste(toxval.db,":", source))
-  dsstox.db <- toxval.config()$dsstox.db
 
-  # Track affected toxval_id values
-  changed_toxval_id = data.frame()
+  # Track affected values
+  all_changed_data = data.frame()
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
+
+  # Write initial query that can be appended to for report.only
+  initial_query = paste0("SELECT a.source, a.toxval_numeric_original, a.toxval_numeric, ",
+                         "a.toxval_units_original, a.toxval_units, a.toxval_type, ",
+                         "a.mw, a.species_id, a.exposure_route, a.human_eco, a.toxval_id, ",
+                         "a.study_type, a.exposure_method, b.common_name ",
+                         "FROM toxval a LEFT JOIN species b ON b.species_id = a.species_id ")
 
   # Handle addition of subsource for queries
   query_addition = " and qc_status NOT LIKE '%fail%'"
@@ -48,8 +54,28 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
 
+  # Get list of species_id values per common_name (used for species ppm to mg/kg-day conversion)
+  species_ids = runQuery("SELECT DISTINCT species_id, common_name AS animal FROM species", toxval.db) %>%
+    # Standardize species case
+    dplyr::mutate(animal = toupper(animal)) %>%
+    toxval.load.dedup(., hashing_cols=c("animal"), delim=", ")
+
   for(source in slist) {
     message("Working on source ", source, " ", match(c(source), slist), " of ", length(slist))
+
+    # Get all data for current source in order to track changed data
+    current_source_query = paste0(initial_query, "WHERE a.source='", source, "' AND a.qc_status NOT LIKE '%fail%'")
+    if(!is.null(subsource)) current_source_query = paste0(current_source_query, " AND a.subsource='", subsource, "'")
+    source_data = runQuery(current_source_query, toxval.db) %>%
+      dplyr::mutate(
+        # Set empty change_made field
+        change_made = as.character(NA),
+
+        # Reset toxval_numeric and toxval_units
+        toxval_numeric = toxval_numeric_original,
+        toxval_units = toxval_units_original
+      )
+
     if(source=="ECOTOX") do.convert.units=FALSE
     if(source=="ECOTOX") {
       # Handle special ECOTOX conversion case
@@ -57,10 +83,22 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
         runQuery("update toxval set toxval_numeric_original=1E10 where toxval_numeric_original>1E10 and source='ECOTOX'",toxval.db)
       } else {
         # Track conversion data
-        changed_toxval_id = runQuery("SELECT DISTINCT toxval_id FROM toxval WHERE toxval_numeric_original>1E10 AND source='ECOTOX'",
-                                     toxval.db) %>%
-          dplyr::mutate(change_made = "ECOTOX > 1E10 set to 1E10") %>%
-          dplyr::bind_rows(changed_toxval_id, .)
+        change = "ECOTOX > 1E10 set to 1E10"
+        current_changes = source_data %>%
+          dplyr::filter(toxval_numeric_original > 1E10) %>%
+          dplyr::mutate(
+            toxval_numeric = 1E10,
+            change_made = dplyr::case_when(
+              is.na(change_made) ~ !!change,
+              TRUE ~ paste0(change_made, "; ", !!change)
+            )
+          )
+        changed_ids = current_changes %>%
+          dplyr::pull(toxval_id) %>%
+          unique()
+        source_data = source_data %>%
+          dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+          dplyr::bind_rows(current_changes)
       }
     }
     cat("===============================================\n")
@@ -82,8 +120,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
                               toxval.db)[,1])
     for(i in seq_len(length(unit.list))) {
       input = unit.list[i]
-      output = input
-      output = output %>%
+      output = input %>%
         stringr::str_replace_all("\uFFFD","u") %>%
         stringr::str_squish()
 
@@ -96,23 +133,38 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           runQuery(query, toxval.db)
         } else {
           # Record changes in toxval_units
-          changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval ",
-                                              "where toxval_units_original='",input,
-                                              "' and source = '",source,"'",query_addition),
-                                       toxval.db) %>%
-            dplyr::mutate(change_made = paste0("Special character removal: ", input, " to ", output)) %>%
-            dplyr::bind_rows(changed_toxval_id, .)
+          change = paste0("Special character removal: ", input, " to ", output)
+          current_changes = source_data %>%
+            dplyr::filter(toxval_units_original == !!input) %>%
+            dplyr::mutate(
+              toxval_units = !!output,
+              change_made = dplyr::case_when(
+                is.na(change_made) ~ !!change,
+                TRUE ~ paste0(change_made, "; ", !!change)
+              )
+            )
+          changed_ids = current_changes %>%
+            dplyr::pull(toxval_id) %>%
+            unique()
+          source_data = source_data %>%
+            dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+            dplyr::bind_rows(current_changes)
         }
       }
     }
 
     # Replace variant unit names with standard ones,
     cat(">>> Transform variant unit names to standard ones\n")
-    single_param_altered = fix.single.param.by.source(toxval.db, param="toxval_units", source, subsource, ignore = FALSE, report.units=report.only)
-    if(report.only) {
-      changed_toxval_id = single_param_altered %>%
-        dplyr::mutate(change_made = "Transform variant unit names to standard ones") %>%
-        dplyr::bind_rows(changed_toxval_id, .)
+    if(!report.only) fix.single.param.by.source(toxval.db, param="toxval_units", source, subsource, ignore = FALSE)
+    else {
+      current_changes = fix.single.param.by.source(toxval.db, param="toxval_units", source,
+                                                        subsource, ignore = FALSE, units.data=source_data)
+      changed_ids = current_changes %>%
+        dplyr::pull(toxval_id) %>%
+        unique()
+      source_data = source_data %>%
+        dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+        dplyr::bind_rows(current_changes)
     }
 
     # Replace mg/kg with mg/kg-day where toxval type is NOAEL or NOEL
@@ -125,13 +177,23 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
       runQuery(query, toxval.db)
     } else {
       # Track conversion data
-      changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval ",
-                                              "WHERE toxval_type in ('",
-                                          paste0(toxval_type_list, collapse="', '"),
-                                          "') and toxval_units='mg/kg' and source = '",source,"'",query_addition),
-                                       toxval.db) %>%
-        dplyr::mutate(change_made = paste0("mg/kg to mg/kg-day for toxval_type: ", toString(toxval_type_list))) %>%
-        dplyr::bind_rows(changed_toxval_id, .)
+      change = paste0("mg/kg to mg/kg-day for toxval_type: ", toString(toxval_type_list))
+      current_changes = source_data %>%
+        dplyr::filter(toxval_units == 'mg/kg',
+                      toxval_type %in% toxval_type_list) %>%
+        dplyr::mutate(
+          toxval_units = "mg/kg-day",
+          change_made = dplyr::case_when(
+            is.na(change_made) ~ !!change,
+            TRUE ~ paste0(change_made, "; ", !!change)
+          )
+        )
+      changed_ids = current_changes %>%
+        dplyr::pull(toxval_id) %>%
+        unique()
+      source_data = source_data %>%
+        dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+        dplyr::bind_rows(current_changes)
     }
 
     # Convert units to standard denominator (e.g. ppb to ppm by dividing by 1000)
@@ -151,11 +213,26 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           runQuery(query, toxval.db)
         } else {
           # Track simple multiple conversion info
-          changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval ",
-                                             "WHERE toxval_units='",convos[i,1],"' and source='",source,"'",query_addition),
-                                      toxval.db) %>%
-            dplyr::mutate(change_made = paste0("Simple conversion: new units - ", convos[i,2], " - multiplier - ", convos[i,3])) %>%
-            dplyr::bind_rows(changed_toxval_id, .)
+          old_units = convos[i,1]
+          new_units = convos[i,2]
+          numeric_conversion = convos[i,3]
+          change = paste0("Simple conversion: new units - ", convos[i,2], " - multiplier - ", convos[i,3])
+          current_changes = source_data %>%
+            dplyr::filter(toxval_units == old_units) %>%
+            dplyr::mutate(
+              toxval_units = new_units,
+              toxval_numeric = toxval_numeric * !!numeric_conversion,
+              change_made = dplyr::case_when(
+                is.na(change_made) ~ !!change,
+                TRUE ~ paste0(change_made, "; ", !!change)
+              )
+            )
+          changed_ids = current_changes %>%
+            dplyr::pull(toxval_id) %>%
+            unique()
+          source_data = source_data %>%
+            dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+            dplyr::bind_rows(current_changes)
         }
       }
     }
@@ -179,11 +256,26 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
         runQuery(query, toxval.db)
       } else {
         # Track molar changes in unit_conversions_table
-        changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval ",
-                                      "WHERE mw>0 and toxval_units = '",convos[i,1],"' and source = '",source,"'",query_addition),
-                               toxval.db) %>%
-          dplyr::mutate(change_made = paste0("molar to mg: new units - ", convos[i, 2])) %>%
-          dplyr::bind_rows(changed_toxval_id, .)
+        new_units = convos[i,2]
+        old_units = convos[i,1]
+        change = paste0("molar to mg: new units - ", new_units)
+        current_changes = source_data %>%
+          dplyr::filter(toxval_units == old_units,
+                        mw > 0) %>%
+          dplyr::mutate(
+            toxval_units = new_units,
+            toxval_numeric = toxval_numeric * mw,
+            change_made = dplyr::case_when(
+              is.na(change_made) ~ !!change,
+              TRUE ~ paste0(change_made, "; ", !!change)
+            )
+          )
+        changed_ids = current_changes %>%
+          dplyr::pull(toxval_id) %>%
+          unique()
+        source_data = source_data %>%
+          dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+          dplyr::bind_rows(current_changes)
       }
     }
 
@@ -198,21 +290,30 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
       runQuery(query, toxval.db)
     } else {
       # Track ppm to mgm3 conversion data
-      changed_toxval_id = runQuery(paste0("SELECT DISTINCT toxval_id FROM toxval ",
-                                    "where mw>0 and toxval_units like 'ppm%' and exposure_route = 'inhalation' ",
-                                    "and human_eco='human health' and source = '",source,"'",query_addition),
-                             toxval.db) %>%
-        dplyr::mutate(change_made = paste0("ppm to mg/m3 for inhalation human health studies - numeric*mw*0.0409")) %>%
-        dplyr::bind_rows(changed_toxval_id, .)
+      change = "ppm to mg/m3 for inhalation human health studies - numeric*mw*0.0409"
+      current_changes = source_data %>%
+        dplyr::filter(mw > 0,
+                      grepl("ppm", toxval_units, ignore.case=TRUE),
+                      exposure_route == "inhalation",
+                      human_eco == "human_health") %>%
+        dplyr::mutate(
+          toxval_units = "mg/m3",
+          toxval_numeric = toxval_numeric*mw*0.0409,
+          change_made = dplyr::case_when(
+            is.na(change_made) ~ !!change,
+            TRUE ~ paste0(change_made, "; ", !!change)
+          )
+        )
+      changed_ids = current_changes %>%
+        dplyr::pull(toxval_id) %>%
+        unique()
+      source_data = source_data %>%
+        dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+        dplyr::bind_rows(current_changes)
     }
 
     # Do the conversion from ppm to mg/kg-day on a species-wise basis for oral exposures
     cat(">>> Do the conversion from ppm to mg/kg-day on a species-wise basis\n")
-    # Get list of species_id values per common_name
-    species_ids = runQuery("SELECT DISTINCT species_id, common_name AS animal FROM species", toxval.db) %>%
-      # Standardize species case
-      dplyr::mutate(animal = toupper(animal)) %>%
-      toxval.load.dedup(., hashing_cols=c("animal"), delim=", ")
 
     # Get conversion dictionary with mapped species_id values
     conv = readxl::read_xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx")) %>%
@@ -232,6 +333,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           "SET toxval_numeric=toxval_numeric_original*", food_conversion, ", toxval_units='mg/kg-day' ",
           "WHERE source='", source, "' ",
           "AND study_type='", study_type, "' ",
+          "AND toxval_units LIKE 'ppm%' ",
           "AND species_id IN (", species_id, ") ",
           "AND exposure_method IN ('feed', 'food', 'diet')",
           !!query_addition
@@ -241,16 +343,9 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           "SET toxval_numeric=toxval_numeric_original*", water_conversion, ", toxval_units='mg/kg-day' ",
           "WHERE source='", source, "' ",
           "AND study_type='", study_type, "' ",
+          "AND toxval_units LIKE 'ppm%' ",
           "AND species_id IN (", species_id, ") ",
-          "AND exposure_method IN ('drinking_water', 'water')",
-          !!query_addition
-        ),
-        changed_query = stringr::str_c(
-          "SELECT DISTINCT toxval_id FROM toxval ",
-          "WHERE source='", source, "' ",
-          "AND study_type='", study_type, "' ",
-          "AND species_id IN (", species_id, ") ",
-          "AND exposure_method IN ('drinking_water', 'water', 'feed', 'food', 'diet')",
+          "AND exposure_method IN ('drinking water', 'water')",
           !!query_addition
         )
       )
@@ -258,70 +353,59 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     # Loop through conversion dictionary and push conversions if specified
     for(i in seq_len(nrow(conv))) {
       if(!report.only) {
-        runquery(conv[i, "food_query", 1], toxval.db)
-        runQuery(conv[i, "water_query", 1], toxval.db)
+        runQuery(conv$food_query[i], toxval.db)
+        runQuery(conv$water_query[i], toxval.db)
       } else {
         # Record species ppm to mg/kg-day conversion info
-        changed_toxval_id = runQuery(conv[i, "changed_query", 1], toxval.db) %>%
+        curr_animal = conv$animal[i]
+        curr_s_ids = conv$species_id[i]
+        s_id_list = stringr::str_split_1(curr_s_ids, pattern=", ")
+        curr_study_type = conv$study_type[i]
+        water_conversion = conv$water_conversion[i]
+        food_conversion = conv$food_conversion[i]
+        change = paste0("ppm to mg/kg-day by species: ", curr_animal, ", species_id: (", curr_s_ids, ")")
+        current_changes = source_data %>%
+          dplyr::filter(study_type == !!curr_study_type,
+                        species_id %in% s_id_list,
+                        exposure_method %in% c("drinking water", "water", "feed", "food", "diet"),
+                        grepl("ppm", toxval_units, ignore.case=TRUE)) %>%
           dplyr::mutate(
-            change_made = paste0("ppm to mg/kg-day by species: ", conv[i, "animal_original", 1],
-                                 " species_id: (", conv[i, "species_id", 1], ")")
-          ) %>%
-          dplyr::bind_rows(changed_toxval_id, .) %>%
-          dplyr::distinct()
+            toxval_units = "mg/kg-day",
+            toxval_numeric = dplyr::case_when(
+              exposure_method %in% c("drinking water", "water") ~ toxval_numeric_original * !!water_conversion,
+              exposure_method %in% c("feed", "food", "diet") ~ toxval_numeric_original * !!food_conversion,
+              TRUE ~ toxval_numeric
+            ),
+            change_made = dplyr::case_when(
+              is.na(change_made) ~ !!change,
+              TRUE ~ paste0(change_made, "; ", !!change)
+            )
+          )
+        changed_ids = current_changes %>%
+          dplyr::pull(toxval_id) %>%
+          unique()
+        source_data = source_data %>%
+          dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+          dplyr::bind_rows(current_changes)
       }
+    }
+    if(report.only) {
+      # Add data changed from current source to running total
+      current_changed_data = source_data %>%
+        tidyr::drop_na(change_made)
+      all_changed_data = dplyr::bind_rows(all_changed_data, current_changed_data) %>%
+        dplyr::distinct()
     }
   }
 
   if(report.only) {
-    # Get string containing toxval_id values for all altered entries
-    toxval_id_str = changed_toxval_id %>%
-      dplyr::distinct() %>%
-      dplyr::pull(toxval_id) %>%
-      paste0("'", ., "'") %>%
-      paste(collapse=", ")
-
-    # Get report data for altered entries using report.extra parameter
-    if(report.extra) {
-      query = paste0("SELECT a.toxval_id, a.source, a.toxval_numeric_original, a.toxval_units_original, a.toxval_numeric, a.toxval_units, ",
-                     "a.toxval_type, a.mw, a.species_id, b.common_name, a.exposure_route, a.human_eco ",
-                     "FROM toxval a ",
-                     "LEFT JOIN species b ON b.species_id = a.species_id ",
-                     "WHERE a.toxval_id IN (", toxval_id_str, ")")
-
-      # Define table here to handle case of no unit changes
-      unit_conversions_table = tibble::tibble(
-        source = character(),
-        toxval_numeric_original = numeric(),
-        toxval_units_original = character(),
-        toxval_numeric = numeric(),
-        toxval_units = character(),
-        toxval_type = character(),
-        mw = numeric(),
-        species_id = numeric(),
-        exposure_route = character(),
-        human_eco = character()
-      )
-    } else {
-      query = paste0("SELECT toxval_id, source, toxval_numeric_original, toxval_units_original, toxval_numeric, toxval_units ",
-                     "FROM toxval WHERE toxval_id IN (", toxval_id_str, ")")
-
-      # Define table here to handle case of no unit changes
-      unit_conversions_table = tibble::tibble(
-        source = character(),
-        toxval_numeric_original = numeric(),
-        toxval_units_original = character(),
-        toxval_numeric = numeric(),
-        toxval_units = character()
-      )
+    if(!report.extra) {
+      all_changed_data = all_changed_data %>%
+        dplyr::select(c("source", "toxval_numeric_original", "toxval_units_original",
+                        "toxval_numeric", "toxval_units"))
     }
 
-    # Finalize unit_conversions_table
-    query_results = runQuery(query, toxval.db)
-    unit_conversions_table = unit_conversions_table %>%
-      # Bind rows to base table to avoid errors when no units were changed
-      dplyr::bind_rows(query_results) %>%
-      # Add conversion_factor
+    unit_conversions_table = all_changed_data %>%
       dplyr::mutate(
         conversion_factor = dplyr::case_when(
           is.na(toxval_numeric_original) | is.na(toxval_numeric) ~ NA,
@@ -334,19 +418,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
       # Sanity check - filter out entries whose values/units did not change
       dplyr::filter(!((toxval_numeric == toxval_numeric_original) & (toxval_units == toxval_units_original))) %>%
       # Remove duplicate entries
-      dplyr::distinct() %>%
-      dplyr::left_join(changed_toxval_id,
-                       by="toxval_id") %>%
-      dplyr::group_by(toxval_id) %>%
-      dplyr::mutate(dplyr::across(change_made,
-                                  ~paste0(unique(.[!is.na(.)]), collapse="; ") %>%
-                                    dplyr::na_if("NA") %>%
-                                    dplyr::na_if("") %>%
-                                    dplyr::na_if("-")
-      )) %>%
-      dplyr::ungroup() %>%
       dplyr::distinct()
-
 
     writexl::write_xlsx(unit_conversions_table, paste0(toxval.config()$datapath,
                                                        "dictionary/unit_conversion_check_",
