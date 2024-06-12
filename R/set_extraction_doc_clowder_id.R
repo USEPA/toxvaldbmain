@@ -39,7 +39,8 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
         dplyr::mutate(toxval_id_clowder_id = paste0(toxval_id, clowder_id)) %>%
         # Filter out any already pushed (toxval_id - clowder_id pairs)
         # Handled by the database as a UNIQUE Key, but multiple layers to ensure duplicates aren't pushed
-        dplyr::filter(!toxval_id_clowder_id %in% source_docs$toxval_id_clowder_id)
+        dplyr::filter(!toxval_id_clowder_id %in% source_docs$toxval_id_clowder_id) %>%
+        dplyr::select(-toxval_id_clowder_id)
     }) %>%
       dplyr::bind_rows() %>%
       return()
@@ -47,7 +48,8 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
     dplyr::bind_rows() %>%
     dplyr::rename(clowder_doc_id = clowder_id,
                   clowder_doc_metadata = clowder_metadata,
-                  record_source_level = document_type)
+                  record_source_level = document_type) %>%
+    dplyr::filter(!is.na(record_source_level))
 
   message("Pushing clowder_doc_id information to record_source...")
   # Run insert query
