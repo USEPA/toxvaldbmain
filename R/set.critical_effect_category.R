@@ -10,7 +10,7 @@ set.critical_effect_category <- function(toxval.db){
   query <- paste0("SELECT LOWER(term) AS term, LOWER(study_type) AS study_type, category, COUNT(*) as category_count ",
                   "FROM critical_effect_categorizations ",
                   "WHERE category IS NOT NULL ",
-                #  "AND (term, study_type) NOT IN (SELECT LOWER(term), LOWER(study_type) FROM critical_effect_categorizations WHERE lanid = 'resolution') ",
+                  #  "AND (term, study_type) NOT IN (SELECT LOWER(term), LOWER(study_type) FROM critical_effect_categorizations WHERE lanid = 'resolution') ",
                   "GROUP BY LOWER(term), LOWER(study_type), category ",
                   "HAVING category_count > 1")
 
@@ -46,13 +46,20 @@ set.critical_effect_category <- function(toxval.db){
 
   # Checks for records in categorizations table that don't have a mapping to terms table
   non_mapped_categorizations <- combined_df %>%
-    dplyr::anti_join(runQuery("SELECT LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms", toxval.db),
-                      by = c("term", "study_type"))
+    dplyr::anti_join(runQuery("SELECT LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms",
+                              toxval.db),
+                     by = c("term", "study_type")) %>%
+    dplyr::filter(!term %in% c("-"),
+                  !study_type %in% c("epidemiologic"))
 
   # Checks for records in terms table that aren't mapped to by categorizations table
-  non_mapped_terms <- runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms", toxval.db) %>%
-                       dplyr::anti_join(combined_df %>% dplyr::filter(!is.na(critical_effect_category)),
-                                        by = c("term", "study_type"))
+  non_mapped_terms <- runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms",
+                               toxval.db) %>%
+    dplyr::anti_join(combined_df %>% dplyr::filter(!is.na(critical_effect_category)),
+                     by = c("term", "study_type")) %>%
+    # Filter out blank terms and select study_type that do not receive a category
+    dplyr::filter(!term %in% c("-"),
+                  !study_type %in% c("epidemiologic"))
 
   # Export the missing files
   if(nrow(non_mapped_categorizations)){
@@ -68,10 +75,10 @@ set.critical_effect_category <- function(toxval.db){
   filtered_df <- combined_df %>%
     dplyr::filter(critical_effect_category != 'cancer')
 
-#  duplicates <- filtered_df %>%
-#    dplyr::group_by(term, study_type) %>%
-#    dplyr::filter(n() > 1) %>%
-#    dplyr::ungroup()
+  # duplicates <- filtered_df %>%
+  #   dplyr::group_by(term, study_type) %>%
+  #   dplyr::filter(n() > 1) %>%
+  #   dplyr::ungroup()
 
   # Prepare update df
   out = runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) AS study_type FROM critical_effect_terms",
