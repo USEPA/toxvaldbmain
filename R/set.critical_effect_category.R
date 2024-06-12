@@ -71,11 +71,11 @@ set.critical_effect_category <- function(toxval.db){
     openxlsx::write.xlsx(non_mapped_terms,file)
   }
 
-  # Filter out cancer values
-  filtered_df <- combined_df %>%
-    dplyr::filter(critical_effect_category != 'cancer')
+  # No longer Filter out cancer values
+  # filtered_df <- combined_df %>%
+  #   dplyr::filter(critical_effect_category != 'cancer')
 
-  # duplicates <- filtered_df %>%
+  # duplicates <- combined_df %>%
   #   dplyr::group_by(term, study_type) %>%
   #   dplyr::filter(n() > 1) %>%
   #   dplyr::ungroup()
@@ -83,7 +83,7 @@ set.critical_effect_category <- function(toxval.db){
   # Prepare update df
   out = runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) AS study_type FROM critical_effect_terms",
                  toxval.db) %>%
-    dplyr::left_join(filtered_df,
+    dplyr::left_join(combined_df,
                      by=c("term", "study_type")) %>%
     dplyr::filter(!is.na(critical_effect_category))
 
