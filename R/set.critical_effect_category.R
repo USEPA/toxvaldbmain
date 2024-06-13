@@ -6,28 +6,83 @@
 #-------------------------------------------------------------------------------------
 set.critical_effect_category <- function(toxval.db){
   message("Pulling critical_effect_category dictionary from critical_effect_categorizations table...")
-  query <- paste0("SELECT term, study_type, category, COUNT(*) as category_count ",
+  # Gets the categorizations that have two non null categories of the same value
+  query <- paste0("SELECT LOWER(term) AS term, LOWER(study_type) AS study_type, category, COUNT(*) as category_count ",
                   "FROM critical_effect_categorizations ",
                   "WHERE category IS NOT NULL ",
-                  "GROUP BY term, study_type, category ",
+                  #  "AND (term, study_type) NOT IN (SELECT LOWER(term), LOWER(study_type) FROM critical_effect_categorizations WHERE lanid = 'resolution') ",
+                  "GROUP BY LOWER(term), LOWER(study_type), category ",
                   "HAVING category_count > 1")
 
   pairs_set <- runQuery(query, toxval.db)
 
-  query <- paste0("SELECT term, study_type, category ",
+  # Gets the categorizations that only have one row due to the 'oma_rule' (all of these are cancer)
+  query <- paste0("SELECT LOWER(term) AS term, Lower(study_type) AS study_type, category ",
                   "FROM critical_effect_categorizations ",
                   "WHERE lanid = 'oma_rule'")
 
   oma_pairs <- runQuery(query, toxval.db)
 
+  query <- paste0("SELECT LOWER(term) as term, LOWER(study_type) as study_type, category ",
+                  "FROM critical_effect_categorizations ",
+                  "WHERE lanid = 'resolution' AND term != '-' ")
+
+  resolution_pairs <- runQuery(query, toxval.db)
+
+
+  # Combine the oma data with the larger set
   combined_df <- pairs_set %>%
     dplyr::select(-category_count) %>%
     dplyr::bind_rows(oma_pairs) %>%
-    dplyr::rename(critical_effect_category = category)
+    dplyr::distinct()
 
-  out = runQuery("SELECT * FROM critical_effect_terms",
+  combined_df <- combined_df %>%
+    dplyr::anti_join(resolution_pairs, by = c("term", "study_type"))
+
+  combined_df <- combined_df %>%
+    dplyr::bind_rows(resolution_pairs) %>%
+    dplyr::rename(critical_effect_category = category) %>%
+    dplyr::distinct()
+
+  # Checks for records in categorizations table that don't have a mapping to terms table
+  non_mapped_categorizations <- combined_df %>%
+    dplyr::anti_join(runQuery("SELECT LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms",
+                              toxval.db),
+                     by = c("term", "study_type")) %>%
+    dplyr::filter(!term %in% c("-"),
+                  !study_type %in% c("epidemiologic"))
+
+  # Checks for records in terms table that aren't mapped to by categorizations table
+  non_mapped_terms <- runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) as study_type FROM critical_effect_terms",
+                               toxval.db) %>%
+    dplyr::anti_join(combined_df %>% dplyr::filter(!is.na(critical_effect_category)),
+                     by = c("term", "study_type")) %>%
+    # Filter out blank terms and select study_type that do not receive a category
+    dplyr::filter(!term %in% c("-"),
+                  !study_type %in% c("epidemiologic"))
+
+  # Export the missing files
+  if(nrow(non_mapped_categorizations)){
+    file = paste0(toxval.config()$datapath, "dictionary/missing/existing_categorizations_no_terms ",Sys.Date(),".xlsx")
+    openxlsx::write.xlsx(non_mapped_categorizations,file)
+  }
+  if(nrow(non_mapped_terms)){
+    file = paste0(toxval.config()$datapath, "dictionary/missing/existing_terms_no_categorizations ",Sys.Date(),".xlsx")
+    openxlsx::write.xlsx(non_mapped_terms,file)
+  }
+
+  # No longer Filter out cancer values
+  # filtered_df <- combined_df %>%
+  #   dplyr::filter(critical_effect_category != 'cancer')
+
+  # duplicates <- combined_df %>%
+  #   dplyr::group_by(term, study_type) %>%
+  #   dplyr::filter(n() > 1) %>%
+  #   dplyr::ungroup()
+
+  # Prepare update df
+  out = runQuery("SELECT id, source_hash, LOWER(term) AS term, LOWER(study_type) AS study_type FROM critical_effect_terms",
                  toxval.db) %>%
-    dplyr::select(-critical_effect_category) %>%
     dplyr::left_join(combined_df,
                      by=c("term", "study_type")) %>%
     dplyr::filter(!is.na(critical_effect_category))
