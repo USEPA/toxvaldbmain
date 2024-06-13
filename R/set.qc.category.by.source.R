@@ -2,12 +2,13 @@
 #' Function for assigning QC Categories to sources in toxval via the qc_category field
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
+#' @param source.db The source database to use.
 #' @param source The source to set a qc_category for
 #' @param jira_access_token A personal access token for authentication in Jira
 #' @param confluence_access_token A personal access token for authentication in Confluence
 #' @export
 #--------------------------------------------------------------------------------------
-set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_token, jira_access_token){
+set.qc.category.by.source <- function(toxval.db, source.db, source=NULL, confluence_access_token, jira_access_token){
   printCurrentFunction(toxval.db)
   if(!is.null(source)) {
     slist = source
@@ -45,6 +46,9 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
 
   table_df <- as.data.frame(do.call(rbind, table_data), stringsAsFactors = FALSE)
   colnames(table_df) <- column_names
+  # Filter out those not reviewed
+  table_df = table_df %>%
+    dplyr::filter(!`QC Status` %in% c(NA, "Ice Box", "Icebox"))
 
   old_qc_category = runQuery("select distinct source, source_table, qc_category from toxval",toxval.db)
   old_qc_category$qc_category[old_qc_category$qc_category == "-"] <- NA
@@ -68,44 +72,61 @@ set.qc.category.by.source <- function(toxval.db, source=NULL, confluence_access_
   res0 <- data.frame()
   # Determine qc_category for each source
   for(src in valid_sources$source) {
-    source_df <- subset(table_df, `Source Name` == src)
+    source_df <- table_df %>%
+      dplyr::filter(`Source Name` == src)
     existing_source <- old_qc_category %>% dplyr::filter(source == src)
     query = paste0("select distinct source_hash, source, qc_category from toxval where source = '", src, "'")
-    in_toxval = runQuery(query, toxval.db)
+    in_toxval = runQuery(query, toxval.db) # %>%
 
-    curation_type <- unique(source_df$curation_type)
-    qc_stat <- unique(source_df$`QC Status`)
-
-    if(curation_type == 'automated'){
-      if(!grepl("Programmatically extracted from structured data source", existing_source$qc_category)){
-        qc_category_new = "Programmatically extracted from structured data source"
-      }
-    } else if (curation_type == 'manual'){
-      if(!grepl("Manually extracted from unstructured data source", existing_source$qc_category)){
-        qc_category_new = "Manually extracted from unstructured data source"
+    # Only certain sources have known multiple curation types
+    if(length(unique(source_df$curation_type)) > 1){
+      # Reconcile curation_type by source_hash
+      if(src %in% c("ATSDR MRLs", "IRIS", "PPRTV (CPHEA)")){
+        src_data = runQuery(paste0("SELECT source_hash, document_type FROM ", source_df$`Table Name`),
+                            source.db)
+        in_toxval = in_toxval %>%
+          dplyr::left_join(src_data, by = "source_hash") %>%
+          dplyr::mutate(curation_type = dplyr::case_when(
+            grepl("PPRTV Summary|ATSDR MRLs Toxicological Profile|IRIS Summary", document_type) ~ "manual",
+            TRUE ~ "automated"
+          )) %>%
+          dplyr::left_join(source_df %>%
+                             dplyr::select(`QC Status`, curation_type),
+                           by="curation_type")
+      } else {
+        stop(paste0("Source with multiple curation_types not in list: ", src))
       }
     }
 
-    in_toxval$qc_category_new = qc_category_new
+    # TODO Pull source_hash from Jira ticket attachments
+    # hashes %>% dplyr::filter(source == src)
+    hash_list = c()
 
-    if(qc_stat == "LV 1- In Review" & is.na(existing_source$assignee)){
+    in_toxval = in_toxval %>%
+      dplyr::mutate(
+        # Establish baseline
+        qc_category_new = dplyr::case_when(
+          curation_type == 'automated' & !grepl("Programmatically extracted from structured data source", qc_category) ~
+            "Programmatically extracted from structured data source",
+          curation_type == 'manual' & !grepl("Manually extracted from unstructured data source", qc_category) ~
+            "Manually extracted from unstructured data source",
+          TRUE ~ NA_character_
+        ),
+        # Account for qc_status and attachment file source_hash values
+        qc_category_new = dplyr::case_when(
+          (`QC Status` %in% c("LV 1 - In Review", "Done")) &
+            source_hash %in% hash_list ~
+            paste0(qc_category_new, ", Source overall passed QC, and this record was manually checked"),
+          TRUE ~ paste0(qc_category_new,
+                        ", Source overall passed QC, but this record was not manually checked")
+        )
+      )
+
+    if((qc_stat == "LV 1- In Review" & is.na(existing_source$assignee)) | qc_stat == "Done"){
       # Set qc_category for entries present in QC sampling
       src_records <- hashes %>% dplyr::filter(source == src) %>%
         dplyr::mutate(
           qc_category_new = paste0(!!qc_category_new, ", Source overall passed QC, and this record was manually checked")
-        )
-
-      # Add sampled QC category to all source toxval hashes
-      merged = in_toxval %>%
-        dplyr::select(-qc_category_new) %>%
-        dplyr::left_join(src_records, by=c('source_hash', 'source')) %>%
-        dplyr::mutate(
-          qc_category_new = dplyr::case_when(
-            # Add new QC category for unsampled values
-            is.na(qc_category_new) ~ paste0(!!qc_category_new,
-                                            ", Source overall passed QC, but this record was not manually checked"),
-            TRUE ~ qc_category_new
-          )
         )
 
       # Comment out for now - assume that all entries in the hashes DF have been manually checked
