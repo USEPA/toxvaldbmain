@@ -70,7 +70,9 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       rac_data = runQuery(paste0("SELECT toxval_id, ", field," FROM toxval ",
                                  "WHERE ", field, " in ('",
                                  paste0(unique(dict$term[dict$field == field]), collapse = "', '"),
-                                 "') and source = '",source,"'"),
+                                 "') and source = '",source,"' ",
+                                 # Only update if RAC hasn't already been updated
+                                 "and risk_assessment_class = '-'"),
                           toxval.db) %>%
         # Join to dictionary to get RAC
         dplyr::left_join(f_dict,
