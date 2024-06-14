@@ -155,8 +155,9 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
 
     # Replace variant unit names with standard ones,
     cat(">>> Transform variant unit names to standard ones\n")
-    if(!report.only) fix.single.param.by.source(toxval.db, param="toxval_units", source, subsource, ignore = FALSE)
-    else {
+    if(!report.only) {
+      fix.single.param.by.source(toxval.db, param="toxval_units", source, subsource, ignore = FALSE)
+    } else {
       current_changes = fix.single.param.by.source(toxval.db, param="toxval_units", source,
                                                         subsource, ignore = FALSE, units.data=source_data)
       changed_ids = current_changes %>%
