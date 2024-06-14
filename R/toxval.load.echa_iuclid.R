@@ -6,6 +6,7 @@
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
+#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE) {
   source = "ECHA IUCLID"

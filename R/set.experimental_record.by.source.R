@@ -68,7 +68,7 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
     View()
 
   # User review comparison and decide if changes are acceptable
-  browser()
+  # browser()
 
   # Accept new assignments
   res = res %>%
