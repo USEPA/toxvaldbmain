@@ -70,8 +70,8 @@ export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=N
     dplyr::distinct()
 
   # Combine output into single report
-  values_export = list(full_data, main_data, toxval_type_data, study_type_data, rac_data)
-  names(values_export) = c("all_values", "main_values", "toxval_type_values", "study_type_values", "rac_values")
+  values_export = list(main_data, toxval_type_data, study_type_data, rac_data)
+  names(values_export) = c("main_values", "toxval_type_values", "study_type_values", "rac_values")
 
   # Write export to file
   fname = paste0(toxval.config()$datapath, "QC Reports/toxval_type.study_type.rac ",
