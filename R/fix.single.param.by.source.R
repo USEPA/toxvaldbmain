@@ -47,10 +47,21 @@ fix.single.param.by.source <- function(toxval.db, param, source, subsource=NULL,
 
   cat("  original list: ",nrow(mat),"\n")
 
-  query <- paste0("select distinct (",param,"_original) from toxval where source like '",source,"'",query_addition)
-  param_original_values <- runQuery(query,toxval.db)[,1]
-  #print(View(param_original_values))
-  mat <- mat[is.element(mat[,2],param_original_values),]
+  if(is.null(units.data)) {
+    query <- paste0("select distinct (",param,"_original) from toxval where source like '",source,"'",query_addition)
+    param_original_values <- runQuery(query,toxval.db)[,1]
+    #print(View(param_original_values))
+    mat <- mat[is.element(mat[,2],param_original_values),]
+  } else {
+    param_original_values = units.data %>%
+      dplyr::select(toxval_units_original) %>%
+      dplyr::distinct() %>%
+      dplyr::mutate(include = 1)
+    mat = mat %>%
+      dplyr::left_join(param_original_values, by=c("toxval_units_original")) %>%
+      dplyr::filter(include == 1) %>%
+      dplyr::select(-include)
+  }
 
   #print(View(mat))
   cat("  final list: ",nrow(mat),"\n")
