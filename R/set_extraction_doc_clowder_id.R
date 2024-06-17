@@ -21,6 +21,9 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
                        toxval.db) %>%
       dplyr::pull(source_table)
 
+    # Set src_tbl to direct load sources if appropriate
+    if(source %in% c('ECOTOX', 'ToxRefDB', 'Uterotrophic Hershberger DB', 'ChemIDPlus')) src_tbl = source
+
     # Loop over all source_tables per source (for IUCLID's multiple source tables)
     lapply(src_tbl, function(src){
       cat(paste0("...", src, "\n"))
