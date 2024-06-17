@@ -201,12 +201,22 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     cat(">>> Convert units that are simple multiples of standard units\n")
     convos = openxlsx::read.xlsx(paste0(toxval.config()$datapath,"dictionary/toxval_units conversions 2022-08-22.xlsx"))
     #browser()
-    query = paste0("select distinct toxval_units from toxval where source='",source,"'",query_addition)
-    tulist = runQuery(query,toxval.db)[,1]
-    convos = convos[is.element(convos$toxval_units,tulist),]
-    nrows = dim(convos)[1]
-    if(nrows>0) {
-      for (i in seq_len(nrows)){
+    if(!report.only) {
+      query = paste0("select distinct toxval_units from toxval where source='",source,"'",query_addition)
+      tulist = runQuery(query, toxval.db) %>%
+        dplyr::mutate(included=1)
+    } else {
+      tulist = source_data %>%
+        dplyr::select(toxval_units) %>%
+        dplyr::distinct() %>%
+        dplyr::mutate(included=1)
+    }
+    convos = convos %>%
+      dplyr::left_join(tulist, by=c("toxval_units")) %>%
+      dplyr::filter(included == 1) %>%
+      dplyr::select(-included)
+    if(nrow(convos)) {
+      for (i in seq_len(nrow(convos))){
         cat("  ",convos[i,1],convos[i,2],convos[i,3],"\n")
         # Update toxval with conversion
         if(!report.only) {
@@ -241,11 +251,21 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     # Run conversions from molar to mg units, using MW
     cat(">>> Run conversions from molar to mg units, using MW\n")
     convos <- openxlsx::read.xlsx(paste0(toxval.config()$datapath,"dictionary/MW conversions.xlsx"))
-    query = paste0("select distinct toxval_units from toxval where source='",source,"'",query_addition)
-    tulist = runQuery(query,toxval.db)[,1]
-    convos = convos[is.element(convos$toxval_units,tulist),]
-    nrows = dim(convos)[1]
-    for (i in seq_len(nrows)){
+    if(!report.only) {
+      query = paste0("select distinct toxval_units from toxval where source='",source,"'",query_addition)
+      tulist = runQuery(query, toxval.db) %>%
+        dplyr::mutate(included=1)
+    } else {
+      tulist = source_data %>%
+        dplyr::select(toxval_units) %>%
+        dplyr::distinct() %>%
+        dplyr::mutate(included=1)
+    }
+    convos = convos %>%
+      dplyr::left_join(tulist, by=c("toxval_units")) %>%
+      dplyr::filter(included == 1) %>%
+      dplyr::select(-included)
+    for (i in seq_len(nrow(convos))){
       units = convos[i,1]
       units.new = convos[i,2]
       cat("  ",convos[i,1],convos[i,2],"\n")
@@ -296,7 +316,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
         dplyr::filter(mw > 0,
                       grepl("ppm", toxval_units, ignore.case=TRUE),
                       exposure_route == "inhalation",
-                      human_eco == "human_health") %>%
+                      human_eco == "human health") %>%
         dplyr::mutate(
           toxval_units = "mg/m3",
           toxval_numeric = toxval_numeric*mw*0.0409,
