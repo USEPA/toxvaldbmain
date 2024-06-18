@@ -2,10 +2,11 @@
 #' Export values related to toxval_type, toxval_type_supercategory, study_type, and RAC by source
 #' @param toxval.db The current version of toxval
 #' @param source_name The source to be reported (single name or list). If source=NULL, report all sources
+#' @param subsource The subsource to be reported (Default: NULL)
 #' @return A list of tibbles containing relevant values
 #' @export
 #-------------------------------------------------------------------------------------
-export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=NULL) {
+export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=NULL, subsource=NULL) {
   printCurrentFunction(toxval.db)
 
   # Determine sources to include
@@ -14,7 +15,13 @@ export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=N
     cat("Exporting values for all sources\n")
   } else {
     cat("Exporting values for ", slist, "\n")
-    source_addition = paste0(" WHERE a.source='", source, "'")
+    source_addition = paste0(" AND a.source='", source, "'")
+  }
+
+  # Handle addition of subsource for queries
+  subsource_addition = ""
+  if(!is.null(subsource)) {
+    subsource_addition = paste0(" AND a.subsource='", subsource, "'")
   }
 
   # Get data with all fields included
@@ -35,7 +42,9 @@ export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=N
     "LEFT JOIN source_chemical c on a.chemical_id=c.chemical_id ",
     "LEFT JOIN species d on a.species_id=d.species_id ",
     "LEFT JOIN record_source e on a.toxval_id=e.toxval_id ",
-    source_addition
+    "WHERE e.record_source_level='primary (risk assessment values)'",
+    source_addition,
+    subsource_addition
   )
   full_data = runQuery(query, toxval.db) %>%
     dplyr::distinct() %>%
@@ -45,7 +54,8 @@ export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=N
 
   # Get subsets of data for different sheets
   main_data = full_data %>%
-    dplyr::select(toxval_type_supercategory, toxval_type_original, toxval_type,
+    dplyr::select(supersource, source, subsource,
+                  toxval_type_supercategory, toxval_type_original, toxval_type,
                   study_type_original, study_type, risk_assessment_class) %>%
     dplyr::distinct()
 
