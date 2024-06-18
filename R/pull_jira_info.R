@@ -88,7 +88,7 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
 
   # Use all QC files from Jira
   qc_files <- res0 %>%
-    dplyr::filter(stringr::str_detect(jira_link, "toxval_qc")) #%>%
+    dplyr::filter(stringr::str_detect(jira_link, "toxval_qc|mrls_QC")) #%>%
     # group_by(Summary) %>%
     # slice_max(date)
 
