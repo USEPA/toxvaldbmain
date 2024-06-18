@@ -1,21 +1,21 @@
 #-------------------------------------------------------------------------------------
 #' Export values related to toxval_type, toxval_type_supercategory, study_type, and RAC by source
 #' @param toxval.db The current version of toxval
-#' @param source_name The source to be reported (single name or list). If source=NULL, report all sources
+#' @param source The source to be reported (single name or list). If source=NULL, report all sources
 #' @param subsource The subsource to be reported (Default: NULL)
 #' @return A list of tibbles containing relevant values
 #' @export
 #-------------------------------------------------------------------------------------
-export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=NULL, subsource=NULL) {
+export.toxval_type.study_type.rac.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
   printCurrentFunction(toxval.db)
 
   # Determine sources to include
   source_addition = ""
-  if(is.null(source_name)) {
+  if(is.null(source)) {
     cat("Exporting values for all sources\n")
   } else {
-    cat("Exporting values for ", slist, "\n")
-    source_addition = paste0(" AND a.source='", source, "'")
+    cat("Exporting values for ", toString(source), "\n")
+    source_addition = paste0(" AND a.source in ('", paste0(source, collapse="', '"), "')")
   }
 
   # Handle addition of subsource for queries
@@ -42,10 +42,11 @@ export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=N
     "LEFT JOIN source_chemical c on a.chemical_id=c.chemical_id ",
     "LEFT JOIN species d on a.species_id=d.species_id ",
     "LEFT JOIN record_source e on a.toxval_id=e.toxval_id ",
-    "WHERE e.record_source_level='primary (risk assessment values)'",
+    "WHERE e.record_source_level not in ('extraction', 'origin')",
     source_addition,
     subsource_addition
   )
+
   full_data = runQuery(query, toxval.db) %>%
     dplyr::distinct() %>%
     dplyr::mutate(
@@ -86,11 +87,11 @@ export.toxval_type.study_type.rac.by.source <- function(toxval.db, source_name=N
   # Write export to file
   fname = paste0(toxval.config()$datapath, "QC Reports/toxval_type.study_type.rac ",
                  Sys.Date(), ".xlsx")
-  if(!is.null(source_name)) {
+  if(!is.null(source)) {
     fname = paste0(toxval.config()$datapath, "QC Reports/toxval_type.study_type.rac ",
-                   source_name, " ", Sys.Date(), ".xlsx")
+                   source, " ", Sys.Date(), ".xlsx")
   }
 
-  openxlsx::write.xlsx(values_export, fname)
+  writexl::write_xlsx(values_export, fname)
   return(values_export)
 }
