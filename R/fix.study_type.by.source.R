@@ -228,8 +228,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         cat("==============================================\n")
         batch_size <- 500
         startPosition <- 1
-        endPosition <- nrow(temp3)# runQuery(paste0("SELECT max(id) from documents"), db=db) %>% .[[1]]
+        endPosition <- nrow(temp3)
         incrementPosition <- batch_size
+        if(incrementPosition > endPosition) incrementPosition = endPosition
 
         while(startPosition <= endPosition){
           message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())

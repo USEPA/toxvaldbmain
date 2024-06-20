@@ -47,7 +47,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     cat("----------------------------------------\n")
 
     if(restart & !report.only) {
-      query = paste0("update toxval set risk_assessment_class = '-'  where source like '",source,"'")
+      query = paste0("update toxval set risk_assessment_class = '-'  where source = '",source,"'")
       runQuery(query, toxval.db)
     }
     dict = conv[conv$source==source,]
@@ -104,6 +104,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
         startPosition <- 1
         endPosition <- nrow(rac_data)
         incrementPosition <- batch_size
+        if(incrementPosition > endPosition) incrementPosition = endPosition
 
         while(startPosition <= endPosition){
           message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
@@ -113,7 +114,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                                  "INNER JOIN z_updated_df b ",
                                  "ON (a.toxval_id = b.toxval_id) ",
                                  "SET a.risk_assessment_class = b.risk_assessment_class ",
-                                 "WHERE a.toxval_id is NOT NULL")
+                                 "WHERE a.toxval_id in (",toString(rac_data$toxval_id[startPosition:incrementPosition]),")")
 
           runUpdate(table="toxval",
                     updateQuery = update_query,
