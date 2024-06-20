@@ -1,7 +1,9 @@
 #' @title pull_jira_info
 #' @description Script to process CSV export of Jira into a status log
 #' @param jira_project Jira project code (e.g. CVTDB)
-#' @param download_bulk Boolean whether to bulk download ticket attachments, Default: FALSE.
+#' @param in_file File path to Jira ticket summary CSV.
+#' @param source The source to set a qc_category for
+#' @param source_table Name of the source table associated with the source
 #' @param auth_token Authorization token for Jira
 #' @return Summary DataFrame of Jira tickets by Epic, Label, and Status
 #' @details DETAILS
@@ -24,7 +26,7 @@
 #' @importFrom dplyr select contains mutate everything filter distinct left_join group_by summarise n
 #' @importFrom tidyr unite
 #' @importFrom stringr str_squish
-pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = NULL, status_filter = "Done"){
+pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, source = NULL, source_table = NULL, auth_token = NULL){
 
   # Format headers
   if(!is.null(auth_token)){
@@ -48,6 +50,12 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
     stop("Either could not pull directly from Jira or 'in_file' loading error...")
   }
 
+  # Filter to input source_table
+  if(!is.null(source_table)){
+    in_data_url = in_data_url %>%
+      dplyr::filter(grepl(!!source_table, Summary))
+  }
+
   # Process loaded data
   in_data <- in_data_url %>%
     dplyr::select(Summary,
@@ -62,8 +70,6 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
                   `Epic Link`=`Custom field (Epic Link)`) %>%
     # Join labels
     tidyr::unite(dplyr::contains("Labels"), col="Labels", sep=", ", na.rm = TRUE) %>%
-    # Remove extraneous label
-    dplyr::mutate(Labels = gsub(", PKWG", "", Labels)) %>%
     dplyr::select(`Issue key`, dplyr::everything())
 
   # Filter to templates to load
@@ -83,12 +89,12 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
                        select(Summary, `Issue key`, Labels),
                      by = "Issue key")
 
-  res0 <- ticket_attachment_metadata %>%
-    dplyr::filter(stringr::str_detect(Summary, " QC"))
-
-  # Use all QC files from Jira
-  qc_files <- res0 %>%
-    dplyr::filter(stringr::str_detect(jira_link, "toxval_qc|mrls_QC")) #%>%
+  qc_files <- ticket_attachment_metadata %>%
+    dplyr::filter(stringr::str_detect(Summary, " QC")) %>%
+    # Use all QC files from Jira
+    dplyr::filter(grepl("toxval_qc|mrls_QC", jira_link),
+                  # Filter out DAT pushed records
+                  !grepl("QC_push", jira_link)) #%>%
     # group_by(Summary) %>%
     # slice_max(date)
 
@@ -97,16 +103,19 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
     jira_link <- qc_files$jira_link[i]
     file_ext <- qc_files$file_ext[i]
     file <- jira_load_file_from_api(url = jira_link, headers = headers, file_type = file_ext, mode='wb')
-    df <- data.frame(file$Sheet1)
-    tryCatch({
-      res0 <- df %>%
-        select(source, source_hash, qc_status)
-      res <- dplyr::bind_rows(res, res0) %>%
-        dplyr::distinct()
-    }, error = function(e){
-      print(paste("Error:", conditionMessage(e)))
-    })
-
+    # Run through each sheet in loaded file
+    for(sheet in names(file)){
+      df = file[[sheet]] %>%
+        data.frame()
+      tryCatch({
+        res <- res %>%
+          dplyr::bind_rows(df %>%
+                             dplyr::select(dplyr::any_of(c("source", "source_hash", "qc_status")))) %>%
+          dplyr::distinct()
+      }, error = function(e){
+        print(paste("Error:", conditionMessage(e)))
+      })
+    }
   }
 
   return(list(in_data=in_data,

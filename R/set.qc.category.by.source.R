@@ -12,12 +12,17 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL, conflue
   printCurrentFunction(toxval.db)
   if(!is.null(source)) {
     slist = source
+    source_table = runQuery(paste0("SELECT distinct source_table FROM toxval WHERE source = '", source, "'"),
+                            toxval.db) %>%
+      dplyr::pull(source_table)
   } else {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+    source_table = NULL
   }
   url <- "https://confluence.epa.gov/x/VuCkFg"
+
   # Retrieve Jira ticket data and confluence page data
-  jira_tickets <- pull_jira_info(in_file = NULL, auth_token = jira_access_token) #%>%
+  jira_tickets <- pull_jira_info(in_file = NULL, source=source, source_table=source_table, auth_token = jira_access_token) #%>%
     #dplyr::filter(`Epic Link` == "TOXVAL-296")
   response <- GET(url, httr::add_headers(Authorization = paste("Bearer", confluence_access_token)))
 
@@ -27,42 +32,56 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL, conflue
     print('authentication failed')
   }
 
-  # Derive the table and rows
+  # # Derive the table and rows
   tables <- rvest::html_nodes(confluence_page, "table")
   table <- tables[[2]]
-  header_row <- rvest::html_nodes(confluence_page, "tr:nth-child(1) th")
-  column_names <- rvest::html_text(header_row)
-  table_data <- list()
-  data_rows <- rvest::html_nodes(table, "tr:not(:first-child)")
+  # header_row <- rvest::html_nodes(confluence_page, "tr:nth-child(1) th")
+  # column_names <- rvest::html_text(header_row)
+  # table_data <- list()
+  # data_rows <- rvest::html_nodes(table, "tr:not(:first-child)")
+  #
+  # # Read the rows into a list
+  # for(i in seq_along(data_rows)) {
+  #   row <- data_rows[[i]]
+  #   cells <- rvest::html_nodes(row, "td")
+  #   row_data <- rvest::html_text(cells) %>%
+  #     stringr::str_squish()
+  #   row_data <- gsub("[\r\n]", "", row_data)
+  #   table_data <- c(table_data, list(row_data))
+  # }
+  # table_df <- as.data.frame(do.call(rbind, table_data), stringsAsFactors = FALSE)
+  # colnames(table_df) <- column_names
 
-  # Read the rows into a list
-  for(i in seq_along(data_rows)) {
-    row <- data_rows[[i]]
-    cells <- rvest::html_nodes(row, "td")
-    row_data <- rvest::html_text(cells)
-    row_data <- gsub("[\r\n]", "", row_data)
-    table_data <- c(table_data, list(row_data))
-  }
+  # Remove Jira Status Macro
+  jira_ticket_nodes = table %>%
+    rvest::html_nodes("table")
+  # https://stackoverflow.com/questions/50768364/how-to-filter-out-nodes-with-rvest/50769954
+  xml2::xml_remove(jira_ticket_nodes)
 
-  table_df <- as.data.frame(do.call(rbind, table_data), stringsAsFactors = FALSE)
-  colnames(table_df) <- column_names
-  # Filter out those not reviewed
-  table_df = table_df %>%
+  table_df = table %>%
+    rvest::html_table() %>%
+    dplyr::select(-`Jira Status`) %>%
+    # Filter out those not reviewed
     dplyr::filter(!`QC Status` %in% c(NA, "Ice Box", "Icebox"))
 
-  old_qc_category = runQuery("select distinct source, source_table, qc_category from toxval",toxval.db)
-  old_qc_category$qc_category[old_qc_category$qc_category == "-"] <- NA
-  old_qc_category$assignee <- NA
-
-  in_data <- jira_tickets$in_data
+  # Filter to relevant Jira tickets
+  in_data <- jira_tickets$in_data %>%
+    dplyr::filter(`Epic Link` == "TOXVAL-296",
+                  `Issue key` %in% table_df$`Jira Ticket`)
+  # Get attachment file source_hash values
   hashes <- jira_tickets$hashes
-  for (i in seq_len(nrow(old_qc_category))){
-    source_table_qc <- paste0(old_qc_category$source_table[i], " QC")
-    matching_rows <- in_data[in_data$Summary == source_table_qc | in_data$Summary == old_qc_category$source_table[i],]
-    if(nrow(matching_rows) > 0){
-      old_qc_category$assignee[i] <- matching_rows$Assignee[1]
-    }
-  }
+
+  old_qc_category = runQuery("select distinct source, source_table, qc_category from toxval",toxval.db) %>%
+    dplyr::mutate(qc_category = qc_category %>%
+                    dplyr::na_if("-"),
+                  source_table = source_table %>%
+                    gsub("direct load|direct_load|Direct Load", "Direct Load", .)) %>%
+    dplyr::left_join(table_df %>%
+                       dplyr::select(`Source Name`, `Table Name`, `Jira Ticket`, curation_type),
+                     by=c("source" = "Source Name", "source_table" = "Table Name")) %>%
+    dplyr::left_join(in_data %>%
+                       dplyr::select(`Issue key`, assignee = Assignee),
+                     by=c("Jira Ticket"="Issue key"))
 
   # Only consider valid, desired sources
   tables_names <- unique(table_df$`Source Name`)
@@ -71,7 +90,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL, conflue
 
   res0 <- data.frame()
   # Determine qc_category for each source
-  for(src in valid_sources$source) {
+  for(src in unique(valid_sources$source)) {
     source_df <- table_df %>%
       dplyr::filter(`Source Name` == src)
     existing_source <- old_qc_category %>% dplyr::filter(source == src)
@@ -98,9 +117,14 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL, conflue
       }
     }
 
-    # TODO Pull source_hash from Jira ticket attachments
-    # hashes %>% dplyr::filter(source == src)
-    hash_list = c()
+    # Pull source_hash from Jira ticket attachments
+    if(nrow(hashes)){
+      hash_list = hashes %>%
+        dplyr::filter(source == src) %>%
+        dplyr::pull(source_hash)
+    } else {
+      hash_list = c()
+    }
 
     in_toxval = in_toxval %>%
       dplyr::mutate(
@@ -121,7 +145,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL, conflue
                         ", Source overall passed QC, but this record was not manually checked")
         )
       )
-
+    # TODO Pull appropriate qc_stat for source (and those with multiple curation_type)
     if((qc_stat == "LV 1- In Review" & is.na(existing_source$assignee)) | qc_stat == "Done"){
       # Set qc_category for entries present in QC sampling
       src_records <- hashes %>% dplyr::filter(source == src) %>%
