@@ -94,9 +94,9 @@ set.critical_effect_category <- function(toxval.db){
   startPosition <- 1
   endPosition <- nrow(out)
   incrementPosition <- batch_size
-  if(incrementPosition > endPosition) incrementPosition = endPosition
 
   while(startPosition <= endPosition){
+    if(incrementPosition > endPosition) incrementPosition = endPosition
     message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
             " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
 

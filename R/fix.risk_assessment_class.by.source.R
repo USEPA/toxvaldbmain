@@ -104,9 +104,9 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
         startPosition <- 1
         endPosition <- nrow(rac_data)
         incrementPosition <- batch_size
-        if(incrementPosition > endPosition) incrementPosition = endPosition
 
         while(startPosition <= endPosition){
+          if(incrementPosition > endPosition) incrementPosition = endPosition
           message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
                   " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
 

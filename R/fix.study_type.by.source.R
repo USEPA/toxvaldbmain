@@ -230,9 +230,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         startPosition <- 1
         endPosition <- nrow(temp3)
         incrementPosition <- batch_size
-        if(incrementPosition > endPosition) incrementPosition = endPosition
 
         while(startPosition <= endPosition){
+          if(incrementPosition > endPosition) incrementPosition = endPosition
           message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())
 
           updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",

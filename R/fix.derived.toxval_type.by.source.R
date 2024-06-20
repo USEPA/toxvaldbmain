@@ -81,9 +81,9 @@ fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=
     startPosition <- 1
     endPosition <- length(toxval_id_list)
     incrementPosition <- batch_size
-    if(incrementPosition > endPosition) incrementPosition = endPosition
 
     while(startPosition <= endPosition){
+      if(incrementPosition > endPosition) incrementPosition = endPosition
       message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())
 
       updateQuery = paste0("UPDATE toxval set ",
