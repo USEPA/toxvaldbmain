@@ -170,8 +170,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
 
       if(report.only){
         rac_data = runQuery(paste0("SELECT toxval_id, source, toxval_type_original, toxval_type, risk_assessment_class FROM toxval ",
-                                   "WHERE source = '", source,
-                                   "' and risk_assessment_class != '-'",query_addition), toxval.db) %>%
+                                   "WHERE source = '", source, "'"), toxval.db) %>%
           dplyr::mutate(risk_assessment_class = dplyr::case_when(
             grepl('^EC|^EC|^IP|^LD|^LC', toxval_type) ~ "other",
             grepl('^LD|^LC', toxval_type) ~ "acute",
@@ -179,8 +178,9 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
             TRUE ~ risk_assessment_class
           ))
         set.all = set.all %>%
-          dplyr::filter(!toxval_id %in% rac_data$toxval_id) %>%
-          dplyr::bind_rows(rac_data)
+          # Only add if the records have not already been (only applied to RAC = "-")
+          dplyr::bind_rows(rac_data %>%
+                             dplyr::filter(!toxval_id %in% set.all$toxval_id))
       }
     }
 
