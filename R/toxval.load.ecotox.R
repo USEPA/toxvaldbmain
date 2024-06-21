@@ -8,7 +8,7 @@
 #--------------------------------------------------------------------------------------
 toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE, sys.date="2024-05-30"){
   source = "ECOTOX"
-  source_table = "direct_load"
+  source_table = "direct load"
   verbose = log
   # Whether to load ECOTOX data from stored RData
   do.load = FALSE

@@ -2,9 +2,8 @@
 #' @description Script to process CSV export of Jira into a status log
 #' @param jira_project Jira project code (e.g. CVTDB)
 #' @param in_file File path to Jira ticket summary CSV.
-#' @param source The source to set a qc_category for
-#' @param source_table Name of the source table associated with the source
 #' @param auth_token Authorization token for Jira
+#' @param ticket_filter_list List of Jira tickets to filter to
 #' @return Summary DataFrame of Jira tickets by Epic, Label, and Status
 #' @details DETAILS
 #' @examples
@@ -26,7 +25,7 @@
 #' @importFrom dplyr select contains mutate everything filter distinct left_join group_by summarise n
 #' @importFrom tidyr unite
 #' @importFrom stringr str_squish
-pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, source = NULL, source_table = NULL, auth_token = NULL){
+pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = NULL, ticket_filter_list = NULL){
 
   # Format headers
   if(!is.null(auth_token)){
@@ -50,10 +49,9 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, source = NULL,
     stop("Either could not pull directly from Jira or 'in_file' loading error...")
   }
 
-  # Filter to input source_table
-  if(!is.null(source_table)){
+  if(!is.null(ticket_filter_list)){
     in_data_url = in_data_url %>%
-      dplyr::filter(grepl(!!source_table, Summary))
+      dplyr::filter(`Issue key` %in% ticket_filter_list)
   }
 
   # Process loaded data
@@ -90,13 +88,7 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, source = NULL,
                      by = "Issue key")
 
   qc_files <- ticket_attachment_metadata %>%
-    dplyr::filter(stringr::str_detect(Summary, " QC")) %>%
-    # Use all QC files from Jira
-    dplyr::filter(grepl("toxval_qc|mrls_QC", jira_link),
-                  # Filter out DAT pushed records
-                  !grepl("QC_push", jira_link)) #%>%
-    # group_by(Summary) %>%
-    # slice_max(date)
+    dplyr::filter(file_ext %in% c("xlsx"))
 
   res <- data.frame()
   for(i in seq_len(nrow(qc_files))){
@@ -111,6 +103,7 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, source = NULL,
         res <- res %>%
           dplyr::bind_rows(df %>%
                              dplyr::select(dplyr::any_of(c("source", "source_hash", "qc_status")))) %>%
+          dplyr::mutate(jira_link = !!jira_link) %>%
           dplyr::distinct()
       }, error = function(e){
         print(paste("Error:", conditionMessage(e)))
