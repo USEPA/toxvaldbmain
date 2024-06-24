@@ -105,13 +105,13 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
                                        by=criteria) %>%
         dplyr::pull(dtxsid)
 
-      ids_to_fail = low_entries %>%
+      source_ids_to_fail = low_entries %>%
         dplyr::filter(dtxsid %in% intersection) %>%
         dplyr::select(toxval_id)
     } else {
       high_priority = as.character(NA)
       low_priority = as.character(NA)
-      ids_to_fail = data.frame()
+      source_ids_to_fail = data.frame()
     }
 
     # Get toxval_id values to fail from subsource hierarchy
@@ -122,44 +122,79 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       subsource_fail_query = paste0("SELECT DISTINCT toxval_id FROM toxval ",
                                     "WHERE source='", source, "' ",
                                     "AND subsource IN (", subsources_to_fail, ")")
-      subsource_fails = runQuery(subsource_fail_query, toxval.db)
+      subsource_ids_to_fail = runQuery(subsource_fail_query, toxval.db)
     } else {
-      subsource_fails = data.frame()
+      subsource_ids_to_fail = data.frame()
     }
 
-    # Get toxval_id values to fail
-    ids_to_fail = ids_to_fail %>%
-      dplyr::bind_rows(subsource_fails) %>%
-      dplyr::pull(toxval_id) %>%
-      unique() %>%
-      toString()
+    if(nrow(source_ids_to_fail) | nrow(subsource_ids_to_fail)){
+      # Set qc_status="fail" for low priority source in appropriate entries
+      # CONCAT reason if already has a fail status
+      source_fail_string = as.character(NA)
+      subsource_fail_string = as.character(NA)
+      no_apostrophe = as.character(NA)
 
-    if(ids_to_fail != ""){
-      if(!report.only){
-        # Set qc_status="fail" for low priority source in appropriate entries
-        # CONCAT reason if already has a fail status
-        update_query = paste0("UPDATE toxval SET qc_status = CASE ",
+      # Handle failing source priority entries
+      if(nrow(source_ids_to_fail)) {
+        # Get toxval_id values to fail
+        source_fail_string = source_ids_to_fail %>%
+          dplyr::pull(toxval_id) %>%
+          unique() %>%
+          toString()
+
+        source_query = paste0("UPDATE toxval SET qc_status = CASE ",
                               "WHEN qc_status like '%Duplicate of ", high_priority," chemical entry%' THEN qc_status ",
                               "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Duplicate of ", high_priority," chemical entry') ",
                               "ELSE 'fail:Duplicate of ", high_priority," chemical entry' ",
                               "END ",
-                              "WHERE source = '", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
-        if(nrow(subsource_fails)) {
-          update_query = paste0("UPDATE toxval SET qc_status = CASE ",
-                                "WHEN subsource in (", subsources_to_fail, ") THEN 'fail: Subsource in ", no_apostrophe, "' ",
-                                "WHEN qc_status like '%Duplicate of ", high_priority," chemical entry%' THEN qc_status ",
-                                "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Duplicate of ", high_priority," chemical entry') ",
-                                "ELSE 'fail: Duplicate of ", high_priority," chemical entry' ",
-                                "END ",
-                                "WHERE source = '", low_priority, "' AND toxval_id IN (", ids_to_fail, ")", query_addition)
-        }
+                              "WHERE source = '", low_priority, "' AND toxval_id IN (", source_fail_string, ")", query_addition)
+        if(!report.only) runQuery(source_query, toxval.db)
+      }
+      # Handle failing subsource priority entries
+      if(nrow(subsource_ids_to_fail)) {
+        # Get toxval_id values to fail
+        subsource_fail_string = subsource_ids_to_fail %>%
+          dplyr::pull(toxval_id) %>%
+          unique() %>%
+          toString()
 
-        runQuery(update_query, toxval.db)
-      } else {
+        subsource_query = paste0("UPDATE toxval SET qc_status = CASE ",
+                                 "WHEN qc_status like '%Subsource in ", no_apostrophe, "%' THEN qc_status ",
+                                 "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Subsource in ", no_apostrophe, "') ",
+                                 "ELSE 'fail: Subsource in ", no_apostrophe, "' ",
+                                 "END ",
+                                 "WHERE source = '", source, "' AND toxval_id IN (", subsource_fail_string, ")", query_addition)
+        if(!report.only) runQuery(subsource_query, toxval.db)
+      }
+
+      if(report.only) {
+        all_failures = source_ids_to_fail %>%
+          dplyr::mutate(add_qc_status = stringr::str_c("Duplicate of ", !!high_priority, " chemical entry")) %>%
+          dplyr::bind_rows(subsource_ids_to_fail) %>%
+          dplyr::mutate(add_qc_status = tidyr::replace_na(add_qc_status,
+                                                          paste0("Subsource in ", !!no_apostrophe)))
+
+        all_failures_string = all_failures %>%
+          dplyr::pull(toxval_id) %>%
+          unique() %>%
+          toString()
+
+        report_query = paste0("SELECT * FROM toxval WHERE toxval_id IN (", all_failures_string, ")")
+        current_report = runQuery(report_query, toxval.db) %>%
+          dplyr::left_join(all_failures, by="toxval_id") %>%
+          dplyr::mutate(
+            previous_qc_status = qc_status,
+            qc_status = dplyr::case_when(
+              stringr::str_detect(qc_status, add_qc_status) ~ qc_status,
+              stringr::str_detect(qc_status, "fail") ~ stringr::str_c(qc_status, "; ", add_qc_status),
+              TRUE ~ stringr::str_c("fail: ", add_qc_status)
+            )
+          ) %>%
+          dplyr::select(-add_qc_status)
+
         report.out = report.out %>%
-          dplyr::bind_rows(.,
-                           runQuery(paste0("SELECT * FROM toxval WHERE toxval_id in (", ids_to_fail, ")"),
-                                    toxval.db))
+          dplyr::bind_rows(., current_report)
+
       }
       cat("\n")
     }
@@ -167,7 +202,12 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   if(report.only){
     if(length(slist) > 1) source = "all sources"
     cat("Exporting report...\n")
-    writexl::write_xlsx(report.out %>% dplyr::distinct(),
+
+    report.out = report.out %>%
+      dplyr::distinct() %>%
+      dplyr::rename(new_qc_status = qc_status)
+
+    writexl::write_xlsx(report.out,
                         paste0("Repo/QC Reports/fix_dedup_hierarchy_", source, "_", subsource, "_", Sys.Date(), ".xlsx") %>%
                           gsub("__", "_", .) %>%
                           stringr::str_squish())
