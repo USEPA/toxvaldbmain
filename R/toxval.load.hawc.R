@@ -69,7 +69,10 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
       gsub(".+\\-", "", .) %>%
       tidyr::replace_na("-"),
     study_duration_units = study_duration_units %>%
-      tidyr::replace_na("-")
+      tidyr::replace_na("-"),
+
+    # Add subsource_url field
+    subsource_url = endpoint_url
   )
 
   cremove = c("assessment","target_organ","noel_original","loel_original","fel_original",
@@ -158,7 +161,6 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

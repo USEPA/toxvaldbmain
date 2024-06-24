@@ -69,7 +69,10 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
         gsub(".+\\-", "", .) %>%
         tidyr::replace_na("-"),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-")
+        tidyr::replace_na("-"),
+
+      # Add subsource_url field
+      subsource_url = record_url
     )
 
   #####################################################################
@@ -81,15 +84,20 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","relationship_id"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
-  # Remove unused columns ("columns to be dealt with)
-  res = res %>% dplyr::select(!tidyselect::any_of(nlist))
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
+  # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","relationship_id"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")

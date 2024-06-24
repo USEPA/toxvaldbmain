@@ -6,6 +6,7 @@
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
+#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE) {
   source = "ECHA IUCLID"
@@ -140,7 +141,9 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     cat("Add code to deal with specific issues for this source\n")
     #####################################################################
 
-    # Source-specific transformations handled elsewhere
+    # Add subsource_url from source_url
+    res = res %>%
+      dplyr::rename(subsource_url = source_url)
 
     #####################################################################
     cat("find columns in res that do not map to toxval or record_source\n")
@@ -151,16 +154,20 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     colnames(res)[which(names(res) == "species")] = "species_original"
     res = res[ , !(names(res) %in% c("record_url","short_ref"))]
     nlist = names(res)
-    nlist = nlist[!is.element(nlist,c("casrn","name","range_relationship_id"))]
-    nlist = nlist[!is.element(nlist,cols)]
+    nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id",
+                                # Do not remove fields that would become "_original" fields
+                                unique(gsub("_original", "", cols)))]
+    nlist = nlist[!nlist %in% cols]
 
-    # Dynamically remove unused OHT columns
+    # Remove columns that are not used in toxval
     res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
+    # Check if any non-toxval column still remaining in nlist
     nlist = names(res)
-    nlist = nlist[!is.element(nlist,c("casrn","name","range_relationship_id"))]
-    nlist = nlist[!is.element(nlist,cols)]
-
+    nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id",
+                                # Do not remove fields that would become "_original" fields
+                                unique(gsub("_original", "", cols)))]
+    nlist = nlist[!nlist %in% cols]
     if(length(nlist)>0) {
       cat("columns to be dealt with\n")
       print(nlist)
@@ -271,7 +278,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     refs = dplyr::distinct(refs)
     res$datestamp = Sys.Date()
     res$source_table = source_table
-    res$subsource_url = "-"
+    res$source_url = "https://echa.europa.eu/"
     res$details_text = paste(source,"Details")
     runInsertTable(res, "toxval", toxval.db, verbose)
     print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
