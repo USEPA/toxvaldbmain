@@ -132,7 +132,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       # CONCAT reason if already has a fail status
       source_fail_string = as.character(NA)
       subsource_fail_string = as.character(NA)
-      no_apostrophe = as.character(NA)
+      # no_apostrophe = as.character(NA)
 
       # Handle failing source priority entries
       if(nrow(source_ids_to_fail)) {
