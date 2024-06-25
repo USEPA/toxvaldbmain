@@ -117,7 +117,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix human_eco by source\n")
   #####################################################################
-  fix.human_eco.by.source(toxval.db, source, subsource, reset = TRUE)
+  fix.human_eco.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix strain by source\n")
