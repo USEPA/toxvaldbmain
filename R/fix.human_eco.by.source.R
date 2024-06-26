@@ -24,8 +24,9 @@ fix.human_eco.by.source <- function(toxval.db, source=NULL, subsource=NULL){
     "DOD ERED",
     "DOE LANL ECORISK",
     "DOE Protective Action Criteria",
-    "DOE Wildlife Benchmarks",
-    "EnviroTox_v2"
+    "EnviroTox_v2",
+    "EPA OW OPP-ALB",
+    "EPA OW NRWQC-ALC"
   )
 
   for(source in slist) {
@@ -33,6 +34,7 @@ fix.human_eco.by.source <- function(toxval.db, source=NULL, subsource=NULL){
     query = paste0(
       "UPDATE toxval SET human_eco = CASE ",
       "WHEN source='EFSA' AND study_type='ecotoxicity' THEN 'eco' ",
+      "WHEN source='DOE Wildlife Benchmarks' AND experimental_record='not experimental' THEN 'eco' ",
       "WHEN source IN ('", paste0(eco_list, collapse="', '"), "') THEN 'eco' ",
       "ELSE 'human health' END ",
       "WHERE source = '", source, "'",
