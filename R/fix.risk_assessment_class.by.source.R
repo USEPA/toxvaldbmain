@@ -28,11 +28,6 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     dplyr::arrange(term, risk_assessment_class, order) %>%
     dplyr::distinct()
 
-  # Handle addition of subsource for queries
-  query_addition = " and qc_status NOT LIKE '%fail%'"
-  if(!is.null(subsource)) {
-    query_addition = paste0(query_addition, " and subsource='", subsource, "'")
-  }
   # Store all missing RAC entries
   missing.all = data.frame()
   # Store all set RAC entries
@@ -46,17 +41,25 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     cat(source,subsource,"\n")
     cat("----------------------------------------\n")
 
+    # Handle addition of subsource for queries
+    query_addition = ""
+    if(!is.null(subsource)) {
+      query_addition = paste0(query_addition, " AND subsource='", subsource, "'")
+    }
+
     if(restart & !report.only) {
-      query = paste0("update toxval set risk_assessment_class = '-'  where source = '",source,"'")
+      query = paste0("update toxval set risk_assessment_class = '-'  where source = '",source,"'", query_addition)
       runQuery(query, toxval.db)
     }
 
     # Set RAC to "-" for entries with non-"human health" human_eco values
     query = paste0("UPDATE toxval SET risk_assessment_class='-'  ",
-                   "WHERE source = '",source,"' ",
-                   "AND human_eco!='human health'",
+                   "WHERE source = '",source,"' and human_eco != 'human health'",
                    query_addition)
     runQuery(query, toxval.db)
+
+    # Add in special filters after restart and human_eco assignment to "-"
+    query_addition = paste0(query_addition, " AND human_eco = 'human health' AND qc_status NOT LIKE '%fail%'")
 
     dict = conv[conv$source==source,]
     if(!nrow(dict) & !report.only){
@@ -66,7 +69,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     }
     n1.0 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' ",
                            "and source = '",source,"' ",
-                           "and human_eco='human health'", query_addition),
+                           query_addition),
                     toxval.db)[1,1]
     if(n1.0 == 0 & !report.only){
       # Skip if not report.only and 0 of value "-"
@@ -87,7 +90,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       query = paste0("SELECT toxval_id, ", field,", source FROM toxval ",
                      "WHERE ", field, " in ('",
                      paste0(unique(dict$term[dict$field == field]), collapse = "', '"),
-                     "') and source = '",source,"' AND human_eco='human health'", query_addition)
+                     "') and source = '",source,"'", query_addition)
 
       if(!report.only){
         query = paste0(query,
@@ -125,8 +128,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                                  "INNER JOIN z_updated_df b ",
                                  "ON (a.toxval_id = b.toxval_id) ",
                                  "SET a.risk_assessment_class = b.risk_assessment_class ",
-                                 "WHERE a.toxval_id in (",toString(rac_data$toxval_id[startPosition:incrementPosition]),") ",
-                                 "AND a.human_eco='human health'")
+                                 "WHERE a.toxval_id in (",toString(rac_data$toxval_id[startPosition:incrementPosition]),")")
 
           runUpdate(table="toxval",
                     updateQuery = update_query,
@@ -138,10 +140,10 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
         }
       }
       # Check if more to assign
-      n0 = runQuery(paste0("select count(*) from toxval where source = '",source,
-                           "' and human_eco='human health'",query_addition),toxval.db )[1,1]
+      n0 = runQuery(paste0("select count(*) from toxval where source = '",
+                           source, "'", query_addition), toxval.db )[1,1]
       n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",
-                           source,"' and human_eco='human health'",query_addition) ,toxval.db)[1,1]
+                           source, "'", query_addition), toxval.db)[1,1]
 
       cat("RAC still missing: ",n1," out of ",n0," from original:",field, "\n")
       if(n1 == 0 & !report.only) break()
@@ -165,28 +167,28 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
     # Handle DOD ERED edge case
     if(source=="DOD ERED") {
       dod_query_list = list(
-        paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'ED%' and source = '",source,"' and risk_assessment_class='-' and human_eco='human health'",query_addition),
-        paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'EC%' and source = '",source,"' and risk_assessment_class='-' and human_eco='human health'",query_addition),
-        paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'IP%' and source = '",source,"' and risk_assessment_class='-' and human_eco='human health'",query_addition),
-        paste0("update toxval set risk_assessment_class = 'acute' where toxval_type like 'LD%' and source = '",source,"' and risk_assessment_class='-' and human_eco='human health'",query_addition),
-        paste0("update toxval set risk_assessment_class = 'acute' where toxval_type like 'LC%' and source = '",source,"' and risk_assessment_class='-' and human_eco='human health'",query_addition),
-        paste0("update toxval set risk_assessment_class = 'other' where toxval_type_original like 'N/R%' and source = '",source,"' and risk_assessment_class='-' and human_eco='human health'",query_addition),
-        paste0("update toxval set risk_assessment_class = 'other' where toxval_type_original like 'BIED%' and source = '",source,"' and risk_assessment_class='-' and human_eco='human health'",query_addition)
+        paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'ED%' and source = '",source,"' and risk_assessment_class='-'",query_addition),
+        paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'EC%' and source = '",source,"' and risk_assessment_class='-'",query_addition),
+        paste0("update toxval set risk_assessment_class = 'other' where toxval_type like 'IP%' and source = '",source,"' and risk_assessment_class='-'",query_addition),
+        paste0("update toxval set risk_assessment_class = 'acute' where toxval_type like 'LD%' and source = '",source,"' and risk_assessment_class='-'",query_addition),
+        paste0("update toxval set risk_assessment_class = 'acute' where toxval_type like 'LC%' and source = '",source,"' and risk_assessment_class='-'",query_addition),
+        paste0("update toxval set risk_assessment_class = 'other' where toxval_type_original like 'N/R%' and source = '",source,"' and risk_assessment_class='-'",query_addition),
+        paste0("update toxval set risk_assessment_class = 'other' where toxval_type_original like 'BIED%' and source = '",source,"' and risk_assessment_class='-'",query_addition)
       )
       for(query in dod_query_list){
         if (!report.only) {
           runQuery(query, toxval.db)
         }
         n0 = runQuery(paste0("select count(*) from toxval where source = '",
-                             source,"' and human_eco='human health'",query_addition),toxval.db )[1,1]
+                             source, "'", query_addition), toxval.db )[1,1]
         n1 = runQuery(paste0("select count(*) from toxval where risk_assessment_class='-' and source = '",
-                             source,"' and human_eco='human health'",query_addition) ,toxval.db)[1,1]
+                             source,"'", query_addition), toxval.db)[1,1]
         cat("RAC still missing: ",n1," out of ",n0,"\n")
       }
 
       if(report.only){
         rac_data = runQuery(paste0("SELECT toxval_id, source, toxval_type_original, toxval_type, risk_assessment_class FROM toxval ",
-                                   "WHERE source = '", source, "' and human_eco='human health'"), toxval.db) %>%
+                                   "WHERE source = '", source, "'", query_addition), toxval.db) %>%
           dplyr::mutate(risk_assessment_class = dplyr::case_when(
             grepl('^EC|^EC|^IP|^LD|^LC', toxval_type) ~ "other",
             grepl('^LD|^LC', toxval_type) ~ "acute",
@@ -240,12 +242,16 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                       "WHERE ",
                       "b.source='",source,"' ",
                       "and b.risk_assessment_class='-' ",
-                      "and b.qc_status NOT LIKE '%fail%' ",
-                      "and b.human_eco='human health'",
-                      query_addition)
+                      # "and b.qc_status NOT LIKE '%fail%' ",
+                      # "and b.human_eco='human health'",
+                      query_addition %>%
+                       # Add query table stems
+                       gsub("subsource", "b.subsource", .) %>%
+                       gsub("qc_status", "b.qc_status", .) %>%
+                       gsub("human_eco", "b.human_eco", .))
 
       # Record missing RAC entries
-      temp = runQuery(query,toxval.db)
+      temp = runQuery(query, toxval.db)
       missing.all = dplyr::bind_rows(missing.all, temp)
       file = paste0(toxval.config()$datapath,"dictionary/missing/missing_rac/missing_RAC_",source, " ",subsource,".xlsx") %>%
         gsub(" \\.xlsx", ".xlsx", .)
