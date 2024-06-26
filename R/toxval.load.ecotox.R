@@ -8,7 +8,7 @@
 #--------------------------------------------------------------------------------------
 toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE, sys.date="2024-05-30"){
   source = "ECOTOX"
-  source_table = "direct_load"
+  source_table = "direct load"
   verbose = log
   # Whether to load ECOTOX data from stored RData
   do.load = FALSE
@@ -369,15 +369,20 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
-  # Remove unused columns ("columns to be dealt with")
-  res = res %>% dplyr::select(!tidyselect::any_of(nlist))
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
 
+  # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
 
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")

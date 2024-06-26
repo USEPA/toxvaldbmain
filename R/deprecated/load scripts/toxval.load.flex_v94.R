@@ -5,7 +5,6 @@
 #' @param verbose Whether the loaded rows should be printed to the console.
 #' @param only.new if TRUE only files where the sources is not alrady in the database
 #' will be loaded
-#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.flex <- function(toxval.db,verbose=F,only.new=F) {
   printCurrentFunction(toxval.db)

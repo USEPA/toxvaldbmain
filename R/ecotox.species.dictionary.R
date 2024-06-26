@@ -10,7 +10,7 @@
 ecotox.species.dictionary <- function(toxval.db,do.load=F,sys.date="2023-05-03") {
   printCurrentFunction(toxval.db)
   source <- "ECOTOX"
-  source_table = "direct_load"
+  source_table = "direct load"
 
   #####################################################################
   cat("load data to res\n")

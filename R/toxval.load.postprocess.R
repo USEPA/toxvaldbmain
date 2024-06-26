@@ -1,8 +1,9 @@
 #--------------------------------------------------------------------------------------
 #' Do all of the post-processing steps for a source
 #' @param toxval.db The database version to use
-#' @param sourcedb The source database name
+#' @param source.db The source database name
 #' @param source The source name
+#' @param subsource The specific subsource to process, if desired (Default: NULL)
 #' @param do.convert.units If TRUE, convert units, mainly from ppm to mg/kg-day. This code is not debugged
 #' @param chem_source Used only for source=ECHA IUCLID
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
@@ -24,6 +25,11 @@ toxval.load.postprocess <- function(toxval.db,
 
   do.convert.units = TRUE # override default because it is not specified in all toxval load functions
   if(source=="ECOTOX") do.convert.units = FALSE
+
+  #####################################################################
+  cat("reset initial QC status for", source, "\n")
+  #####################################################################
+  set.initial.qc_status(toxval.db, source.db, source, subsource)
 
   #####################################################################
   cat("fix deduping hierarchy by source\n")
@@ -111,7 +117,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix human_eco by source\n")
   #####################################################################
-  fix.human_eco.by.source(toxval.db, source, subsource, reset = TRUE)
+  fix.human_eco.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix strain by source\n")
@@ -159,7 +165,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix QC status by source\n")
   #####################################################################
-  fix.qc_status.by.source(toxval.db, source, subsource)
+  fix.qc_status.by.source(toxval.db, source.db, source, subsource)
 
   #####################################################################
   cat("export report to check toxval_type, exposure_route, units\n")
@@ -170,6 +176,9 @@ toxval.load.postprocess <- function(toxval.db,
   cat("set export_source_name and supersource by source\n")
   #####################################################################
   set.supersource.export.names(toxval.db, source)
+
+  cat("set experimental_record tag\n")
+  set.experimental_record.by.source(toxval.db, source)
 
   #####################################################################
   cat("export by source\n")

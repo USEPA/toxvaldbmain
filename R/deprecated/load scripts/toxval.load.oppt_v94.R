@@ -5,7 +5,6 @@
 #' @param source.db The source database to use.
 #' @param log If TRUE, send output to a log file
 #'
-#' @export
 #--------------------------------------------------------------------------------------
 toxval.load.oppt <- function(toxval.db, source.db, log=F){
   printCurrentFunction(toxval.db)
