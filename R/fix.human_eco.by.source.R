@@ -6,7 +6,7 @@
 #' @return The database will be altered
 #' @export
 #--------------------------------------------------------------------------------------
-fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL){
+fix.human_eco.by.source <- function(toxval.db, source=NULL, subsource=NULL){
   printCurrentFunction(paste(toxval.db,":", source,subsource))
 
   # Fix all sources if source not specified
@@ -26,22 +26,19 @@ fix.human_eco.by.source <- function(toxval.db,source=NULL,subsource=NULL){
     "DOE Protective Action Criteria",
     "DOE Wildlife Benchmarks",
     "EnviroTox_v2"
-  ) %>%
-    paste0("'", ., "'") %>%
-    toString()
+  )
 
   for(source in slist) {
     # Set human_eco values according to eco_list and special EFSA case
     query = paste0(
       "UPDATE toxval SET human_eco = CASE ",
       "WHEN source='EFSA' AND study_type='ecotoxicity' THEN 'eco' ",
-      "WHEN source='EFSA' AND study_type!='ecotoxicity' THEN 'human health ",
-      "WHEN source IN (", eco_list, ") THEN 'eco' ",
+      "WHEN source IN ('", paste0(eco_list, collapse="', '"), "') THEN 'eco' ",
       "ELSE 'human health' END ",
       "WHERE source = '", source, "'",
       query_addition
     )
-    runQuery(query)
+    runQuery(query, toxval.db)
   }
 }
 
