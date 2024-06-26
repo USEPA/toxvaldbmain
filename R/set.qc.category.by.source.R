@@ -144,10 +144,8 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
       dplyr::mutate(
         # Establish baseline
         qc_category_new = dplyr::case_when(
-          curation_type == 'automated' ~
-            "Programmatically extracted from structured data source",
-          curation_type == 'manual' ~
-            "Manually extracted from unstructured data source",
+          curation_type == 'automated' ~ "Programmatically extracted from structured data source",
+          curation_type == 'manual' ~ "Manually extracted from unstructured data source",
           TRUE ~ NA_character_
         ),
         # Account for ticket status (overall pass QC if LV 1 - In Review or Done)
@@ -198,8 +196,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                      by=c("Jira Ticket"="jira_ticket")) %>%
     group_by(source_hash) %>%
     # Combine unique categories that aren't NA
-    dplyr::mutate(qc_category = paste0(unique(c(qc_category, qc_category_new)[!is.na(c(qc_category, qc_category_new))]),
-                                       collapse = ", ")) %>%
+    dplyr::mutate(qc_category = qc_category_new) %>%
     dplyr::ungroup() %>%
     dplyr::select("source", "source_hash", "qc_category") %>%
     distinct()
