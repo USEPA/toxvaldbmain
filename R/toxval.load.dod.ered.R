@@ -143,7 +143,6 @@ toxval.load.dod.ered <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$subsource_url = "-"
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)

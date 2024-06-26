@@ -131,7 +131,6 @@ toxval.load.fda_cedi <- function(toxvaldb,source.db, log=FALSE, remove_null_dtxs
   res$datestamp = Sys.Date()
   res$source_table = source_table
   # res$source_url = "https://www.accessdata.fda.gov/scripts/sda/sdNavigation.cfm?sd=edisrev"
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

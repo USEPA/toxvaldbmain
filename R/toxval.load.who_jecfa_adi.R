@@ -55,8 +55,29 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
               "meeting", "flavis_number", "mrl_code", "mrl_comment", "fema_number", "specs_code", "addendum_url", "chemical_url", "coe_number",
               "residues", "chemical_names", "ins", "intake", "report", "report_url", "addendum", "webpage_name", "evaluation_year",
               "specification_url", "ins_matches", "functional_class", "allergenicity", "residues_url", "treatment_level", "tolerable_intake", "comments",
-              "toxval_units_comments", "study_duration_qualifier", "specification", "source_version_date")
+              "toxval_units_comments", "study_duration_qualifier", "specification", "source_version_date", "subsource_url")
   res = res[ , !(names(res) %in% cremove)]
+
+  # Add URL information from WHO JECFA Tox Studies
+  # Get subsource_url from who_jecfa_tox_studies by dtxsid
+  query = paste0("SELECT DISTINCT b.dtxsid, a.subsource_url ",
+                 "FROM res_toxval_v95.toxval a LEFT JOIN res_toxval_source_v5.source_chemical b ",
+                 "ON a.chemical_id=b.chemical_id ",
+                 "WHERE a.source='WHO JECFA Tox Studies'")
+  who_jecfa_url = runQuery(query, toxval.db)
+
+  # Temporarily get dtxsid for current res
+  query = paste0("SELECT DISTINCT b.dtxsid, a.chemical_id ",
+                 "FROM res_toxval_v95.toxval a LEFT JOIN res_toxval_source_v5.source_chemical b ",
+                 "ON a.chemical_id=b.chemical_id ",
+                 "WHERE a.source='WHO JECFA ADI'")
+  who_jecfa_adi_dtxsid = runQuery(query, toxval.db)
+
+  # Get subsource_url by merging with above dataframes
+  res = res %>%
+    dplyr::left_join(who_jecfa_adi_dtxsid, by=c("chemical_id")) %>%
+    dplyr::left_join(who_jecfa_url, by=c("dtxsid")) %>%
+    dplyr::select(-dtxsid)
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -160,7 +181,6 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
