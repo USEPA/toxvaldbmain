@@ -128,7 +128,12 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                                  "INNER JOIN z_updated_df b ",
                                  "ON (a.toxval_id = b.toxval_id) ",
                                  "SET a.risk_assessment_class = b.risk_assessment_class ",
-                                 "WHERE a.toxval_id in (",toString(rac_data$toxval_id[startPosition:incrementPosition]),")")
+                                 "WHERE a.toxval_id in (",toString(rac_data$toxval_id[startPosition:incrementPosition]),")",
+                                 query_addition %>%
+                                   # Add query table stems
+                                   gsub("subsource", "a.subsource", .) %>%
+                                   gsub("qc_status", "a.qc_status", .) %>%
+                                   gsub("human_eco", "a.human_eco", .))
 
           runUpdate(table="toxval",
                     updateQuery = update_query,

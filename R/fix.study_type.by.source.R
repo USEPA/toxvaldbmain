@@ -243,12 +243,14 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
         while(startPosition <= endPosition){
           if(incrementPosition > endPosition) incrementPosition = endPosition
-          message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())
+          message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+                  " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
 
           updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                               "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type",
-                               " WHERE a.source_hash in ('",
-                               paste0(temp3$source_hash[startPosition:incrementPosition], collapse="', '"), "')")
+                               "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type ",
+                               "WHERE a.source_hash in ('",
+                               paste0(temp3$source_hash[startPosition:incrementPosition], collapse="', '"), "') ",
+                               "AND a.qc_status NOT LIKE '%fail%' and a.human_eco = 'human health'")
 
           runUpdate(table="toxval",
                     updateQuery = updateQuery,
