@@ -275,15 +275,6 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
       casrn = sapply(casrn, FUN=fix.casrn)
     ) %>%
 
-    # Remove excess whitespace, replace NA with "-"
-    dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~stringr::str_squish(.) %>%
-                                  tidyr::replace_na("-")))
-
-  # Remove intermediates
-  rm(res1, res2, ECOTOX)
-
-  # Final filtering
-  res = res %>%
     # Filter toxval_numeric greater than 0
     dplyr::filter(toxval_numeric >= 0) %>%
 
@@ -291,7 +282,14 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     tidyr::drop_na(toxval_numeric, toxval_type, toxval_units) %>%
 
     # Remove duplicate entries
-    dplyr::distinct()
+    dplyr::distinct() %>%
+
+    # Remove excess whitespace, replace NA with "-"
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~stringr::str_squish(.) %>%
+                                  tidyr::replace_na("-")))
+
+  # Remove intermediates
+  rm(res1, res2, ECOTOX)
 
   #####################################################################
   cat("add other columns to res\n")
