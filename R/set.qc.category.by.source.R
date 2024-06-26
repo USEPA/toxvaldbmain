@@ -144,9 +144,9 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
       dplyr::mutate(
         # Establish baseline
         qc_category_new = dplyr::case_when(
-          curation_type == 'automated' & !grepl("Programmatically extracted from structured data source", qc_category) ~
+          curation_type == 'automated' ~
             "Programmatically extracted from structured data source",
-          curation_type == 'manual' & !grepl("Manually extracted from unstructured data source", qc_category) ~
+          curation_type == 'manual' ~
             "Manually extracted from unstructured data source",
           TRUE ~ NA_character_
         ),
