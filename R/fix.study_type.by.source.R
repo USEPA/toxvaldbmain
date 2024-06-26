@@ -33,6 +33,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   if(!is.null(subsource)) {
     query_addition = paste0(query_addition, " and b.subsource='", subsource, "'")
   }
+
   if(!is.null(custom.query.filter)){
     query_addition = paste0(query_addition, " ", custom.query.filter)
   }
@@ -86,7 +87,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                     "WHERE b.source='", source, "'",
                     query_addition,
                     " and b.source_hash NOT IN ('", import_logged, "')",
-                    " and b.qc_status NOT LIKE '%fail%'")
+                    " and b.qc_status NOT LIKE '%fail%'",
+                    " and human_eco = 'human health'")
 
       cat("Pulling source_hash records not already accounted for...\n")
       mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
@@ -117,6 +119,13 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
     # Store aggregate missing entries
     missing.all = data.frame()
+
+    # Set study_type to "-" for entries with non-"human health" human_eco values
+    query = paste0("UPDATE toxval SET study_type='-'  ",
+                   "WHERE source = '",source,"' ",
+                   "AND human_eco != 'human health'",
+                   query_addition)
+    runQuery(query, toxval.db)
 
     for(source in slist) {
 
@@ -162,7 +171,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       temp.old = runQuery(paste0("SELECT b.source_hash, b.study_type from toxval b ",
                                         # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                                         "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
-                                        " and b.qc_status NOT LIKE '%fail%'",
+                                        " and b.qc_status NOT LIKE '%fail%' and b.human_eco = 'human health'",
                                         query_addition), toxval.db)
 
       shlist = unique(temp0$source_hash)
@@ -188,6 +197,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                        # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                        "WHERE b.source='", source, "'",
                        " and b.qc_status NOT LIKE '%fail%'",
+                       " and b.human_eco = 'human health'",
                        query_addition)
 
         if(!is.null(subsource)) {
