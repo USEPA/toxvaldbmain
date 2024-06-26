@@ -131,6 +131,10 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
                       dplyr::na_if(""))
     )
 
+  # Manually fix special case identified
+  # Set study duration from "54465 weeks" to "104 weeks"
+  res$study_duration_value[res$study_duration_value %in% c(54465)] = 104
+
   # View(res %>% select(admin_route, admin_method, vehicle, exposure_route, exposure_method, exposure_form) %>% distinct())
   cat("set the source_hash\n")
   # Add source_hash_temp column
