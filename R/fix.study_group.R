@@ -37,7 +37,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
                    "left join record_source b on a.toxval_id=b.toxval_id ",
                    "left join species c on a.species_id=c.species_id ",
                    # Only use record_source entries from the source, not ToxVal team cataloging
-                   "where b.clowder_doc_id = '-' and record_source_level = 'primary (risk assessment values)' ",
+                   "where b.clowder_doc_id = '-' and b.record_source_level not in ('extraction', 'origin') ",
                    "and a.source='",source,"'", query_addition)
 
     # Pull data
