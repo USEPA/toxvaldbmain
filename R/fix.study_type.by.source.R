@@ -31,7 +31,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
-    query_addition = paste0(query_addition, " and b.subsource='", subsource, "'")
+    query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
 
   if(!is.null(custom.query.filter)){
@@ -85,7 +85,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                     "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
                     # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                     "WHERE b.source='", source, "'",
-                    query_addition,
+                    query_addition %>%
+                      gsub("subsource", "b.subsource", .),
                     " and b.source_hash NOT IN ('", import_logged, "')",
                     " and b.qc_status NOT LIKE '%fail%'",
                     " and human_eco = 'human health'")
@@ -172,7 +173,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                                         # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
                                         "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
                                         " and b.qc_status NOT LIKE '%fail%' and b.human_eco = 'human health'",
-                                        query_addition), toxval.db)
+                                        query_addition %>%
+                                   gsub("subsource", "b.subsource", .)), toxval.db)
 
       shlist = unique(temp0$source_hash)
       shlist.db = unique(temp.old$source_hash)
@@ -198,7 +200,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                        "WHERE b.source='", source, "'",
                        " and b.qc_status NOT LIKE '%fail%'",
                        " and b.human_eco = 'human health'",
-                       query_addition)
+                       query_addition %>%
+                         gsub("subsource", "b.subsource", .))
 
         if(!is.null(subsource)) {
           query = paste0(query, " and b.subsource='",subsource,"'")
