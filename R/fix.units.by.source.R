@@ -45,7 +45,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
   initial_query = paste0("SELECT a.source, a.toxval_numeric_original, a.toxval_numeric, ",
                          "a.toxval_units_original, a.toxval_units, a.toxval_type, ",
                          "a.mw, a.species_id, a.exposure_route, a.human_eco, a.toxval_id, ",
-                         "a.study_type, a.exposure_method, b.common_name ",
+                         "a.study_duration_class, a.exposure_method, b.common_name ",
                          "FROM toxval a LEFT JOIN species b ON b.species_id = a.species_id ")
 
   # Handle addition of subsource for queries
@@ -338,6 +338,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
 
     # Get conversion dictionary with mapped species_id values
     conv = readxl::read_xlsx(paste0(toxval.config()$datapath,"dictionary/ppm to mgkgday by animal.xlsx")) %>%
+      dplyr::rename(study_duration_class = study_type) %>%
       # Standardize species case
       dplyr::mutate(
         animal_original = animal,
@@ -353,7 +354,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           "UPDATE toxval ",
           "SET toxval_numeric=toxval_numeric_original*", food_conversion, ", toxval_units='mg/kg-day' ",
           "WHERE source='", source, "' ",
-          "AND study_type='", study_type, "' ",
+          "AND study_duration_class='", study_duration_class, "' ",
           "AND toxval_units LIKE 'ppm%' ",
           "AND species_id IN (", species_id, ") ",
           "AND exposure_method IN ('feed', 'food', 'diet')",
@@ -363,7 +364,7 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           "UPDATE toxval ",
           "SET toxval_numeric=toxval_numeric_original*", water_conversion, ", toxval_units='mg/kg-day' ",
           "WHERE source='", source, "' ",
-          "AND study_type='", study_type, "' ",
+          "AND study_duration_class='", study_duration_class, "' ",
           "AND toxval_units LIKE 'ppm%' ",
           "AND species_id IN (", species_id, ") ",
           "AND exposure_method IN ('drinking water', 'water')",
@@ -381,12 +382,12 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
         curr_animal = conv$animal[i]
         curr_s_ids = conv$species_id[i]
         s_id_list = stringr::str_split_1(curr_s_ids, pattern=", ")
-        curr_study_type = conv$study_type[i]
+        curr_study_duration_class = conv$study_duration_class[i]
         water_conversion = conv$water_conversion[i]
         food_conversion = conv$food_conversion[i]
         change = paste0("ppm to mg/kg-day by species: ", curr_animal, ", species_id: (", curr_s_ids, ")")
         current_changes = source_data %>%
-          dplyr::filter(study_type == !!curr_study_type,
+          dplyr::filter(study_duration_class == !!curr_study_duration_class,
                         species_id %in% s_id_list,
                         exposure_method %in% c("drinking water", "water", "feed", "food", "diet"),
                         grepl("ppm", toxval_units, ignore.case=TRUE)) %>%
