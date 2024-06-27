@@ -125,7 +125,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     query = paste0("UPDATE toxval SET study_type='-'  ",
                    "WHERE source = '",source,"' ",
                    "AND human_eco != 'human health'",
-                   gsub("b\\.subsource", "subsource", query_addition))
+                   query_addition)
     runQuery(query, toxval.db)
 
     for(source in slist) {
