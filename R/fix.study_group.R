@@ -29,7 +29,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
       runQuery(paste0("update toxval set study_group='-' where source='",source,"'", query_addition), toxval.db)
     }
     # Query unique study fields
-    query = paste0("select a.toxval_id,a.dtxsid,c.common_name, a.toxval_units,  ",
+    query = paste0("select a.toxval_id, a.source, a.subsource, a.dtxsid,c.common_name, a.toxval_units,  ",
                    "a.study_type, a.exposure_route,a.exposure_method,a.exposure_form, ",
                    "a.study_duration_value, a.study_duration_units, a.sex, a.lifestage, a.generation, a.year,",
                    "a.strain, b.year as record_year, b.long_ref, b.title ",
@@ -51,10 +51,11 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
 
     temp_sg = temp %>%
       dplyr::mutate(source_hash = temp.temp$source_hash) %>%
-      dplyr::select(toxval_id, source_hash) %>%
+      dplyr::select(toxval_id, source, subsource, source_hash) %>%
       # Collapse toxval_id for duplicate hashes
       dplyr::group_by(dplyr::across(c(-toxval_id))) %>%
       dplyr::summarise(toxval_id = toString(toxval_id)) %>%
+      dplyr::ungroup() %>%
       # Only account for those with duplicates
       dplyr::filter(grepl(",", toxval_id))
 
@@ -62,7 +63,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
       temp_sg = temp_sg %>%
         # Assign study group
         dplyr::mutate(study_group = 1:n() %>%
-                        paste0(!!source, "_dup_", !!subsource, .)) %>%
+                        paste0(source, "_dup_", subsource, "_", .)) %>%
         dplyr::ungroup() %>%
         dplyr::select(-source_hash) %>%
         # Separate collapse toxval_id groups
