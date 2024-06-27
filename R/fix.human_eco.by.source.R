@@ -36,7 +36,7 @@ fix.human_eco.by.source <- function(toxval.db, source=NULL, subsource=NULL){
     "WHEN source='DOE Wildlife Benchmarks' AND",
     " (species_original IN ('rat', 'mouse', 'rhesus macaque', 'dog', 'guinea pig', 'hamster') OR",
     " species_id IN (SELECT species_id FROM species WHERE common_name IN ('Rat', 'Mouse', 'Rhesus Macaque', 'Dog', 'Guinea Pig', 'Hamster')))",
-    " THEN 'human_health' ",
+    " THEN 'human health' ",
     "WHEN source='DOE Wildlife Benchmarks' AND experimental_record='not experimental' THEN 'eco' ",
     "WHEN source IN ('", paste0(eco_list, collapse="', '"), "') THEN 'eco' ",
     "ELSE 'human health' END ",
