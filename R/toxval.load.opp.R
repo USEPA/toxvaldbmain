@@ -63,7 +63,7 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","toxval_relationship",
+  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","hhbp_rfd_id","cancer_id",
                               # Do not remove fields that would become "_original" fields
                               unique(gsub("_original", "", cols)))]
   nlist = nlist[!nlist %in% cols]
@@ -73,7 +73,7 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
 
   # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","toxval_relationship",
+  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","hhbp_rfd_id","cancer_id",
                               # Do not remove fields that would become "_original" fields
                               unique(gsub("_original", "", cols)))]
   nlist = nlist[!nlist %in% cols]
@@ -118,9 +118,14 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   cat("Set the toxval_relationship for separated toxval_numeric range records\n")
   #####################################################################
   relationship_initial = res %>%
-    dplyr::filter(grepl("Range", toxval_relationship),
-                  !range_relationship_id %in% c("-", NA))
-
+    dplyr::filter(grepl("range", toxval_subtype),
+                  !range_relationship_id %in% c("-", NA)) %>%
+    dplyr::mutate(
+      toxval_relationship = dplyr::case_when(
+        grepl("lower", toxval_subtype) ~ "Lower Range",
+        grepl("upper", toxval_subtype) ~ "Upper Range"
+      )
+    )
   # Add check for filtered values
   if(nrow(relationship_initial)) {
     relationship = relationship_initial %>%
@@ -133,7 +138,8 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
       dplyr::rename(toxval_id_1 = `Lower Range`,
                     toxval_id_2 = `Upper Range`) %>%
       dplyr::mutate(relationship = "toxval_numeric range") %>%
-      dplyr::select(-range_relationship_id)
+      dplyr::select(-range_relationship_id) %>%
+      dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
 
     # Insert range relationships into toxval_relationship table
     if(nrow(relationship)){
@@ -143,7 +149,94 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
 
   # Remove range_relationship_id and toxval_relationship fields
   res = res %>%
-    dplyr::select(-range_relationship_id, -toxval_relationship)
+    dplyr::select(-range_relationship_id)
+
+  #####################################################################
+  cat("Set the toxval_relationship for HHBP-RfD pairs\n")
+  #####################################################################
+  # Iterate through non-cancer study_types
+  for(study_type in unique(res$study_type)) {
+    if(study_type == "cancer") ~ next
+
+    relationship_initial = res %>%
+      dplyr::filter(study_type == !!study_type,
+                    grepl("HHBP|RfD", toxval_type),
+                    !hhbp_rfd_id %in% c("-", NA)) %>%
+      dplyr::mutate(
+        toxval_relationship = dplyr::case_when(
+          grepl("HHBP", toxval_type) ~ "HHBP",
+          TRUE ~ "RfD"
+        )
+      )
+
+    # Add check for filtered values
+    if(nrow(relationship_initial)) {
+      relationship = relationship_initial %>%
+        tidyr::separate_rows(
+          hhbp_rfd_id,
+          sep = " \\|::\\| "
+        ) %>%
+        dplyr::select(toxval_id, hhbp_rfd_id, toxval_relationship) %>%
+        tidyr::pivot_wider(id_cols = "hhbp_rfd_id", names_from=toxval_relationship, values_from = toxval_id) %>%
+        dplyr::rename(toxval_id_1 = HHBP,
+                      toxval_id_2 = RfD) %>%
+        dplyr::mutate(relationship = stringr::str_c(!!study_type, " HHBP to RfD")) %>%
+        dplyr::select(-hhbp_rfd_id) %>%
+        dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
+
+      # Insert range relationships into toxval_relationship table
+      if(nrow(relationship)){
+        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+      }
+    }
+  }
+
+  # Remove range_relationship_id and toxval_relationship fields
+  res = res %>%
+    dplyr::select(-hhbp_rfd_id)
+
+  #####################################################################
+  cat("Set the toxval_relationship for cancer column pairs\n")
+  #####################################################################
+  # Handle lower/upper relationships separately
+  for(rel in c("lower", "upper")) {
+    relationship_initial = res %>%
+      dplyr::filter(study_type == "cancer",
+                    !cancer_id %in% c("-", NA),
+                    (grepl(!!rel, toxval_subtype) | toxval_type == "cancer slope factor")) %>%
+      dplyr::mutate(
+        toxval_relationship = dplyr::case_when(
+          grepl("HHBP", toxval_type) ~ "HHBP",
+          TRUE ~ "cancer slope factor"
+        )
+      )
+
+    # Add check for filtered values
+    if(nrow(relationship_initial)) {
+      relationship = relationship_initial %>%
+        tidyr::separate_rows(
+          cancer_id,
+          sep = " \\|::\\| "
+        ) %>%
+        dplyr::select(toxval_id, cancer_id, toxval_relationship) %>%
+        tidyr::pivot_wider(id_cols = "cancer_id", names_from=toxval_relationship, values_from = toxval_id) %>%
+        dplyr::rename(toxval_id_1 = `cancer slope factor`,
+                      toxval_id_2 = HHBP) %>%
+        dplyr::mutate(relationship = "cancer column pair") %>%
+        dplyr::select(-cancer_id) %>%
+        dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
+
+      # Insert range relationships into toxval_relationship table
+      if(nrow(relationship)){
+        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+      }
+    }
+
+  }
+
+  # Remove range_relationship_id and toxval_relationship fields
+  res = res %>%
+    dplyr::select(-cancer_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
