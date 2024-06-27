@@ -29,18 +29,20 @@ fix.human_eco.by.source <- function(toxval.db, source=NULL, subsource=NULL){
     "EPA OW NRWQC-ALC"
   )
 
-  for(source in slist) {
-    # Set human_eco values according to eco_list and special EFSA case
-    query = paste0(
-      "UPDATE toxval SET human_eco = CASE ",
-      "WHEN source='EFSA' AND study_type='ecotoxicity' THEN 'eco' ",
-      "WHEN source='DOE Wildlife Benchmarks' AND experimental_record='not experimental' THEN 'eco' ",
-      "WHEN source IN ('", paste0(eco_list, collapse="', '"), "') THEN 'eco' ",
-      "ELSE 'human health' END ",
-      "WHERE source = '", source, "'",
-      query_addition
-    )
-    runQuery(query, toxval.db)
-  }
+  # Set human_eco values according to eco_list and special cases
+  query = paste0(
+    "UPDATE toxval SET human_eco = CASE ",
+    "WHEN source='EFSA' AND study_type='ecotoxicity' THEN 'eco' ",
+    "WHEN source='DOE Wildlife Benchmarks' AND",
+    " (species_original IN ('rat', 'mouse', 'rhesus macaque', 'dog', 'guinea pig', 'hamster') OR",
+    " species_id IN (SELECT species_id FROM species WHERE common_name IN ('Rat', 'Mouse', 'Rhesus Macaque', 'Dog', 'Guinea Pig', 'Hamster')))",
+    " THEN 'human health' ",
+    "WHEN source='DOE Wildlife Benchmarks' AND experimental_record='not experimental' THEN 'eco' ",
+    "WHEN source IN ('", paste0(eco_list, collapse="', '"), "') THEN 'eco' ",
+    "ELSE 'human health' END ",
+    "WHERE source IN ('", paste0(slist, collapse="', '"), "')",
+    query_addition
+  )
+  runQuery(query, toxval.db)
 }
 

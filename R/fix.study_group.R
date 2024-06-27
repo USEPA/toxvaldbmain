@@ -62,7 +62,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
       temp_sg = temp_sg %>%
         # Assign study group
         dplyr::mutate(study_group = 1:n() %>%
-                        paste0(!!source, "_dup_", .)) %>%
+                        paste0(!!source, "_dup_", !!subsource, .)) %>%
         dplyr::ungroup() %>%
         dplyr::select(-source_hash) %>%
         # Separate collapse toxval_id groups
