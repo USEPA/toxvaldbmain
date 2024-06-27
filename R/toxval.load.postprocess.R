@@ -137,15 +137,15 @@ toxval.load.postprocess <- function(toxval.db,
   runQuery(paste0("update toxval set study_duration_value=-999 where study_duration_value is NULL and source='",source,"'",query_addition),toxval.db)
 
   #####################################################################
-  cat("fix units by source\n")
-  #####################################################################
-  fix.units.by.source(toxval.db, source,subsource,do.convert.units)
-
-  #####################################################################
   cat("add the manual study_type fixes\n")
   #####################################################################
   fix.study_type.by.source(toxval.db, mode="import", source=source,
                            subsource=subsource)
+
+  #####################################################################
+  cat("fix units by source\n")
+  #####################################################################
+  fix.units.by.source(toxval.db, source,subsource,do.convert.units)
 
   #####################################################################
   cat("fix study group by source\n")
