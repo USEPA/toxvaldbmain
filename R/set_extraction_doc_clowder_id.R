@@ -23,6 +23,9 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
 
     # Loop over all source_tables per source (for IUCLID's multiple source tables)
     lapply(src_tbl, function(src){
+      if(src == "direct load"){
+        src = source
+      }
       cat(paste0("...", src, "\n"))
       # Split into 2 queries to filter on R-side because it was faster
       source_docs = runQuery(paste0("SELECT CONCAT(toxval_id, clowder_doc_id) as toxval_id_clowder_id ",
@@ -34,8 +37,8 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
                              "LEFT JOIN ", source.db, ".documents_records dr ON t.source_hash = dr.source_hash ",
                              "LEFT JOIN ", source.db, ".documents d ON dr.fk_doc_id = d.id ",
                              "WHERE dr.source_table ='", src, "'"
-                             ),
-                      toxval.db) %>%
+      ),
+      toxval.db) %>%
         dplyr::mutate(toxval_id_clowder_id = paste0(toxval_id, clowder_id)) %>%
         # Filter out any already pushed (toxval_id - clowder_id pairs)
         # Handled by the database as a UNIQUE Key, but multiple layers to ensure duplicates aren't pushed
@@ -49,7 +52,11 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
     dplyr::rename(clowder_doc_id = clowder_id,
                   clowder_doc_metadata = clowder_metadata,
                   record_source_level = document_type) %>%
-    dplyr::filter(!is.na(record_source_level))
+    dplyr::filter(!is.na(record_source_level)) %>%
+    dplyr::mutate(
+      # Convert document IDs to URLs
+      clowder_doc_id = stringr::str_c("https://clowder.edap-cluster.com/files/", clowder_doc_id)
+    )
 
   message("Pushing clowder_doc_id information to record_source...")
   # Run insert query
