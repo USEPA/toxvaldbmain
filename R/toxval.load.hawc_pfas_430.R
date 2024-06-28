@@ -69,7 +69,10 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
         gsub(".+\\-", "", .) %>%
         tidyr::replace_na("-"),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-")
+        tidyr::replace_na("-"),
+
+      # Add subsource_url field
+      subsource_url = record_url
     )
 
   #####################################################################

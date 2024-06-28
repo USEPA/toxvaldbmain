@@ -51,11 +51,10 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("table_title")
+  cremove = c("table_title", "url")
   res = res[ , !(names(res) %in% cremove)]
   res <- res %>%
-    dplyr::rename(year = year_updated,
-                  source_url = url)
+    dplyr::rename(year = year_updated)
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -136,7 +135,6 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

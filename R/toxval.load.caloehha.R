@@ -158,7 +158,6 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   refs$record_source_note = "-"
   refs$record_source_level = "-"
   res$source_table = source_table
-  res$subsource_url = "-"
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)

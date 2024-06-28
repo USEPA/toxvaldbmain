@@ -51,9 +51,8 @@ toxval.load.ntp.pfas <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  res = res %>%
-    # Add source_url column for record source table
-    dplyr::mutate(source_url = url)
+
+  # Issues handled in import script
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -143,7 +142,6 @@ toxval.load.ntp.pfas <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

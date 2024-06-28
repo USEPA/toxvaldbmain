@@ -54,7 +54,7 @@ toxval.load.doe.pac <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   res = res %>%
     # Add columns as necessary
     dplyr::mutate(
-      source_url = "https://www.energy.gov/ehss/protective-action-criteria-pac-aegls-erpgs-teels",
+      source_url = "https://edms3.energy.gov/pac/TeelDocs",
       human_eco = "human health",
       subsource = "DOE EHSS",
       risk_assessment_class = "acute"

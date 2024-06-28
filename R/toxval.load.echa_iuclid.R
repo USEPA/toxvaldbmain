@@ -141,7 +141,9 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     cat("Add code to deal with specific issues for this source\n")
     #####################################################################
 
-    # Source-specific transformations handled elsewhere
+    # Add subsource_url from source_url
+    res = res %>%
+      dplyr::rename(subsource_url = source_url)
 
     #####################################################################
     cat("find columns in res that do not map to toxval or record_source\n")
@@ -276,7 +278,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     refs = dplyr::distinct(refs)
     res$datestamp = Sys.Date()
     res$source_table = source_table
-    res$subsource_url = "-"
+    res$source_url = "https://echa.europa.eu/"
     res$details_text = paste(source,"Details")
     runInsertTable(res, "toxval", toxval.db, verbose)
     print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))

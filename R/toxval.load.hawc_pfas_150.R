@@ -69,7 +69,10 @@ toxval.load.hawc_pfas_150 <- function(toxval.db, source.db, log=FALSE, remove_nu
         gsub(".+\\-", "", .) %>%
         tidyr::replace_na("-"),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-")
+        tidyr::replace_na("-"),
+
+      # Add subsource_url field
+      subsource_url = record_url
     )
 
   #####################################################################
@@ -188,7 +191,6 @@ toxval.load.hawc_pfas_150 <- function(toxval.db, source.db, log=FALSE, remove_nu
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))

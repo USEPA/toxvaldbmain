@@ -160,7 +160,6 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
