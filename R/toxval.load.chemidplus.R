@@ -186,7 +186,7 @@ toxval.load.chemidplus <- function(toxval.db, source.db, log=FALSE, remove_null_
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://www.nlm.nih.gov/pubs/techbull/ja22/ja22_pubchem.html"
+  res$source_url = "https://pubchem.ncbi.nlm.nih.gov/source/ChemIDplus"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   runInsertTable(res, "toxval", toxval.db, verbose)

@@ -143,7 +143,7 @@ toxval.load.doe.lanl.ecorisk <- function(toxval.db, source.db, log=FALSE, remove
   refs = dplyr::distinct(refs)
   res$datestamp <- Sys.Date()
   res$source_table <- source_table
-  res$source_url = "https://www.intellusnm.com/documents/documents.cfm"
+  res$source_url = "https://www.intellusnm.com/documents/document-library.cfc?method=retrieveLanlFile&nodeId=113331"
   res$subsource_url <- "-"
   res$details_text <- paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()

@@ -149,7 +149,7 @@ toxval.load.dod <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=T
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://phc.amedd.army.mil/Pages/Library.aspx?queries[series]=PHC+Technical+Guide"
+  res$source_url = "https://ph.health.mil/topics/envirohealth/hrasm/Pages/TG230.aspx"
   res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
