@@ -5,9 +5,10 @@
 #' @param toxval.db The version of the database to use
 #' @param source The source to be fixed
 #' @param subsource The subsource to be fixed (NULL default)
+#' @param report.only Whether to update database or only report the results. Default FALSE.
 #' @export
 #--------------------------------------------------------------------------------------
-fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=NULL, report_only=FALSE) {
+fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=NULL, report.only=FALSE) {
 
   #####################################################################
   cat("Set select derived toxval_type fields to '-'\n")
@@ -57,7 +58,7 @@ fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=
 
   for(source in slist) {
     cat("fix.derived.toxval_type.by.source: ", source, "\n")
-    query = paste0("select distinct toxval_id, source, toxval_type_original, toxval_type, ",
+    query = paste0("select distinct toxval_id, source_hash, source, toxval_type_original, toxval_type, ",
                    toString(toxval_tbl$COLUMN_NAME), " ",
                    "from toxval ",
                    "where source ='",source,"'",query_addition,
@@ -66,7 +67,7 @@ fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=
     # Query matches, only use toxval_id except for troubleshooting
     toxval_id_list = runQuery(query, toxval.db)
 
-    if(report_only){
+    if(report.only){
       out_report = out_report %>%
         dplyr::bind_rows(toxval_id_list)
       # If report only, skip update
@@ -84,23 +85,23 @@ fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=
 
     while(startPosition <= endPosition){
       if(incrementPosition > endPosition) incrementPosition = endPosition
-      message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition, " at: ", Sys.time())
+      message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+              " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
 
       updateQuery = paste0("UPDATE toxval set ",
                            paste0(toxval_tbl$COLUMN_NAME, "=", toxval_tbl$COLUMN_DEFAULT, collapse = ", "),
 
-                           " WHERE toxval_id in (",
+                           ", species_original='human' WHERE toxval_id in (",
                            toString(toxval_id_list[startPosition:incrementPosition]),
                            ")")
 
-      # runQuery(updateQuery, toxval.db)
+      runQuery(updateQuery, toxval.db)
       startPosition <- startPosition + batch_size
       incrementPosition <- startPosition + batch_size - 1
     }
   }
-  if(report_only){
+  if(report.only){
     out_report %>%
-      dplyr::select(-toxval_id) %>%
       dplyr::distinct() %>%
       return()
   }
