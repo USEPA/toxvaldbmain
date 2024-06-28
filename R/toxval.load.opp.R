@@ -156,7 +156,7 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   # Iterate through non-cancer study_types
   for(study_type in unique(res$study_type)) {
-    if(study_type == "cancer") ~ next
+    if(study_type == "cancer") next
 
     relationship_initial = res %>%
       dplyr::filter(study_type == !!study_type,
