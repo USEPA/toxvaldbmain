@@ -223,8 +223,6 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                       "b.toxval_subtype, ",
                       "b.toxval_numeric,b.toxval_units, ",
                       "b.toxval_numeric_original,b.toxval_units_original, ",
-                      "b.toxval_numeric_standard,b.toxval_units_standard, ",
-                      "b.toxval_numeric_human,b.toxval_units_human, ",
                       "b.study_type,b.study_type_original, ",
                       "b.study_duration_class,b.study_duration_class_original, ",
                       "b.study_duration_value,b.study_duration_value_original, ",
