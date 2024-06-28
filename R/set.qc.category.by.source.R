@@ -140,34 +140,39 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
       hash_list = c()
     }
 
-    in_toxval = in_toxval %>%
-      dplyr::mutate(
-        # Establish baseline
-        qc_category_new = dplyr::case_when(
-          curation_type == 'automated' ~ "Programmatically extracted from structured data source",
-          curation_type == 'manual' ~ "Manually extracted from unstructured data source",
-          TRUE ~ NA_character_
-        ),
-        # Account for ticket status (overall pass QC if LV 1 - In Review or Done)
-        qc_category_new = dplyr::case_when(
-          ticket_status %in% c("QC Lv 1 - In Review", "Done") ~
-            paste0(qc_category_new, "; Source overall passed QC"),
-          TRUE ~ qc_category_new
-        ),
-        # Account for record qc_status and attachment file source_hash values
-        qc_category_new = dplyr::case_when(
-          # If source_hash ever in a ticket attachment or has a status of pass or fail
-          # Then it was manually checked
-          (source_hash %in% hash_list | record_qc_status %in% c("pass", "fail")) &
-            # Only apply if source marked as "passed QC"
-            grepl("Source overall passed QC", qc_category_new) ~
-            paste0(qc_category_new, ", and this record was manually checked"),
-          # Source QC Passed, but no attachment hashes or qc_status of reviewed records
-          grepl("Source overall passed QC", qc_category_new) ~ paste0(qc_category_new,
-                                                                      ", but this record was not manually checked"),
-          TRUE ~ qc_category_new
+    if(src %in% c("ECOTOX", "ToxRefDB")){
+      in_toxval$qc_category_new <- "Data source QC'd by data provider prior to ToxValDB import"
+    } else{
+      in_toxval = in_toxval %>%
+        dplyr::mutate(
+          # Establish baseline
+          qc_category_new = dplyr::case_when(
+            curation_type == 'automated' ~ "Programmatically extracted from structured data source",
+            curation_type == 'manual' ~ "Manually extracted from unstructured data source",
+            TRUE ~ NA_character_
+          ),
+          # Account for ticket status (overall pass QC if LV 1 - In Review or Done)
+          qc_category_new = dplyr::case_when(
+            ticket_status %in% c("QC Lv 1 - In Review", "Done") ~
+              paste0(qc_category_new, "; Source overall passed QC"),
+            TRUE ~ qc_category_new
+          ),
+          # Account for record qc_status and attachment file source_hash values
+          qc_category_new = dplyr::case_when(
+            # If source_hash ever in a ticket attachment or has a status of pass or fail
+            # Then it was manually checked
+            (source_hash %in% hash_list | grepl("pass", record_qc_status, ignore.case = TRUE) | grepl("fail", record_qc_status, ignore.case = TRUE)) &
+              # Only apply if source marked as "passed QC"
+              grepl("Source overall passed QC", qc_category_new) ~
+              paste0(qc_category_new, ", and this record was manually checked"),
+            # Source QC Passed, but no attachment hashes or qc_status of reviewed records
+            grepl("Source overall passed QC", qc_category_new) ~ paste0(qc_category_new,
+                                                                        ", but this record was not manually checked"),
+            TRUE ~ qc_category_new
+          )
         )
-      )
+    }
+
 
     #--------------------------------------------------------------------------------------
     # TODO: Incorporate logic for adding additional qc_categories
