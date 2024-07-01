@@ -33,7 +33,7 @@ fix.human_eco.by.source <- function(toxval.db, source=NULL, subsource=NULL){
   query = paste0(
     "UPDATE toxval SET human_eco = CASE ",
     "WHEN source='WHO JECFA Tox Studies' AND",
-    " species_id IN (SELECT species_id FROM species WHERE common_name IN ('Bacteria')))",
+    " species_id IN (SELECT species_id FROM species WHERE common_name IN ('Bacteria'))",
     " THEN 'eco' ",
     "WHEN source='EFSA' AND study_type='ecotoxicity' THEN 'eco' ",
     "WHEN source='DOE Wildlife Benchmarks' AND",

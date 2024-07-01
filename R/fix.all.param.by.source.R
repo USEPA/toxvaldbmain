@@ -17,7 +17,7 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
   if(n==0) fill.toxval_fix = TRUE
   if(fill.toxval_fix) {
     cat("load toxval_fix\n")
-    runInsert("delete from toxval_fix",toxval.db)
+    runQuery("delete from toxval_fix",toxval.db)
 
     filenames <- list.files(path = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/"), pattern="_5.xlsx", full.names = T)
 
@@ -95,25 +95,25 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
             final = sdict[i,"term_final"]
             #if(field=="toxval_units") cat(original,final,"\n")
             query = paste0("update toxval set ",field,"=\"",final,"\" where ",field,"_original=\"",original,"\" and source = '",source,"'",query_addition)
-            runInsert(query,toxval.db,T,F,T)
+            runQuery(query, toxval.db)
           }
         }
       }
     }
 
     query <- paste0("update toxval set ",field,"='-' where ",field,"_original is NULL and source = '",source,"'",query_addition)
-    runInsert(query,toxval.db,T,F,T)
+    runQuery(query, toxval.db)
 
     cat("  expoure route\n")
     query <- paste0("update toxval
     set exposure_route = 'inhalation'
     where toxval_type in ('RFCi', 'Inhalation Unit Risk', 'IUR', 'Inhalation UR', 'Inhalation TC', 'Inhalation SF') and source = '",source,"'",query_addition)
-    runInsert(query,toxval.db,T,F,T)
+    runQuery(query, toxval.db)
 
     query = paste0("update toxval
     set exposure_route = 'oral'
     where toxval_type in ('RFDo', 'Oral Slope Factor', 'oral TDI', 'oral SF', 'oral ADI', 'LDD50 (Lethal Dietary Dose)') and source = '",source,"'",query_addition)
-    runInsert(query,toxval.db,T,F,T)
+    runQuery(query, toxval.db)
 
     query = paste0("update toxval ",
                    "SET exposure_route = 'oral' ",
@@ -130,7 +130,14 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     query = paste0("update toxval
     set study_duration_class = 'chronic'
     where toxval_type like 'Chronic%' and source = '",source,"'",query_addition)
-    runInsert(query,toxval.db,T,F,T)
+    runQuery(query, toxval.db)
+
+    cat("  toxval_subtype\n")
+    query = paste0("UPDATE toxval SET toxval_subtype = '-' ",
+                   "WHERE toxval_subtype IN ('chronic', 'subchronic', 'intermediate', 'acute', 'developmental') ",
+                   "AND toxval_type IN (SELECT DISTINCT toxval_type FROM toxval_type_dictionary ",
+                   "WHERE toxval_type_supercategory = 'Point of Departure')")
+    runQuery(query, toxval.db)
 
     export.missing.dictionary.entries(toxval.db,source,subsource)
   }
