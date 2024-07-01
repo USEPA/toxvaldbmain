@@ -12,8 +12,6 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024
   printCurrentFunction()
   if(reset) runQuery("update toxval set strain='-', strain_group='-'",db5)
 
-  fix.species.duplicates(toxval.db)
-
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
   dict = openxlsx::read.xlsx(file)
   dict = dplyr::distinct(dict)
@@ -71,5 +69,7 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024
         }
       }
     }
+    cat("Handle quotes in strains\n")
+    runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
   }
 }
