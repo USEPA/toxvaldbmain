@@ -70,8 +70,6 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     cat(" deal with quotes in strings\n")
     cat("   exposure_method\n")
     runQuery(paste0("update toxval SET exposure_method"," = ", "REPLACE", "( exposure_method",  ",\'\"\',", " \"'\" ) WHERE exposure_method"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
-    cat("   strain\n")
-    runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
     cat("   exposure_route\n")
     runQuery(paste0("update toxval SET exposure_route"," = ", "REPLACE", "( exposure_route",  ",\'\"\',", " \"'\" ) WHERE exposure_route"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
     cat("   media\n")
