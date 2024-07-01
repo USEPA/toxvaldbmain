@@ -12,6 +12,9 @@
 set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                                       confluence_url = "https://confluence.epa.gov/x/VuCkFg",
                                       confluence_access_token, jira_access_token){
+  if(is.null(confluence_access_token) || is.na(confluence_access_token)) stop("Must provide confluence_access_token")
+  if(is.null(jira_access_token) || is.na(jira_access_token)) stop("Must provide jira_access_token")
+
   printCurrentFunction(toxval.db)
   if(!is.null(source)) {
     slist = source

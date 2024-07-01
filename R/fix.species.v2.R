@@ -86,29 +86,21 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
         sid = -1
         if(is.element(tag,dict$common_name)) {
           sid = dict[is.element(dict$common_name,tag),"species_id"][1]
-        }
-        else if(is.element(tag,dict$latin_name)) {
+        } else if(is.element(tag,dict$latin_name)) {
           sid = dict[is.element(dict$latin_name,tag),"species_id"][1]
-        }
-        else if(is.element(tag,synonyms$latin_name)) {
+        } else if(is.element(tag,synonyms$latin_name)) {
           sid = dict[is.element(synonyms$latin_name,tag),"species_id"][1]
-        }
-        else if(is.element(tag,extra$species_original)) {
+        } else if(is.element(tag,extra$species_original)) {
           sid = extra[is.element(extra$species_original,tag),"species_id"][1]
-        }
-        else if(is.element(tag0,dict$common_name)) {
+        } else if(is.element(tag0,dict$common_name)) {
           sid = dict[is.element(dict$common_name,tag0),"species_id"][1]
-        }
-        else if(is.element(tag0,dict$latin_name)) {
+        } else if(is.element(tag0,dict$latin_name)) {
           sid = dict[is.element(dict$latin_name,tag0),"species_id"][1]
-        }
-        else if(is.element(tag0,synonyms$latin_name)) {
+        } else if(is.element(tag0,synonyms$latin_name)) {
           sid = dict[is.element(synonyms$latin_name,tag0),"species_id"][1]
-        }
-        else if(is.element(tag0,extra$species_original)) {
+        } else if(is.element(tag0,extra$species_original)) {
           sid = extra[is.element(extra$species_original,tag0),"species_id"][1]
-        }
-        else if(is.element(tag,extra$species_original)) {
+        } else if(is.element(tag,extra$species_original)) {
           sid = extra[is.element(extra$species_original,tag),"species_id"][1]
         }
         cat(tag,sid,"\n")
@@ -117,8 +109,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
           count.good = count.good+1
           query = paste0("update toxval set species_id=",sid," where source='",source,"'",query_addition," and species_original='",stringr::str_replace_all(tag0,"\\\'","\\\\'"),"'")
           runQuery(query,toxval.db)
-        }
-        else {
+        } else {
           cat(tag,"\n")
           #browser()
         }
