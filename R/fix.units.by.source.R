@@ -77,6 +77,20 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
       )
 
     if(source=="ECOTOX") do.convert.units=FALSE
+
+    cat("===============================================\n")
+    cat(source,"\n")
+    if(!is.null(subsource)) cat(subsource,"\n")
+    cat("===============================================\n")
+    if(!report.only) {
+      cat("update 1\n")
+      runQuery(paste0("update toxval set toxval_units_original='-' where toxval_units_original='' and source = '",source,"'",query_addition),toxval.db)
+      cat("update 2\n")
+      runQuery(paste0("update toxval set toxval_units=toxval_units_original where source = '",source,"'",query_addition),toxval.db)
+      cat("update 3\n")
+      runQuery(paste0("update toxval set toxval_numeric=toxval_numeric_original where source = '",source,"'",query_addition),toxval.db)
+    }
+
     if(source=="ECOTOX") {
       # Handle special ECOTOX conversion case
       if(!report.only) {
@@ -100,18 +114,6 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           dplyr::filter(!(toxval_id %in% changed_ids)) %>%
           dplyr::bind_rows(current_changes)
       }
-    }
-    cat("===============================================\n")
-    cat(source,"\n")
-    if(!is.null(subsource)) cat(subsource,"\n")
-    cat("===============================================\n")
-    if(!report.only) {
-      cat("update 1\n")
-      runQuery(paste0("update toxval set toxval_units_original='-' where toxval_units_original='' and source = '",source,"'",query_addition),toxval.db)
-      cat("update 2\n")
-      runQuery(paste0("update toxval set toxval_units=toxval_units_original where source = '",source,"'",query_addition),toxval.db)
-      cat("update 3\n")
-      runQuery(paste0("update toxval set toxval_numeric=toxval_numeric_original where source = '",source,"'",query_addition),toxval.db)
     }
 
     # Remove special characters
@@ -160,38 +162,6 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
     } else {
       current_changes = fix.single.param.by.source(toxval.db, param="toxval_units", source,
                                                         subsource, ignore = FALSE, units.data=source_data)
-      changed_ids = current_changes %>%
-        dplyr::pull(toxval_id) %>%
-        unique()
-      source_data = source_data %>%
-        dplyr::filter(!(toxval_id %in% changed_ids)) %>%
-        dplyr::bind_rows(current_changes)
-    }
-
-    # Replace mg/kg with mg/kg-day where toxval type is NOAEL or NOEL
-    toxval_type_list = c("BMD", "LEL", "LOAEC", "LOAEL", "LOEC", "LOEL", "HNEL", "NEL", "NOAEC", "NOAEL", "NOEC", "NOEL")
-    # toxval_type_list = c('BMDL','BMDL05','BMDL10','HNEL','LOAEC','LOAEL','LOEC','LOEL','NEL','NOAEC','NOAEL','NOEC','NOEL')
-    cat(">>> Replace mg/kg with mg/kg-day where toxval type is: ", toString(toxval_type_list), "\n")
-
-    if(!report.only) {
-      query <- paste0("update toxval set toxval_units='mg/kg-day' where (",
-                      # Combine into a regex for any variations of the base toxval_type
-                      paste0(paste0("toxval_type like '", toxval_type_list, "%'"), collapse = " or "),
-                      ") and toxval_units='mg/kg' and source = '",source,"'",query_addition)
-      runQuery(query, toxval.db)
-    } else {
-      # Track conversion data
-      change = paste0("mg/kg to mg/kg-day for toxval_type: ", toString(toxval_type_list))
-      current_changes = source_data %>%
-        dplyr::filter(toxval_units == 'mg/kg',
-                      grepl(paste0(toxval_type_list, collapse="|"), toxval_type)) %>%
-        dplyr::mutate(
-          toxval_units = "mg/kg-day",
-          change_made = dplyr::case_when(
-            is.na(change_made) ~ !!change,
-            TRUE ~ paste0(change_made, "; ", !!change)
-          )
-        )
       changed_ids = current_changes %>%
         dplyr::pull(toxval_id) %>%
         unique()
@@ -301,6 +271,38 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           dplyr::filter(!(toxval_id %in% changed_ids)) %>%
           dplyr::bind_rows(current_changes)
       }
+    }
+
+    # Replace mg/kg with mg/kg-day where toxval type is NOAEL or NOEL
+    toxval_type_list = c("BMD", "LEL", "LOAEC", "LOAEL", "LOEC", "LOEL", "HNEL", "NEL", "NOAEC", "NOAEL", "NOEC", "NOEL")
+    # toxval_type_list = c('BMDL','BMDL05','BMDL10','HNEL','LOAEC','LOAEL','LOEC','LOEL','NEL','NOAEC','NOAEL','NOEC','NOEL')
+    cat(">>> Replace mg/kg with mg/kg-day where toxval type is: ", toString(toxval_type_list), "\n")
+
+    if(!report.only) {
+      query <- paste0("update toxval set toxval_units='mg/kg-day' where (",
+                      # Combine into a regex for any variations of the base toxval_type
+                      paste0(paste0("toxval_type like '", toxval_type_list, "%'"), collapse = " or "),
+                      ") and toxval_units='mg/kg' and source = '",source,"'",query_addition)
+      runQuery(query, toxval.db)
+    } else {
+      # Track conversion data
+      change = paste0("mg/kg to mg/kg-day for toxval_type: ", toString(toxval_type_list))
+      current_changes = source_data %>%
+        dplyr::filter(toxval_units == 'mg/kg',
+                      grepl(paste0(toxval_type_list, collapse="|"), toxval_type)) %>%
+        dplyr::mutate(
+          toxval_units = "mg/kg-day",
+          change_made = dplyr::case_when(
+            is.na(change_made) ~ !!change,
+            TRUE ~ paste0(change_made, "; ", !!change)
+          )
+        )
+      changed_ids = current_changes %>%
+        dplyr::pull(toxval_id) %>%
+        unique()
+      source_data = source_data %>%
+        dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+        dplyr::bind_rows(current_changes)
     }
 
     # Convert ppm to mg/m3 for inhalation studies
