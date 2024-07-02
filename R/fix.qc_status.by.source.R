@@ -106,7 +106,10 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; risk_assessment_class not specified') ",
                     "ELSE 'fail:risk_assessment_class not specified'",
                     "END ",
-                    "WHERE risk_assessment_class in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
+                    "WHERE source = '", source, "' AND",
+                    " (risk_assessment_class = 'not specified' OR",
+                    " (risk_assessment_class = '-' AND human_eco != 'eco'))",
+                    query_addition), toxval.db)
 
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric<0' where toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric is null' where toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
