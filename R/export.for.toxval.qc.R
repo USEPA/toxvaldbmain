@@ -11,7 +11,7 @@
 #'  ../export/toxval_pod_summary_[human_eco]_Sys.Date().xlsx
 #'
 #-----------------------------------------------------------------------------------
-export.for.toxval.qc <- function(toxval.db="res_toxval_v95",source=NULL) {
+export.for.toxval.qc <- function(toxval.db, source=NULL) {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath,"export_for_qc/")
 

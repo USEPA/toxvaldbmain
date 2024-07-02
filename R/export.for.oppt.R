@@ -3,7 +3,6 @@
 #' Build a data frame of the PODs and exports as xlsx
 #'
 #' @param toxval.db Database version
-#' @param human_eco Either 'human health' or 'eco'
 #' @param file.name If not NA, this is a file containing chemicals, and only those chemicals will be exported
 #'
 #'
@@ -11,7 +10,7 @@
 #'  ../export/toxval_pod_summary_[human_eco]_Sys.Date().xlsx
 #'
 #-----------------------------------------------------------------------------------
-export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
+export.for.oppt <- function(toxval.db, file.name="TSCA PICS") {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath,"export_subset/")
   if(!is.na(file.name)) {
