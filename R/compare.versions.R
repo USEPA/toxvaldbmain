@@ -4,7 +4,7 @@
 #' @param db2 The new version of the database
 #' @export
 #--------------------------------------------------------------------------------------
-compare.versions <- function(db1="res_toxval_v94",db2="res_toxval_v95") {
+compare.versions <- function(db1, db2) {
   printCurrentFunction(paste(db1,":", db2))
   slist = runQuery("select distinct source from toxval",db1)[,1]
   for(source in slist) {

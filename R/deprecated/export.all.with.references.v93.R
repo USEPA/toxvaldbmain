@@ -3,15 +3,15 @@
 #' Build a data frame of the PODs and exports as xlsx
 #'
 #' @param toxval.db Database version
-#' @param human_eco Either 'human health' or 'eco'
 #' @param file.name If not NA, this is a file containing chemicals, and only those chemicals will be exported
+#' @param pfas If TRUE, include PFAS synonyms from input file. Default TRUE.
 #'
 #'
 #' @return writes an Excel file with the name
 #'  ../export/toxval_pod_summary_[human_eco]_Sys.Date().xlsx
 #'
 #-----------------------------------------------------------------------------------
-export.all.with.references.v93 <- function(toxval.db="res_toxval_v94",file.name=NA,pfas=T) {
+export.all.with.references.v93 <- function(toxval.db, file.name=NA, pfas=TRUE) {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath,"export/")
   if(!is.na(file.name)) {

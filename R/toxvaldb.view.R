@@ -12,8 +12,7 @@
 #' @return Write a file with the results: data/view/ToxValDB View {toxval.db} {Sys.Date()}.xlsx
 #' @export
 #-----------------------------------------------------------------------------------
-toxvaldb.view <- function(toxval.db="res_toxval_v95", user="_dataminer", password="pass",
-                          count=10) {
+toxvaldb.view <- function(toxval.db, user, password, count=10) {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath, "data/view/")
   setDBConn(user=user,password=password)

@@ -1,11 +1,12 @@
 #-------------------------------------------------------------------------------------
 #' Initialize the database. THis sill load the species, info and dictionary tables
 #' @param toxval.db The version of toxval into which the tables are loaded.
+#' @param version_info Info string describing the version.
 #' @param reset If TRUE, delete all content from the database
 #' @param date_string The date of the dictionary versions
 #' @export
 #--------------------------------------------------------------------------------------
-toxval.init.db <- function(toxval.db,reset=F,date_string="2022-05-25") {
+toxval.init.db <- function(toxval.db, version_info, reset=F, date_string="2022-05-25") {
   printCurrentFunction(toxval.db)
 
   if(reset) {
@@ -27,7 +28,7 @@ toxval.init.db <- function(toxval.db,reset=F,date_string="2022-05-25") {
   #################################################################
   cat("load the info table\n")
   #################################################################
-  query = paste0("insert into info (name,description,date_created) values ('res_toxvald_v94','ToxVal DB v9.4','",Sys.Date(),"')")
+  query = paste0("insert into info (name, description, date_created) values ('", toxval.db, "','", version_info, "','",Sys.Date(),"')")
   runQuery(query,toxval.db)
 
   #################################################################
