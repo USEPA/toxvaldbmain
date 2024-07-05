@@ -6,17 +6,17 @@
 #' @param verbose if TRUE, print diagnostic information
 #' @param con_type The type of connection to use. Options: MySQL (default), SQLite, PostgreSQL
 #' @param schema If con_type=PostgreSQL, schema must be specified (Default: NULL)
-#' @export 
+#' @export
 #' @title runQuery
 #' @return Query results
 #' @details DETAILS
-#' @examples 
+#' @examples
 #' \dontrun{
 #' if(interactive()){
 #'  #EXAMPLE1
 #'  }
 #' }
-#' @seealso 
+#' @seealso
 #'  \code{\link[RMySQL]{character(0)}}, \code{\link[RMySQL]{MySQLDriver-class}}
 #'  \code{\link[utils]{flush.console}}
 #' @rdname runQuery
@@ -31,18 +31,22 @@ runQuery <- function(query=NULL,db,do.halt=TRUE,verbose=FALSE,con_type="MySQL",s
     return(NULL)
   }
 
-  if(!exists("DB.SERVER")) {
-    cat("DB.SERVER not defined\n")
-    return(NULL)
+  con_type = tolower(con_type)
+  if(con_type != "sqlite") {
+    if(!exists("DB.SERVER")) {
+      cat("DB.SERVER not defined\n")
+      return(NULL)
+    }
+    if(!exists("DB.USER")) {
+      cat("DB.USER not defined\n")
+      return(NULL)
+    }
+    if(!exists("DB.PASSWORD")) {
+      cat("DB.PASSWORD not defined\n")
+      return(NULL)
+    }
   }
-  if(!exists("DB.USER")) {
-    cat("DB.USER not defined\n")
-    return(NULL)
-  }
-  if(!exists("DB.PASSWORD")) {
-    cat("DB.PASSWORD not defined\n")
-    return(NULL)
-  }
+
   if(verbose) {
     printCurrentFunction()
     cat("query: ",query,"\n")
@@ -50,8 +54,7 @@ runQuery <- function(query=NULL,db,do.halt=TRUE,verbose=FALSE,con_type="MySQL",s
     cat("connection type:",con_type,"\n")
   }
 
-  con_type = tolower(con_type)
-
+  # Initialize appropriate connection type
   switch(
     con_type,
     "mysql" = {
