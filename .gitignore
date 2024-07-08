@@ -59,6 +59,7 @@ Repo/
 dev_setup.R
 # Ignore temp file for test running functions from console
 tmp_delete.R
+README_dev
 
 ######################################################################################################################
 # Python based .gitignore
