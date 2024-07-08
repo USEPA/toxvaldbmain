@@ -58,7 +58,7 @@ export_table_list_to_sqlite <- function(table_list, input_db, output_file) {
   output_db = RSQLite::dbConnect(RSQLite::SQLite(), output_file)
 
   for(table in table_list) {
-    cat("...pushing table ", table, " (", which(table %in% table_list), " of ",
+    cat("...pushing table ", table, " (", which(table_list == table), " of ",
         length(table_list), " - ", format(Sys.time(), usetz = TRUE), ")", "\n")
     # Pull data to write from MySQL DB and write to SQLite
     data = runQuery(paste0("SELECT * FROM ", table), input_db)
