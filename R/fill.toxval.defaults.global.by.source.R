@@ -19,18 +19,18 @@ fill.toxval.defaults.global.by.source <- function(toxval.db, source=NULL, subsou
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
-  slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  if(!is.null(source)) slist = source
-  for(source in slist) {
-    cat(source,"\n")
-    # For each column, set NA or empty values to "-"
-    for(col in col.list){
-      n <- runQuery(paste0("select count(*) from toxval where ",col," ='' and source = '",source,"'",query_addition) ,toxval.db)[1,1]
-      if(n>0) {
-        cat(col,n,"\n")
-        query <- paste0("update toxval set ",col,"='-' where ",col," ='' and source = '",source,"'",query_addition)
-        runQuery(query,toxval.db)
-      }
+  slist = source
+  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  source_string = slist %>%
+    paste0(., collapse="', '")
+
+  # For each column, set NA or empty values to "-"
+  for(col in col.list){
+    n <- runQuery(paste0("select count(*) from toxval where ",col," ='' and source in ('",source_string,"')",query_addition) ,toxval.db)[1,1]
+    if(n>0) {
+      cat(col,n,"\n")
+      query <- paste0("update toxval set ",col,"='-' where ",col," ='' and source in ('",source_string,"')",query_addition)
+      runQuery(query,toxval.db)
     }
   }
 }

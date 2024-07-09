@@ -8,13 +8,9 @@
 #--------------------------------------------------------------------------------------
 fix.empty.by.source <- function(toxval.db,source=NULL,subsource=NULL){
   printCurrentFunction(paste(toxval.db,":", source,subsource))
-  res <- runQuery("desc toxval",toxval.db)
-  mask <- vector(mode="integer",length=dim(res)[1])
-  mask[] <- 0
-  for(i in 1:dim(res)[1]) {
-    if(grepl("varchar|text", res$Type[i])) mask[i] <- 1
-  }
-  cols <- res[mask==1,"Field"]
+  cols <- runQuery("desc toxval",toxval.db) %>%
+    dplyr::filter(grepl("varchar|text", Type)) %>%
+    dplyr::pull(Field)
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -22,21 +18,22 @@ fix.empty.by.source <- function(toxval.db,source=NULL,subsource=NULL){
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
-  slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  if(!is.null(source)) slist = source
-  for(source in slist) {
-    cat(source,"\n")
-    # For each field, set empty values to "-"
-    for(col in cols) {
-      print(col)
-      query <- paste0("update toxval set ",col,"='-' where ",col,"='' and source like '",source,"'",query_addition)
-      runQuery(query,toxval.db)
-      query <- paste0("update toxval set ",col,"='-' where ",col," is null and source like '",source,"'",query_addition)
-      runQuery(query,toxval.db)
-      query <- paste0("update toxval set ",col,"='-' where ",col,"=' ' and source like '",source,"'",query_addition)
-      runQuery(query,toxval.db)
-      query <- paste0("update toxval set ",col,"='-' where ",col,"='  ' and source like '",source,"'",query_addition)
-      runQuery(query,toxval.db)
-    }
+  slist = source
+  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  source_string = slist %>%
+    paste0(., collapse="', '")
+
+
+  # For each field, set empty values to "-"
+  for(col in cols) {
+    print(col)
+    query <- paste0("update toxval set ",col,"='-' where ",col,"='' and source in ('",source_string,"')",query_addition)
+    runQuery(query,toxval.db)
+    query <- paste0("update toxval set ",col,"='-' where ",col," is null and source in ('",source_string,"')",query_addition)
+    runQuery(query,toxval.db)
+    query <- paste0("update toxval set ",col,"='-' where ",col,"=' ' and source in ('",source_string,"')",query_addition)
+    runQuery(query,toxval.db)
+    query <- paste0("update toxval set ",col,"='-' where ",col,"='  ' and source in ('",source_string,"')",query_addition)
+    runQuery(query,toxval.db)
   }
 }

@@ -16,11 +16,11 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024
   dict = openxlsx::read.xlsx(file)
   dict = dplyr::distinct(dict)
   dict$common_name = tolower(dict$common_name)
-  if(is.null(source)) {
-    slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  } else {
-    slist = source
-  }
+
+  slist = source
+  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  source_string = slist %>%
+    paste0(., collapse="', '")
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -34,7 +34,7 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024
                    "from toxval a, species b ",
                    "where a.species_id=b.species_id ",
                    # "and a.human_eco='human health' ",
-                   "and a.source='",source,"'",query_addition)
+                   "and a.source in ('",source_string,"')",gsub("and sub", "and a.sub", query_addition))
     t1 = runQuery(query,toxval.db)
     t1 = dplyr::distinct(t1)
     if(nrow(t1)) {
@@ -60,7 +60,7 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024
                   message("Multiple dictionary fixes identified...how to proceed?")
                   browser()
                 }
-                query = paste0("update toxval set strain='",d2[1,"strain"],"', strain_group='",d2[1,"strain_group"],"' where source='",source,"' and strain_original='",so,"' and species_id=",sid,query_addition)
+                query = paste0("update toxval set strain='",d2[1,"strain"],"', strain_group='",d2[1,"strain_group"],"' where source in ('",source_string,"') and strain_original='",so,"' and species_id=",sid,query_addition)
                 # if(d2[1,"strain_group"]=="Bird") browser()
                 runQuery(query,toxval.db)
               }
@@ -70,6 +70,6 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024
       }
     }
     cat("Handle quotes in strains\n")
-    runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
+    runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
   }
 }
