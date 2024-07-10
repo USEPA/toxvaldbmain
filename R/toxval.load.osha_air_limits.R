@@ -45,6 +45,15 @@ toxval.load.osha_air_limits <- function(toxval.db, source.db,log=F){
   cremove = c("source_version_date","","","")
   res = res[ , !(names(res) %in% cremove)]
 
+  # Set redundant subsource_url values to "-"
+  res = res %>%
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -122,7 +131,6 @@ toxval.load.osha_air_limits <- function(toxval.db, source.db,log=F){
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.1000TABLEZ1"
-  res$subsource_url = res$source_url
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

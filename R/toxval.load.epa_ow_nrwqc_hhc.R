@@ -54,7 +54,14 @@ toxval.load.epa_ow_nrwqc_hhc <- function(toxval.db,source.db, log=FALSE, remove_
   cremove = c("table_title","priority_pollutant","notes","","url")
   res = res[ , !(names(res) %in% cremove)]
   res <- res %>%
-    dplyr::rename(year = publication_year)
+    dplyr::rename(year = publication_year) %>%
+    # Set redundant subsource_url values to "-"
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
