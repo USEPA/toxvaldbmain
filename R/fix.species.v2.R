@@ -124,19 +124,21 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   human_id = runQuery("SELECT DISTINCT species_id FROM species WHERE common_name='Human'", toxval.db)[[1]]
 
   # Handle ATSDR MRLs special human MRL case
-  query = paste0("UPDATE toxval SET species_id=", human_id, " ",
-                 "WHERE source='ATSDR MRLs' AND toxval_type='MRL' ",
-                 "AND source IN ('", paste0(slist, collapse="', '"), "')")
-  runQuery(query, toxval.db)
+  if(source == "ATSDR MRLs"){
+    query = paste0("UPDATE toxval SET species_id = ", human_id, " ",
+                   "WHERE source = 'ATSDR MRLs' AND toxval_type = 'MRL'")
+    runQuery(query, toxval.db)
+  }
 
   # Set species_id to human for specified sources
   human_list = c("EPA AEGL", "EPA OW NPDWR", "EPA OW NRWQC-HHC", "FDA CEDI",
                  "Mass. Drinking Water Standards", "NIOSH", "OSHA Air contaminants",
                  "OW Drinking Water Standards", "Pennsylvania DEP ToxValues", "RSL", "USGS HBSL")
-  query = paste0("UPDATE toxval SET species_id=", human_id, " ",
-                 "WHERE source IN ('", paste0(human_list, collapse="', '"), "') ",
-                 "AND source IN ('", paste0(slist, collapse="', '"), "')")
-  runQuery(query, toxval.db)
+  if(source %in% human_list){
+    query = paste0("UPDATE toxval SET species_id=", human_id, " ",
+                   "WHERE source = '", source, "'")
+    runQuery(query, toxval.db)
+  }
 
   # Handle cases where two entries with the same species_original have different species_id values
   fix.species.duplicates(toxval.db)
