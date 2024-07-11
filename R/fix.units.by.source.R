@@ -415,6 +415,39 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
           dplyr::bind_rows(current_changes)
       }
     }
+
+    # Handle special mg/kg soil case for RSL
+    if(source == "RSL") {
+      cat(">>> Handle special mg/kg soil case for RSL\n")
+      if(!report.only) {
+        query = paste0("UPDATE toxval SET toxval_units='mg/kg soil' ",
+                       "WHERE toxval_type",
+                       " IN ('screening level (residential soil)', 'screening level (industrial soil)') ",
+                       "AND source='RSL'", query_addition)
+        runQuery(query, toxval.db)
+      } else {
+        # Track RSL conversion data
+        change = "mg/kg to mg/kg soil for RSL"
+        current_changes = source_data %>%
+          dplyr::filter(
+            toxval_type %in% c('screening level (residential soil)', 'screening level (industrial soil)')
+          ) %>%
+          dplyr::mutate(
+            toxval_units = "mg/kg soil",
+            change_made = dplyr::case_when(
+              is.na(change_made) ~ !!change,
+              TRUE ~ paste0(change_made, "; ", !!change)
+            )
+          )
+        changed_ids = current_changes %>%
+          dplyr::pull(toxval_id) %>%
+          unique()
+        source_data = source_data %>%
+          dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+          dplyr::bind_rows(current_changes)
+      }
+    }
+
     if(report.only) {
       # Add data changed from current source to running total
       current_changed_data = source_data %>%
