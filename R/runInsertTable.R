@@ -21,19 +21,21 @@
 #' @export
 #' @importFrom RMySQL dbConnect MySQL dbWriteTable dbSendQuery dbFetch dbHasCompleted dbClearResult dbDisconnect
 #--------------------------------------------------------------------------------------
-runInsertTable <- function(mat,table,db,do.halt=T,verbose=F,get.id=T) {
-  if(!exists("DB.SERVER")) {
-    cat("DB.SERVER not defined\n")
+runInsertTable <- function(mat, table, db, do.halt=TRUE, verbose=FALSE, get.id=TRUE) {
+  if(is.null(table)){
+    cat("No table provided...\n")
     return(NULL)
   }
-  if(!exists("DB.USER")) {
-    cat("DB.USER not defined\n")
-    return(NULL)
+
+  # Check environment variables for database credentials are set
+  credentials = c("db_user", "db_pass", "db_server", "db_port")
+  for(cred in credentials){
+    if(Sys.getenv(cred) == ""){
+      cat(paste0("'", cred, "' environment variable not defined\n"))
+      return(NULL)
+    }
   }
-  if(!exists("DB.PASSWORD")) {
-    cat("DB.PASSWORD not defined\n")
-    return(NULL)
-  }
+
   if(verbose) {
     printCurrentFunction()
     cat("mat: ",dim(mat),"\n")
@@ -41,8 +43,14 @@ runInsertTable <- function(mat,table,db,do.halt=T,verbose=F,get.id=T) {
     cat("db: ",db,"\n")
   }
   tryCatch({
-    con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),user=DB.USER,password=DB.PASSWORD,host=DB.SERVER,dbname=db)
-    res = RMySQL::dbWriteTable(con,name=table,value=mat,row.names=F,overwrite=F,append=T)
+    con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),
+                             user=Sys.getenv("db_user"),
+                             password=Sys.getenv("db_pass"),
+                             host=Sys.getenv("db_server"),
+                             dbname=db,
+                             port=as.numeric(Sys.getenv("db_port"))
+    )
+    res = RMySQL::dbWriteTable(con,name=table,value=mat,row.names=FALSE, overwrite=FALSE, append=TRUE)
     if(get.id) {
       rs2 <- RMySQL::dbSendQuery(con, "select LAST_INSERT_ID()")
       d2 <- RMySQL::dbFetch(rs2, n = -1)

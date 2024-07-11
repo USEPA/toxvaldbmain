@@ -23,18 +23,20 @@
 #--------------------------------------------------------------------------------------
 runInsert <- function(query,db,do.halt=F,verbose=F,auto.increment.id=F) {
 
-  if(!exists("DB.SERVER")) {
-    cat("DB.SERVER not defined\n")
+  if(is.null(query)){
+    cat("No query provided...\n")
     return(NULL)
   }
-  if(!exists("DB.USER")) {
-    cat("DB.USER not defined\n")
-    return(NULL)
+
+  # Check environment variables for database credentials are set
+  credentials = c("db_user", "db_pass", "db_server", "db_port")
+  for(cred in credentials){
+    if(Sys.getenv(cred) == ""){
+      cat(paste0("'", cred, "' environment variable not defined\n"))
+      return(NULL)
+    }
   }
-  if(!exists("DB.PASSWORD")) {
-    cat("DB.PASSWORD not defined\n")
-    return(NULL)
-  }
+
   if(verbose) {
     printCurrentFunction()
     cat("query: ",query,"\n")
@@ -42,7 +44,13 @@ runInsert <- function(query,db,do.halt=F,verbose=F,auto.increment.id=F) {
   }
   id <- -1
   tryCatch({
-    con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),user=DB.USER,password=DB.PASSWORD,host=DB.SERVER,dbname=db)
+    con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),
+                             user=Sys.getenv("db_user"),
+                             password=Sys.getenv("db_pass"),
+                             host=Sys.getenv("db_server"),
+                             dbname=db,
+                             port=as.numeric(Sys.getenv("db_port"))
+    )
     rs <- RMySQL::dbSendQuery(con, query)
     RMySQL::dbHasCompleted(rs)
     RMySQL::dbClearResult(rs)
