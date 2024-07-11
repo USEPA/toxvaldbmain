@@ -60,6 +60,11 @@ toxval.load.mass_mmcl <- function(toxval.db,source.db, log=FALSE, remove_null_dt
       stringr::str_match(., "[0-9\\.]+") %>%
       # Convert to numeric
       as.numeric(),
+    # Set redundant subsource_url values to "-"
+    subsource_url = dplyr::case_when(
+      subsource_url == source_url ~ "-",
+      TRUE ~ subsource_url
+    )
   )
 
   #####################################################################

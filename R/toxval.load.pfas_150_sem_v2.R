@@ -69,7 +69,13 @@ toxval.load.pfas_150_sem_v2 <- function(toxval.db, source.db, log=FALSE, remove_
       gsub(".*\\-", "", .) %>%
       tidyr::replace_na("-"),
     study_duration_units = study_duration_units %>%
-      tidyr::replace_na("-")
+      tidyr::replace_na("-"),
+
+    # Set redundant subsource_url values to "-"
+    subsource_url = dplyr::case_when(
+      subsource_url == source_url ~ "-",
+      TRUE ~ subsource_url
+    )
   )
 
   #####################################################################
