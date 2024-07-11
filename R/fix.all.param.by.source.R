@@ -46,11 +46,8 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
   }
   full_dict = full_dict[!is.na(full_dict$term_original),]
   #print(View(full_dict))
-  slist = source
-  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  slist = sort(slist)
-  source_string = slist %>%
-    paste0(., collapse="', '")
+  slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  if(!is.null(source)) slist = source
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -59,84 +56,87 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
   }
 
   # slist = slist[!is.element(slist,c("ECOTOX","ECHA IUCLID"))]
+  slist = sort(slist)
 
-  cat("\n-----------------------------------------------------\n")
-  cat(gsub("', '", ", ", source_string),subsource,"\n")
-  cat("-----------------------------------------------------\n")
-  cat("perform extra processes that require matching between fields\n")
-  fix.exposure.params(toxval.db, slist,subsource)
-  fix.study_duration.params(toxval.db, slist,subsource)
-  fix.generation.by.source(toxval.db, slist,subsource)
+  for(source in slist) {
+    cat("\n-----------------------------------------------------\n")
+    cat(source,subsource,"\n")
+    cat("-----------------------------------------------------\n")
+    cat("perform extra processes that require matching between fields\n")
+    fix.exposure.params(toxval.db, source,subsource)
+    fix.study_duration.params(toxval.db, source,subsource)
+    fix.generation.by.source(toxval.db, source,subsource)
 
-  cat(" deal with quotes in strings\n")
-  cat("   exposure_method\n")
-  runQuery(paste0("update toxval SET exposure_method"," = ", "REPLACE", "( exposure_method",  ",\'\"\',", " \"'\" ) WHERE exposure_method"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
-  cat("   exposure_route\n")
-  runQuery(paste0("update toxval SET exposure_route"," = ", "REPLACE", "( exposure_route",  ",\'\"\',", " \"'\" ) WHERE exposure_route"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
-  cat("   media\n")
-  runQuery(paste0("update toxval SET media"," = ", "REPLACE", "( media",  ",\'\"\',", " \"'\" ) WHERE media"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
-  cat("   study_type\n")
-  runQuery(paste0("update toxval SET study_type"," = ", "REPLACE", "( study_type",  ",\'\"\',", " \"'\" ) WHERE study_type"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
-  cat("   toxval_type\n")
-  runQuery(paste0("update toxval SET toxval_type"," = ", "REPLACE", "( toxval_type",  ",\'\"\',", " \"'\" ) WHERE toxval_type"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
-  cat(" iterate through the full_dict\n")
-  flist = unique(full_dict$field)
-  for(field in flist) {
-    cat("   ",field,"\n")
-    sdict = full_dict[full_dict$field==field,]
-    query = paste0("select distinct ",field,"_original from toxval where source in ('",source_string,"')",query_addition)
-    terms = runQuery(query,toxval.db)[,1]
-    if(length(terms)>0) {
-      sdict = sdict[is.element(sdict$term_original,terms),]
-      if(nrow(sdict)>0) {
-        for(i in 1:nrow(sdict)) {
-          original = sdict[i,"term_original"]
-          final = sdict[i,"term_final"]
-          #if(field=="toxval_units") cat(original,final,"\n")
-          query = paste0("update toxval set ",field,"=\"",final,"\" where ",field,"_original=\"",original,"\" and source in ('",source_string,"')",query_addition)
-          runQuery(query, toxval.db)
+    cat(" deal with quotes in strings\n")
+    cat("   exposure_method\n")
+    runQuery(paste0("update toxval SET exposure_method"," = ", "REPLACE", "( exposure_method",  ",\'\"\',", " \"'\" ) WHERE exposure_method"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
+    cat("   exposure_route\n")
+    runQuery(paste0("update toxval SET exposure_route"," = ", "REPLACE", "( exposure_route",  ",\'\"\',", " \"'\" ) WHERE exposure_route"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
+    cat("   media\n")
+    runQuery(paste0("update toxval SET media"," = ", "REPLACE", "( media",  ",\'\"\',", " \"'\" ) WHERE media"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
+    cat("   study_type\n")
+    runQuery(paste0("update toxval SET study_type"," = ", "REPLACE", "( study_type",  ",\'\"\',", " \"'\" ) WHERE study_type"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
+    cat("   toxval_type\n")
+    runQuery(paste0("update toxval SET toxval_type"," = ", "REPLACE", "( toxval_type",  ",\'\"\',", " \"'\" ) WHERE toxval_type"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
+    cat(" iterate through the full_dict\n")
+    flist = unique(full_dict$field)
+    for(field in flist) {
+      cat("   ",field,"\n")
+      sdict = full_dict[full_dict$field==field,]
+      query = paste0("select distinct ",field,"_original from toxval where source='",source,"'",query_addition)
+      terms = runQuery(query,toxval.db)[,1]
+      if(length(terms)>0) {
+        sdict = sdict[is.element(sdict$term_original,terms),]
+        if(nrow(sdict)>0) {
+          for(i in 1:nrow(sdict)) {
+            original = sdict[i,"term_original"]
+            final = sdict[i,"term_final"]
+            #if(field=="toxval_units") cat(original,final,"\n")
+            query = paste0("update toxval set ",field,"=\"",final,"\" where ",field,"_original=\"",original,"\" and source = '",source,"'",query_addition)
+            runQuery(query, toxval.db)
+          }
         }
       }
     }
+
+    query <- paste0("update toxval set ",field,"='-' where ",field,"_original is NULL and source = '",source,"'",query_addition)
+    runQuery(query, toxval.db)
+
+    cat("  expoure route\n")
+    query <- paste0("update toxval
+    set exposure_route = 'inhalation'
+    where toxval_type in ('RFCi', 'Inhalation Unit Risk', 'IUR', 'Inhalation UR', 'Inhalation TC', 'Inhalation SF') and source = '",source,"'",query_addition)
+    runQuery(query, toxval.db)
+
+    query = paste0("update toxval
+    set exposure_route = 'oral'
+    where toxval_type in ('RFDo', 'Oral Slope Factor', 'oral TDI', 'oral SF', 'oral ADI', 'LDD50 (Lethal Dietary Dose)') and source = '",source,"'",query_addition)
+    runQuery(query, toxval.db)
+
+    query = paste0("update toxval ",
+                   "SET exposure_route = 'oral' ",
+                   "WHERE (exposure_route = '-' or exposure_route_original = '-') and toxval_units = 'mg/kg-day' and ",
+                   "(toxval_type in ('NEL', 'LEL', 'LOEL', 'NOEL', 'NOAEL', 'LOAEL') or toxval_type like 'BMD%') and ",
+                   "source = '",source,"'",query_addition)
+    runQuery(query, toxval.db)
+
+    cat("  study_duration_class\n")
+    query = paste0("update toxval
+    set study_duration_class = 'acute'
+    where toxval_type in ('ARFD', 'ARFD (group)', 'AAOEL') and source = '",source,"'",query_addition)
+
+    query = paste0("update toxval
+    set study_duration_class = 'chronic'
+    where toxval_type like 'Chronic%' and source = '",source,"'",query_addition)
+    runQuery(query, toxval.db)
+
+    cat("  toxval_subtype\n")
+    query = paste0("UPDATE toxval SET toxval_subtype = '-' ",
+                   "WHERE toxval_subtype IN ('chronic', 'subchronic', 'intermediate', 'acute', 'developmental') ",
+                   "AND toxval_type IN (SELECT DISTINCT toxval_type FROM toxval_type_dictionary ",
+                   "WHERE toxval_type_supercategory = 'Point of Departure')")
+    runQuery(query, toxval.db)
+
+    export.missing.dictionary.entries(toxval.db,source,subsource)
   }
-
-  query <- paste0("update toxval set ",field,"='-' where ",field,"_original is NULL and source in ('",source_string,"')",query_addition)
-  runQuery(query, toxval.db)
-
-  cat("  expoure route\n")
-  query <- paste0("update toxval
-  set exposure_route = 'inhalation'
-  where toxval_type in ('RFCi', 'Inhalation Unit Risk', 'IUR', 'Inhalation UR', 'Inhalation TC', 'Inhalation SF') and source in ('",source_string,"')",query_addition)
-  runQuery(query, toxval.db)
-
-  query = paste0("update toxval
-  set exposure_route = 'oral'
-  where toxval_type in ('RFDo', 'Oral Slope Factor', 'oral TDI', 'oral SF', 'oral ADI', 'LDD50 (Lethal Dietary Dose)') and source in ('",source_string,"')",query_addition)
-  runQuery(query, toxval.db)
-
-  query = paste0("update toxval ",
-                 "SET exposure_route = 'oral' ",
-                 "WHERE (exposure_route = '-' or exposure_route_original = '-') and toxval_units = 'mg/kg-day' and ",
-                 "(toxval_type in ('NEL', 'LEL', 'LOEL', 'NOEL', 'NOAEL', 'LOAEL') or toxval_type like 'BMD%') and ",
-                 "source in ('",source_string,"')",query_addition)
-  runQuery(query, toxval.db)
-
-  cat("  study_duration_class\n")
-  query = paste0("update toxval
-  set study_duration_class = 'acute'
-  where toxval_type in ('ARFD', 'ARFD (group)', 'AAOEL') and source in ('",source_string,"')",query_addition)
-
-  query = paste0("update toxval
-  set study_duration_class = 'chronic'
-  where toxval_type like 'Chronic%' and source in ('",source_string,"')",query_addition)
-  runQuery(query, toxval.db)
-
-  cat("  toxval_subtype\n")
-  query = paste0("UPDATE toxval SET toxval_subtype = '-' ",
-                 "WHERE toxval_subtype IN ('chronic', 'subchronic', 'intermediate', 'acute', 'developmental') ",
-                 "AND toxval_type IN (SELECT DISTINCT toxval_type FROM toxval_type_dictionary ",
-                 "WHERE toxval_type_supercategory = 'Point of Departure') AND source in ('",source_string,"')")
-  runQuery(query, toxval.db)
-
-  export.missing.dictionary.entries(toxval.db,slist,subsource)
 }
