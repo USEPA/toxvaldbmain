@@ -62,7 +62,15 @@ toxval.load.gestis.dnel <- function(toxval.db,source.db, log=FALSE, remove_null_
     fill.toxval.defaults(toxval.db, .) %>%
 
     # Filter out duplicate rows
-    dplyr::distinct()
+    dplyr::distinct() %>%
+
+    # Set redundant subsource_url values to "-"
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
