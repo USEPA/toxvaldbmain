@@ -54,7 +54,14 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   cremove = c("table_title", "url")
   res = res[ , !(names(res) %in% cremove)]
   res <- res %>%
-    dplyr::rename(year = year_updated)
+    dplyr::rename(year = year_updated) %>%
+    # Set redundant subsource_url values to "-"
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################

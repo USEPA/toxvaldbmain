@@ -33,17 +33,13 @@ runQuery <- function(query=NULL,db,do.halt=TRUE,verbose=FALSE,con_type="MySQL",s
 
   con_type = tolower(con_type)
   if(con_type != "sqlite") {
-    if(!exists("DB.SERVER")) {
-      cat("DB.SERVER not defined\n")
-      return(NULL)
-    }
-    if(!exists("DB.USER")) {
-      cat("DB.USER not defined\n")
-      return(NULL)
-    }
-    if(!exists("DB.PASSWORD")) {
-      cat("DB.PASSWORD not defined\n")
-      return(NULL)
+    # Check environment variables for database credentials are set
+    credentials = c("db_user", "db_pass", "db_server", "db_port")
+    for(cred in credentials){
+      if(Sys.getenv(cred) == ""){
+        cat(paste0("'", cred, "' environment variable not defined\n"))
+        return(NULL)
+      }
     }
   }
 
@@ -59,11 +55,11 @@ runQuery <- function(query=NULL,db,do.halt=TRUE,verbose=FALSE,con_type="MySQL",s
     con_type,
     "mysql" = {
       con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),
-                               user=DB.USER,
-                               password=DB.PASSWORD,
-                               host=DB.SERVER,
+                               user=Sys.getenv("db_user"),
+                               password=Sys.getenv("db_pass"),
+                               host=Sys.getenv("db_server"),
                                dbname=db,
-                               port=as.numeric(ifelse(!is.null(DB.PORT), DB.PORT, 3306))
+                               port=as.numeric(Sys.getenv("db_port"))
       )
       query_func = RMySQL::dbSendQuery
       fetch_func = RMySQL::dbFetch
@@ -83,11 +79,12 @@ runQuery <- function(query=NULL,db,do.halt=TRUE,verbose=FALSE,con_type="MySQL",s
       if(is.null(schema)) opt = ""
       else opt = paste0("-c search_path=", schema)
       con <- RPostgreSQL::dbConnect(drv=RPostgreSQL::dbDriver("PostgreSQL"),
-                                    user=DB.USER,
-                                    password=DB.PASSWORD,
-                                    host=DB.SERVER,
+                                    user=Sys.getenv("db_user"),
+                                    password=Sys.getenv("db_pass"),
+                                    host=Sys.getenv("db_server"),
                                     dbname=db,
-                                    port=as.numeric(ifelse(!is.null(DB.PORT), DB.PORT, 3306)),
+                                    port=as.numeric(ifelse(!is.null(Sys.getenv("db_port")),
+                                                           Sys.getenv("db_port"), 3306)),
                                     options=opt)
       query_func = RPostgreSQL::dbSendQuery
       fetch_func = RPostgreSQL::fetch

@@ -64,6 +64,13 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
         tidyr::replace_na("-"),
       study_duration_units = study_duration_units %>%
         tidyr::replace_na("-")
+    ) %>%
+    # Set redundant subsource_url values to "-"
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
     )
 
   #####################################################################

@@ -65,11 +65,19 @@ toxval.load.efsa <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
       url = paste0("https://doi.org/", doi)
     ) %>%
     tidyr::unite("long_ref", title, publication_date,
-                 sep=" ", remove=FALSE, na.rm=TRUE)
+                 sep=" ", remove=FALSE, na.rm=TRUE) %>%
     # # Filter to specific study_type values
     # dplyr::filter(study_type %in% c(
     #   "acute", "chronic/long-term", "subchronic", "reproductive", "short-term", "human"
     # ))
+
+    # Set redundant subsource_url values to "-"
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

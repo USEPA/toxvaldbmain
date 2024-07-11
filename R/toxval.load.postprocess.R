@@ -37,6 +37,14 @@ toxval.load.postprocess <- function(toxval.db,
   fix.dedup.hierarchy.by.source(toxval.db, source, subsource)
 
   #####################################################################
+  cat("set redundant source_url to '-'\n")
+  #####################################################################
+  query = paste0("UPDATE toxval SET subsource_url='-' ",
+                 "WHERE subsource_url=source_url AND source_url!='-' AND source='", source, "'",
+                 query_addition)
+  runQuery(query, toxval.db)
+
+  #####################################################################
   cat("load chemical info to source_chemical\n")
   #####################################################################
   if(source=="ECHA IUCLID") {
