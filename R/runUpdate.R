@@ -33,18 +33,15 @@ runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE
     return(NULL)
   }
 
-  if(!exists("DB.SERVER")) {
-    cat("DB.SERVER not defined\n")
-    return(NULL)
+  # Check environment variables for database credentials are set
+  credentials = c("db_user", "db_pass", "db_server", "db_port")
+  for(cred in credentials){
+    if(Sys.getenv(cred) == ""){
+      cat(paste0("'", cred, "' environment variable not defined\n"))
+      return(NULL)
+    }
   }
-  if(!exists("DB.USER")) {
-    cat("DB.USER not defined\n")
-    return(NULL)
-  }
-  if(!exists("DB.PASSWORD")) {
-    cat("DB.PASSWORD not defined\n")
-    return(NULL)
-  }
+
   if(is.null(db)){
     cat("No 'db' database paramter provided...\n")
     return(NULL)
@@ -55,9 +52,10 @@ runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE
     cat("updateQuery: ",updateQuery,"\n")
     cat("db: ",db,"\n")
   }
+
   tryCatch({
     # Add session_stem in case multiple users use runUpdate() at the same time
-    session_stem = paste0(DB.USER,"_",
+    session_stem = paste0(Sys.getenv("db_user"), "_",
                           substr(digest::digest(Sys.time()), 1, 5))
     updateTable = paste0("z_updated_df_", session_stem)
 
@@ -69,7 +67,11 @@ runUpdate <- function(table, updateQuery=NULL, updated_df=NULL, db, do.halt=TRUE
     # Push temp table of updates
     # Create a table like the source table so the COLLATE and encoding arguments match
     runQuery(paste0("CREATE TABLE ", updateTable," LIKE ", table), db)
-    con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),user=DB.USER,password=DB.PASSWORD,host=DB.SERVER,dbname=db)
+    con <- RMySQL::dbConnect(drv=RMySQL::MySQL(),
+                             user=Sys.getenv("db_user"),
+                             password=Sys.getenv("db_pass"),
+                             host=Sys.getenv("db_server"),
+                             dbname=db)
 
     res = RMySQL::dbWriteTable(con,
                        name=updateTable,
