@@ -1,21 +1,12 @@
 #-------------------------------------------------------------------------------------
 #' Function to generate general summaries of the ToxValDB for a given release version
 #' @param in.toxval.db The version of toxval to summarize
+#' @param in.toxval.host The host of the toxval database
 #' @param compare.toxval.db The version of toxval to compare with the input toxval.db version
+#' @param compare.toxval.host The host of teh comparison toxval database
 #' @return None. Exported files are generated in a summary folder.
 #-------------------------------------------------------------------------------------
-toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
-
-  # Prep vector of toxval versions to summarize
-  to_summarize <- sort(c(in.toxval.db, compare.toxval.db))
-
-  # Check if input databases exist on server
-  tbl_check <- runQuery("SHOW databases", in.toxval.db) %>%
-    dplyr::filter(Database %in% to_summarize)
-
-  if(!all(to_summarize %in% tbl_check$Database)){
-    stop("Input database does not exist on server...")
-  }
+toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxval.db, compare.toxval.host){
 
   # Helper function to check if any field names match sql keywords
   check_keywords <- function(database, words_file, outDir){
@@ -41,17 +32,35 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
   }
 
   # Loop through input databases
-  for(toxval.db in to_summarize){
-    message("Summarizing '", toxval.db, "'")
+  for(toxval.db in c(in.toxval.db, compare.toxval.db)){
+
+    # Set server host
+    if(toxval.db == in.toxval.db) DB.SERVER <<- in.toxval.host
+    if(toxval.db == compare.toxval.db) DB.SERVER <<- compare.toxval.host
+
+    message("Summarizing '", toxval.db, "' from ", DB.SERVER)
+
+    # Check if input databases exist on server
+    tbl_check <- runQuery("SHOW databases", in.toxval.db) %>%
+      dplyr::filter(Database %in% toxval.db)
+
+    if(!toxval.db %in% tbl_check$Database){
+      stop("Input database does not exist on server...")
+    }
+
+
     # Create subfolders to store outputs by toxval version
     outDir <- file.path(toxval.config()$datapath, "toxvaldb_release_summaries", toxval.db)
     if(!dir.exists(outDir)) {
       dir.create(outDir, recursive = TRUE)
       dir.create(file.path(outDir, "DDL"))
+    } else {
+      # Clear out old files
+      unlink(outDir, recursive = TRUE)
     }
 
     reserved_words_file = paste0(toxval.config()$datapath, "dictionary/mysql_reserved_terms.txt")
-    nonreserved_words_file = paste0(toxval.config()$datapath,"dictionary/mysql_non_reserved_terms.txt")
+    nonreserved_words_file = paste0(toxval.config()$datapath, "dictionary/mysql_non_reserved_terms.txt")
 
     # database, words_file, outDir
     check_keywords(database=toxval.db, words_file=reserved_words_file, outDir=outDir)
@@ -64,7 +73,7 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
                            toxval.db)
     # Record counts
     # Estimate row count from information schema
-    n_tbl_row_est <- runQuery(paste0("SELECT table_name, TABLE_ROWS as n_tbl_row_est FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '",
+    n_tbl_row_est <- runQuery(paste0("SELECT TABLE_NAME as table_name, TABLE_ROWS as n_tbl_row_est FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '",
                                      toxval.db, "'"),
                               toxval.db)
 
