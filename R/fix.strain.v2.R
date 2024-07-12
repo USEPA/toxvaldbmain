@@ -58,7 +58,7 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
 
     # Export for dictionary curation if any missing
     if(nrow(missing)){
-      writexl::write_xlsx(missing, file.path(toxval.config()$datapath,"dictionary/missing/missing_strain_mapping.xlsx"))
+      writexl::write_xlsx(missing, paste0(toxval.config()$datapath,"dictionary/missing/missing_", source, "_strain_mapping.xlsx"))
     }
 
     # Filter out missing
