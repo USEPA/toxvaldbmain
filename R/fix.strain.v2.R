@@ -109,10 +109,6 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
       incrementPosition <- startPosition + batch_size - 1
     }
 
-    query = paste0("' where source='",source,"' and strain_original='",so,"' and species_id=",sid,query_addition)
-    # if(d2[1,"strain_group"]=="Bird") browser()
-    runQuery(query,toxval.db)
-
     # Generic strain fix
     cat("Handle quotes in strains\n")
     runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
