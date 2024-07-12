@@ -108,9 +108,16 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     result_sample_unit_desc = "result_sample_unit_desc"
   )
 
+  # Filter to specific toxval_type entries
+  toxval_type_list = c("BMD",
+                       "LEL", "LOAEC", "LOEC", "LOAEL", "LOEL",
+                       "NEL", "NOAEC", "NOEC", "NOAEL", "NOEL")
+
   res <- res0 %>%
     # Apply name mapping, and select only renamed columns (columns of interest)
     dplyr::rename(dplyr::all_of(rename_list)) %>%
+    # Remove records with test_location "Field *", only retain "Lab" or "Not Reported"
+    dplyr::filter(!grepl("Field", test_location)) %>%
     dplyr::select(dplyr::all_of(names(rename_list))) %>%
 
     dplyr::mutate(
@@ -150,6 +157,10 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
         gsub("Both", "male/female", .) %>%
         tolower()
     ) %>%
+    # Filter to specific toxval_type entries
+    dplyr::filter(grepl(paste0("^", toxval_type_list,
+                               collapse = "|"),
+                        toxval_type)) %>%
 
     # Combine existing values to create long_ref and critical_effect
     tidyr::unite(
