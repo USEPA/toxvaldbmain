@@ -35,10 +35,10 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
   for(toxval.db in c(in.toxval.db, compare.toxval.db)){
 
     # Set server host
-    if(toxval.db == in.toxval.db) DB.SERVER <<- in.toxval.host
-    if(toxval.db == compare.toxval.db) DB.SERVER <<- compare.toxval.host
+    if(toxval.db == in.toxval.db) Sys.setenv(db_server = in.toxval.host)
+    if(toxval.db == compare.toxval.db) Sys.setenv(db_server = compare.toxval.host)
 
-    message("Summarizing '", toxval.db, "' from ", DB.SERVER)
+    message("Summarizing '", toxval.db, "' from ", Sys.getenv("db_server"))
 
     # Check if input databases exist on server
     tbl_check <- runQuery("SHOW databases", in.toxval.db) %>%
@@ -48,15 +48,16 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
       stop("Input database does not exist on server...")
     }
 
-
     # Create subfolders to store outputs by toxval version
-    outDir <- file.path(toxval.config()$datapath, "toxvaldb_release_summaries", toxval.db)
+    outDir <- file.path(toxval.config()$datapath, "toxvaldb_release_summaries", Sys.getenv("db_server"), toxval.db)
     if(!dir.exists(outDir)) {
       dir.create(outDir, recursive = TRUE)
       dir.create(file.path(outDir, "DDL"))
     } else {
       # Clear out old files
       unlink(outDir, recursive = TRUE)
+      dir.create(outDir, recursive = TRUE)
+      dir.create(file.path(outDir, "DDL"))
     }
 
     reserved_words_file = paste0(toxval.config()$datapath, "dictionary/mysql_reserved_terms.txt")
@@ -122,9 +123,9 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
     return(x)
   }
 
-  old <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", compare.toxval.db),
+  old <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", compare.toxval.host, compare.toxval.db),
                                      "/", compare.toxval.db, "_release_summary_", Sys.Date(), ".xlsx"))
-  new <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", in.toxval.db),
+  new <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", in.toxval.host, in.toxval.db),
                                      "/", in.toxval.db, "_release_summary_", Sys.Date(), ".xlsx"))
 
   comparison <- list(
@@ -167,6 +168,6 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
 
   writexl::write_xlsx(comparison,
                       paste0(toxval.config()$datapath, "/toxvaldb_release_summaries/",
-                                    in.toxval.db, "_", compare.toxval.db, "_release_comparison_", Sys.Date(), ".xlsx"))
+                                    in.toxval.host, "_", in.toxval.db, "_", compare.toxval.host, "_", compare.toxval.db, "_release_comparison_", Sys.Date(), ".xlsx"))
   message("Done comparing...")
 }
