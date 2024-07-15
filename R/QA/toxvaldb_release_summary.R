@@ -1,21 +1,12 @@
 #-------------------------------------------------------------------------------------
 #' Function to generate general summaries of the ToxValDB for a given release version
 #' @param in.toxval.db The version of toxval to summarize
+#' @param in.toxval.host The host of the toxval database
 #' @param compare.toxval.db The version of toxval to compare with the input toxval.db version
+#' @param compare.toxval.host The host of teh comparison toxval database
 #' @return None. Exported files are generated in a summary folder.
 #-------------------------------------------------------------------------------------
-toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
-
-  # Prep vector of toxval versions to summarize
-  to_summarize <- sort(c(in.toxval.db, compare.toxval.db))
-
-  # Check if input databases exist on server
-  tbl_check <- runQuery("SHOW databases", in.toxval.db) %>%
-    dplyr::filter(Database %in% to_summarize)
-
-  if(!all(to_summarize %in% tbl_check$Database)){
-    stop("Input database does not exist on server...")
-  }
+toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxval.db, compare.toxval.host){
 
   # Helper function to check if any field names match sql keywords
   check_keywords <- function(database, words_file, outDir){
@@ -41,17 +32,36 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
   }
 
   # Loop through input databases
-  for(toxval.db in to_summarize){
-    message("Summarizing '", toxval.db, "'")
+  for(toxval.db in c(in.toxval.db, compare.toxval.db)){
+
+    # Set server host
+    if(toxval.db == in.toxval.db) Sys.setenv(db_server = in.toxval.host)
+    if(toxval.db == compare.toxval.db) Sys.setenv(db_server = compare.toxval.host)
+
+    message("Summarizing '", toxval.db, "' from ", Sys.getenv("db_server"))
+
+    # Check if input databases exist on server
+    tbl_check <- runQuery("SHOW databases", in.toxval.db) %>%
+      dplyr::filter(Database %in% toxval.db)
+
+    if(!toxval.db %in% tbl_check$Database){
+      stop("Input database does not exist on server...")
+    }
+
     # Create subfolders to store outputs by toxval version
-    outDir <- file.path(toxval.config()$datapath, "toxvaldb_release_summaries", toxval.db)
+    outDir <- file.path(toxval.config()$datapath, "toxvaldb_release_summaries", Sys.getenv("db_server"), toxval.db)
     if(!dir.exists(outDir)) {
+      dir.create(outDir, recursive = TRUE)
+      dir.create(file.path(outDir, "DDL"))
+    } else {
+      # Clear out old files
+      unlink(outDir, recursive = TRUE)
       dir.create(outDir, recursive = TRUE)
       dir.create(file.path(outDir, "DDL"))
     }
 
     reserved_words_file = paste0(toxval.config()$datapath, "dictionary/mysql_reserved_terms.txt")
-    nonreserved_words_file = paste0(toxval.config()$datapath,"dictionary/mysql_non_reserved_terms.txt")
+    nonreserved_words_file = paste0(toxval.config()$datapath, "dictionary/mysql_non_reserved_terms.txt")
 
     # database, words_file, outDir
     check_keywords(database=toxval.db, words_file=reserved_words_file, outDir=outDir)
@@ -64,7 +74,7 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
                            toxval.db)
     # Record counts
     # Estimate row count from information schema
-    n_tbl_row_est <- runQuery(paste0("SELECT table_name, TABLE_ROWS as n_tbl_row_est FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '",
+    n_tbl_row_est <- runQuery(paste0("SELECT TABLE_NAME as table_name, TABLE_ROWS as n_tbl_row_est FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '",
                                      toxval.db, "'"),
                               toxval.db)
 
@@ -113,9 +123,9 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
     return(x)
   }
 
-  old <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", compare.toxval.db),
+  old <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", compare.toxval.host, compare.toxval.db),
                                      "/", compare.toxval.db, "_release_summary_", Sys.Date(), ".xlsx"))
-  new <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", in.toxval.db),
+  new <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", in.toxval.host, in.toxval.db),
                                      "/", in.toxval.db, "_release_summary_", Sys.Date(), ".xlsx"))
 
   comparison <- list(
@@ -158,6 +168,6 @@ toxvaldb_release_summary <- function(in.toxval.db, compare.toxval.db=NULL){
 
   writexl::write_xlsx(comparison,
                       paste0(toxval.config()$datapath, "/toxvaldb_release_summaries/",
-                                    in.toxval.db, "_", compare.toxval.db, "_release_comparison_", Sys.Date(), ".xlsx"))
+                                    in.toxval.host, "_", in.toxval.db, "_", compare.toxval.host, "_", compare.toxval.db, "_release_comparison_", Sys.Date(), ".xlsx"))
   message("Done comparing...")
 }

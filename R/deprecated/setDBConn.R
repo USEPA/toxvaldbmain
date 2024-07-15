@@ -14,9 +14,8 @@
 #'  }
 #' }
 #' @rdname setDBConn
-#' @export
 #--------------------------------------------------------------------------------------
-setDBConn <- function(server="ccte-mysql-res.epa.gov",user=NULL,password=NULL,api_auth=NULL,port=3306) {
+setDBConn <- function(server, user, password, api_auth, port) {
   printCurrentFunction()
   DB.SERVER <<- server
   DB.USER <<- user
