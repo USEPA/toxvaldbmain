@@ -12,12 +12,15 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
   printCurrentFunction()
 
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
-  dict = openxlsx::read.xlsx(file)
-  dict = dplyr::distinct(dict)
-  dict$common_name = tolower(dict$common_name)
+  dict = openxlsx::read.xlsx(file) %>%
+    dplyr::select(-common_name) %>%
+    dplyr::distinct()
 
-  slist = source
-  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  if(is.null(source)) {
+    slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  } else {
+    slist = source
+  }
   source_string = slist %>%
     paste0(., collapse="', '")
 
@@ -35,7 +38,7 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
     }
 
     cat("fix strain:", source, subsource, "\n")
-    query = paste0("select DISTINCT a.species_original, a.strain_original, b.species_id ",
+    query = paste0("select DISTINCT a.species_original, a.strain_original, b.species_id, b.common_name ",
                    "from toxval a, species b ",
                    "where a.species_id=b.species_id ",
                    # "and a.human_eco='human health' ",
@@ -108,9 +111,12 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
       startPosition <- startPosition + batch_size
       incrementPosition <- startPosition + batch_size - 1
     }
-
-    # Generic strain fix
-    cat("Handle quotes in strains\n")
-    runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
   }
+  # Generic strain fix
+  cat("Handle quotes in strains\n")
+  runQuery(paste0("update toxval SET strain"," = ", "REPLACE",
+                  "( strain",  ",\'\"\',", " \"'\" ) WHERE strain",
+                  " LIKE \'%\"%\' and source in ('",source_string,"')",
+                  query_addition),
+           toxval.db)
 }

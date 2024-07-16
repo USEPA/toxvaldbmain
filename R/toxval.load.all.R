@@ -68,7 +68,6 @@ toxval.load.all <- function(toxval.db,
     toxval.load.epa_ow_nrwqc_alc(toxval.db, source.db, log)
     toxval.load.epa_ow_nrwqc_hhc(toxval.db, source.db, log)
     toxval.load.epa_ow_opp_alb(toxval.db, source.db, log)
-    toxval.load.fda_cedi(toxval.db, source.db, log)
     toxval.load.gestis.dnel(toxval.db, source.db, log)
     toxval.load.hawc(toxval.db, source.db, log)
     toxval.load.hawc_pfas_150(toxval.db, source.db, log)
