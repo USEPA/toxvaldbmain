@@ -18,30 +18,35 @@ set.supersource.export.names <- function(toxval.db, source=NULL, version_date="2
   if(is.null(source)) {
     slist = runQuery("select distinct source from toxval", toxval.db)$source
   }
+  source_string = slist %>%
+    paste0(collapse="', '")
 
-  for(src in slist) {
-    # Get relevant data for current source
-    src_data = source_info %>%
-      dplyr::filter(source == !!src) %>%
-      dplyr::select(source, supersource) %>%
-      dplyr::distinct()
+  # Get relevant data for current source
+  src_data = source_info %>%
+    dplyr::filter(source %in% !!slist) %>%
+    dplyr::select(source, supersource) %>%
+    dplyr::distinct()
 
-    # Check for multiple mappings
-    if(nrow(src_data) > 1) {
-      cat("Multiple mappings exist for", src, "export_source_name or supersource.\n")
-      View(src_data)
-      browser()
-    }
-
-    supersource = src_data %>%
-      dplyr::pull(supersource)
-
-    cat("source:", src, "| supersource:", supersource, "\n")
-
-    # Push export_source_name and supersource values to ToxVal
-    query = paste0("UPDATE toxval SET ",
-                   "supersource = '", supersource, "' ",
-                   "WHERE source = '", src, "'")
-    runQuery(query, toxval.db)
+  # Check for multiple mappings
+  if(nrow(src_data) > length(slist)) {
+    cat("Multiple mappings exist for export_source_name or supersource.\n")
+    View(src_data)
+    browser()
   }
+
+  src_data = src_data %>%
+    dplyr::mutate(
+      case_block = stringr::str_c("WHEN source='", source, "' THEN '", supersource, "'")
+    )
+
+  case_string = src_data %>%
+    dplyr::pull(case_block) %>%
+    paste0(collapse = " ")
+
+  # Push export_source_name and supersource values to ToxVal
+  query = paste0("UPDATE toxval SET ",
+                 "supersource = CASE ",
+                 case_string, " ELSE supersource END ",
+                 "WHERE source IN ('", source_string, "')")
+  runQuery(query, toxval.db)
 }
