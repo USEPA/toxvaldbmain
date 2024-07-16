@@ -24,6 +24,8 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
+  source_string = slist %>%
+    paste0(collapse="', '")
 
   # Handle addition of subsource for queries
   query_addition = " and qc_status NOT LIKE '%fail%'"
@@ -34,6 +36,7 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
   missing = data.frame()
 
   for(source in slist) {
+    source_missing = NULL
     cat("\n-----------------------------------------------------\n")
     cat(source,subsource,"\n")
     cat("-----------------------------------------------------\n")
@@ -76,16 +79,17 @@ fix.study_duration.params <- function(toxval.db, source=NULL,subsource=NULL, rep
       # Track values missing from dictionary
       else {
         missing = rbind(missing,temp1)
+        source_missing = rbind(source_missing, temp1)
       }
     }
-  }
-  # Record missing values
-  if(nrow(missing)) {
-    if(!report.only) {
-      cat("Found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params.xlsx\n and add to the dictionary\n")
-      file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source,".xlsx")
-      if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ", source," ", subsource,".xlsx")
-      openxlsx::write.xlsx(dplyr::distinct(missing), file)
+    # Record missing values
+    if(nrow(source_missing)) {
+      if(!report.only) {
+        cat("Found missing study_duration_value, study_duration_units, study_duration_class combination\nSee the file dictionary/missing/missing_study_duration_params.xlsx\n and add to the dictionary\n")
+        file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ",source,".xlsx")
+        if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_study_duration_params ", source," ", subsource,".xlsx")
+        openxlsx::write.xlsx(dplyr::distinct(source_missing), file)
+      }
     }
   }
   if(report.only) return(missing)
