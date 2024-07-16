@@ -19,6 +19,8 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
+  source_string = slist %>%
+    paste0(collapse="', '")
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -27,56 +29,59 @@ fix.exposure.params <- function(toxval.db, source=NULL, subsource=NULL, report.o
   }
 
   missing = NULL
-  for(source in slist) {
-    cat("\n-----------------------------------------------------\n")
-    cat(source,subsource,"\n")
-    cat("-----------------------------------------------------\n")
-    res = runQuery(paste0("select source,toxval_id,exposure_route_original,exposure_method_original,exposure_form_original from toxval where source='",
-                          source,"' AND qc_status NOT LIKE '%fail%'",query_addition),
-                   toxval.db)
-    res$index1 = paste(res[,3],res[,4],res[,5])
-    ilist = unique(res$index1)
-    # Check each record for appropriate exposure parameters
-    for(index in ilist) {
-      temp1 = res[res$index1==index,]
-      if(is.element(index,dict$index1)) {
-        # cat(source,index,"\n")
-        x = dict[is.element(dict$index1,index),]
-        eroute = x[1,"exposure_route"]
-        emethod = x[1,"exposure_method"]
-        eform = x[1,"exposure_form"]
-        tlist = temp1$toxval_id
-        tval = paste(tlist,collapse=",")
-        # Update exposure parameters if specified
-        if (!report.only) {
-          query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id in (",tval,")")
-          runQuery(query,toxval.db)
-        }
-        # for(i in 1:nrow(temp1)) {
-        #   tid = temp1[i,"toxval_id"]
-        #   query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id=",tid)
-        #   #print(query)
-        #   runQuery(query,toxval.db)
-        # }
+  res = runQuery(paste0("select source,toxval_id,exposure_route_original,exposure_method_original,exposure_form_original from toxval where ",
+                        "source IN ('", source_string, "') AND qc_status NOT LIKE '%fail%'",query_addition),
+                 toxval.db)
+  res$index1 = paste(res[,3],res[,4],res[,5])
+  ilist = unique(res$index1)
+  # Check each record for appropriate exposure parameters
+  for(index in ilist) {
+    temp1 = res[res$index1==index,]
+    if(is.element(index,dict$index1)) {
+      # cat(source,index,"\n")
+      x = dict[is.element(dict$index1,index),]
+      eroute = x[1,"exposure_route"]
+      emethod = x[1,"exposure_method"]
+      eform = x[1,"exposure_form"]
+      tlist = temp1$toxval_id
+      tval = paste(tlist,collapse=",")
+      # Update exposure parameters if specified
+      if (!report.only) {
+        query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id in (",tval,")")
+        runQuery(query,toxval.db)
       }
-      else {
-        # If report only, track missing entries but do not update toxval
-        missing = rbind(missing,temp1)
-        if (!report.only) {
-          cat("Found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form.xlsx\n and add to the dictionary\n")
-          #browser()
-        }
+      # for(i in 1:nrow(temp1)) {
+      #   tid = temp1[i,"toxval_id"]
+      #   query = paste0("update toxval set exposure_route='",eroute,"', exposure_method='",emethod,"', exposure_form='",eform,"' where toxval_id=",tid)
+      #   #print(query)
+      #   runQuery(query,toxval.db)
+      # }
+    }
+    else {
+      # If report only, track missing entries but do not update toxval
+      missing = rbind(missing,temp1)
+      if (!report.only) {
+        cat("Found missing exposure_route, method, form combination\nSee the file dictionary/missing/missing_exposure_route_method_form.xlsx\n and add to the dictionary\n")
+        #browser()
       }
     }
   }
+
   # Return or record missing entries
   if(!is.null(missing) & !report.only) {
-    if(is.null(source)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form all source.xlsx")
-    else {
-      file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source,".xlsx")
-      if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source," ",subsource,".xlsx")
+    if(length(unique(slist)) == nrow(runQuery("SELECT DISTINCT source FROM toxval", toxval.db))) {
+      file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form all source.xlsx")
+      writexl::write_xlsx(missing, file)
+    } else {
+      for(source in unique(missing$source)) {
+        cat("\n-----------------------------------------------------\n")
+        cat(source,subsource,"\n")
+        cat("-----------------------------------------------------\n")
+        file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source,".xlsx")
+        if(!is.null(subsource)) file = paste0(toxval.config()$datapath,"dictionary/missing/missing_exposure_route_method_form ",source," ",subsource,".xlsx")
+        writexl::write_xlsx(dplyr::filter(missing, source == !!source), file)
+      }
     }
-    openxlsx::write.xlsx(missing,file)
   }
   if (report.only) {
     return(missing)
