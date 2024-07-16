@@ -12,9 +12,10 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
   printCurrentFunction()
 
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
-  dict = openxlsx::read.xlsx(file)
-  dict = dplyr::distinct(dict)
-  dict$common_name = tolower(dict$common_name)
+  dict = openxlsx::read.xlsx(file) %>%
+    dplyr::select(-common_name) %>%
+    dplyr::distinct()
+
   if(is.null(source)) {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   } else {
@@ -35,7 +36,7 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
     }
 
     cat("fix strain:", source, subsource, "\n")
-    query = paste0("select DISTINCT a.species_original, a.strain_original, b.species_id ",
+    query = paste0("select DISTINCT a.species_original, a.strain_original, b.species_id, b.common_name ",
                    "from toxval a, species b ",
                    "where a.species_id=b.species_id ",
                    # "and a.human_eco='human health' ",

@@ -121,5 +121,5 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
     runQuery("update toxval set species_id=1000000 where species_id=-1",toxval.db)
   }
   # Handle cases where two entries with the same species_original have different species_id values
-  fix.species.duplicates(toxval.db)
+  fix.species.duplicates(toxval.db, source, subsource)
 }
