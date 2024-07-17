@@ -34,7 +34,8 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       "HAWC PFAS 150" = "PFAS 150 SEM v2",
       "California DPH" = "Cal OEHHA",
       "EnviroTox_v2" = "ECOTOX",
-      "OW Drinking Water Standards" = "EPA OW NPDWR"
+      "OW Drinking Water Standards" = "EPA OW NPDWR",
+      "USGS HBSL" = "EPA OPP"
     )
   } else {
     # Use input priority_list if available
@@ -97,16 +98,11 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
                               toxval.db)
 
       # Identify entries present in both sets of data
-      intersection = dplyr::inner_join(low_entries %>%
-                                         dplyr::select(-toxval_id) %>%
-                                         dplyr::distinct(),
-                                       high_entries %>%
-                                         dplyr::distinct(),
-                                       by=criteria) %>%
-        dplyr::pull(dtxsid)
-
-      source_ids_to_fail = low_entries %>%
-        dplyr::filter(dtxsid %in% intersection) %>%
+      source_ids_to_fail = dplyr::inner_join(low_entries %>%
+                                               dplyr::distinct(),
+                                             high_entries %>%
+                                               dplyr::distinct(),
+                                             by=criteria) %>%
         dplyr::select(toxval_id)
     } else {
       high_priority = as.character(NA)
