@@ -416,6 +416,52 @@ fix.units.by.source <- function(toxval.db, source=NULL, subsource=NULL, do.conve
       }
     }
 
+    # Handle conversion from mg/kg diet to mg/kg-day
+    cat(">>> Handle conversion from mg/kg diet to mg/kg-day\n")
+    if(!report.only) {
+      query = paste0("UPDATE toxval a ",
+                     "INNER JOIN species b ON a.species_id=b.species_id ",
+                     "SET a.toxval_units='mg/kg-day', ",
+                     "a.toxval_numeric = CASE",
+                     " WHEN b.common_name='Rat' THEN a.toxval_numeric / 16",
+                     " WHEN b.common_name='Mouse' THEN a.toxval_numeric / 4.5",
+                     " ELSE a.toxval_numeric ",
+                     "WHERE a.toxval_units='mg/kg diet' ",
+                     "AND b.common_name IN ('Rat', 'Mouse')",
+                     query_addition %>%
+                       gsub("subsource", "a.subsource", .) %>%
+                       gsub("qc_status", "a.qc_status", .))
+      runQuery(query, toxval.db)
+    } else {
+      # Track mg/kg diet conversion data
+      change = "mg/kg diet to mg/kg-day"
+      current_changes = source_data %>%
+        dplyr::filter(
+          common_name %in% c("Rat", "Mouse"),
+          toxval_units == "mg/kg diet"
+        ) %>%
+        dplyr::mutate(
+          toxval_units = "mg/kg-day",
+          toxval_numeric = dplyr::case_when(
+            common_name == "Rat" ~ toxval_numeric / 16,
+            common_name == "Mouse" ~ toxval_numeric / 4.5,
+            TRUE ~ toxval_numeric
+          ),
+          change_made = dplyr::case_when(
+            is.na(change_made) ~ !!change,
+            TRUE ~ paste0(change_made, "; ", !!change)
+          )
+        )
+      changed_ids = current_changes %>%
+        dplyr::pull(toxval_id) %>%
+        unique()
+      source_data = source_data %>%
+        dplyr::filter(!(toxval_id %in% changed_ids)) %>%
+        dplyr::bind_rows(current_changes)
+    }
+
+
+
     # Handle special mg/kg soil case for RSL
     if(source == "RSL") {
       cat(">>> Handle special mg/kg soil case for RSL\n")
