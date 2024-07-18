@@ -54,8 +54,18 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   # Track sources already completed to ensure unnecessary work is not repeated
   already_finished = NULL
   report.out = data.frame()
+  input_criteria = criteria
 
   for(source in slist) {
+
+    # Source specific criteria
+    if(source %in% c("USGS HBSL", "EPA OPP")){
+      criteria = c("dtxsid", "toxval_type")
+    } else {
+      # Switch back to the input criteria
+      criteria = input_criteria
+    }
+
     if(source %in% already_finished) {
       cat("Already handled hierarchical deduping relevant to", source, "\n")
       next
@@ -165,10 +175,14 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
 
       if(report.only) {
         all_failures = source_ids_to_fail %>%
-          dplyr::mutate(add_qc_status = stringr::str_c("Duplicate of ", !!high_priority, " chemical entry")) %>%
-          dplyr::bind_rows(subsource_ids_to_fail) %>%
-          dplyr::mutate(add_qc_status = tidyr::replace_na(add_qc_status,
-                                                          paste0("Subsource in ", !!no_apostrophe)))
+          dplyr::mutate(add_qc_status = stringr::str_c("Duplicate of ", !!high_priority, " chemical entry"))
+
+        if(nrow(subsource_ids_to_fail)){
+          all_failures = all_failures %>%
+            dplyr::bind_rows(subsource_ids_to_fail) %>%
+            dplyr::mutate(add_qc_status = tidyr::replace_na(add_qc_status,
+                                                            paste0("Subsource in ", !!no_apostrophe)))
+        }
 
         all_failures_string = all_failures %>%
           dplyr::pull(toxval_id) %>%
