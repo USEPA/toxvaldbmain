@@ -43,74 +43,79 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   slist = runQuery("select distinct source from toxval",toxval.db) %>%
     dplyr::pull(source)
   if(!is.null(source)) slist = source
+  source_string = slist %>%
+    paste0(collapse="', '")
   #----------------------------------------------------------------------------
   # Run the export process
   #----------------------------------------------------------------------------
   if(mode=="export") {
+    cat("Checking old '", source,"'logged study_type already imported...\n")
+    import_logged <- list.files(paste0(dir),
+                                pattern = slist %>%
+                                  paste0(collapse="|") %>%
+                                  # Escape parentheses for regex
+                                  gsub("\\(", "\\\\(", .) %>%
+                                  gsub("\\)", "\\\\)", .),
+                                recursive = TRUE,
+                                full.names = TRUE) %>%
+      # Ignore files in specific subfolders
+      .[!grepl("export_temp|old files", .)] %>%
+      lapply(., readxl::read_xlsx) %>%
+      dplyr::bind_rows()
+
+    if(nrow(import_logged)){
+      import_logged = import_logged %>%
+        dplyr::pull(source_hash) %>%
+        unique() %>%
+        paste0(collapse="', '")
+    }
+
+    query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
+                  "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
+                  "b.toxval_units, b.study_type_original, b.study_type, ",
+                  "b.study_type as study_type_corrected, b.study_duration_value, ",
+                  "b.study_duration_units, ",
+                  "d.common_name, ",
+                  "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
+                  "b.critical_effect, ",
+                  "f.long_ref, f.title, ",
+                  "b.source_hash ",
+                  "FROM toxval b ",
+                  "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
+                  "LEFT JOIN species d on b.species_id=d.species_id ",
+                  "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
+                  # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                  "WHERE b.source IN ('", source_string, "')",
+                  query_addition %>%
+                    gsub("subsource", "b.subsource", .),
+                  " and b.source_hash NOT IN ('", import_logged, "')",
+                  " and b.qc_status NOT LIKE '%fail%'",
+                  " and human_eco = 'human health'")
+
+    cat("Pulling source_hash records not already accounted for...\n")
+    mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
+      dplyr::distinct() %>%
+      dplyr::mutate(fixed = 0)
+
+    if(!nrow(mat)){
+      cat("No source_hashes to export...all accounted for.\n")
+      return()
+    }
+    dir1 = paste0(dir,"export_temp/")
     for(source in slist) {
-
-      cat("Checking old '", source,"'logged study_type already imported...\n")
-      import_logged <- list.files(paste0(dir),
-                                  pattern = source %>%
-                                    # Escape parentheses for regex
-                                    gsub("\\(", "\\\\(", .) %>%
-                                    gsub("\\)", "\\\\)", .),
-                                  recursive = TRUE,
-                                  full.names = TRUE) %>%
-        # Ignore files in specific subfolders
-        .[!grepl("export_temp|old files", .)] %>%
-        lapply(., readxl::read_xlsx) %>%
-        dplyr::bind_rows()
-
-      if(nrow(import_logged)){
-        import_logged = import_logged %>%
-          dplyr::pull(source_hash) %>%
-          unique() %>%
-          paste0(collapse="', '")
-      }
-
-      query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
-                    "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
-                    "b.toxval_units, b.study_type_original, b.study_type, ",
-                    "b.study_type as study_type_corrected, b.study_duration_value, ",
-                    "b.study_duration_units, ",
-                    "d.common_name, ",
-                    "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
-                    "b.critical_effect, ",
-                    "f.long_ref, f.title, ",
-                    "b.source_hash ",
-                    "FROM toxval b ",
-                    "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
-                    "LEFT JOIN species d on b.species_id=d.species_id ",
-                    "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
-                    # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                    "WHERE b.source='", source, "'",
-                    query_addition %>%
-                      gsub("subsource", "b.subsource", .),
-                    " and b.source_hash NOT IN ('", import_logged, "')",
-                    " and b.qc_status NOT LIKE '%fail%'",
-                    " and human_eco = 'human health'")
-
-      cat("Pulling source_hash records not already accounted for...\n")
-      mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
-        dplyr::distinct() %>%
-        dplyr::mutate(fixed = 0)
-
-      if(!nrow(mat)){
-        cat("No source_hashes to export...all accounted for.\n")
-        return()
-      }
-      dir1 = paste0(dir,"export_temp/")
+      src_mat = mat %>%
+        dplyr::filter(source == !!source)
+      if(!(nrow(src_mat))) next
       file = paste0(dir1,"/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
       sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-      openxlsx::write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
-      # file = paste0(dir1,"/toxval_new_study_type ",source, " ", subsource) %>%
-      #   stringr::str_squish() %>%
-      #   paste0(".csv")
-      # write.csv(mat,file=file,row.names=FALSE)
+      openxlsx::write.xlsx(src_mat,file,firstRow=TRUE,headerStyle=sty)
     }
+    # file = paste0(dir1,"/toxval_new_study_type ",source, " ", subsource) %>%
+    #   stringr::str_squish() %>%
+    #   paste0(".csv")
+    # write.csv(mat,file=file,row.names=FALSE)
   }
 
   #----------------------------------------------------------------------------
@@ -123,7 +128,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
     # Set study_type to "-" for entries with non-"human health" human_eco values
     query = paste0("UPDATE toxval SET study_type='-'  ",
-                   "WHERE source = '",source,"' ",
+                   "WHERE source IN ('",source_string,"') ",
                    "AND human_eco != 'human health'",
                    query_addition)
     runQuery(query, toxval.db)

@@ -26,6 +26,9 @@ set.study_type.by.study_group <- function(toxval.db,
                          source, "_", Sys.Date(), ".xlsx")
   }
 
+  source_string = slist %>%
+    paste0(., collapse="', '")
+
   # Handle addition of subsource for queries and output_file
   query_addition = ""
   if(!is.null(subsource)) {
@@ -58,29 +61,27 @@ set.study_type.by.study_group <- function(toxval.db,
     study_type_suggestion = character()
   )
 
-  for(source in slist) {
-    # Get study_type/study_group pairings for current source
-    curr_mapping_query = paste0("SELECT DISTINCT source, study_type, study_group FROM toxval WHERE ",
-                                "source='", source, "'", query_addition)
-    curr_mappings = runQuery(curr_mapping_query, toxval.db)
+  # Get study_type/study_group pairings for current source
+  curr_mapping_query = paste0("SELECT DISTINCT source, study_type, study_group FROM toxval WHERE ",
+                              "source IN ('",source_string,"')", query_addition)
+  curr_mappings = runQuery(curr_mapping_query, toxval.db)
 
-    # Map recommendations to current source data
-    all_suggestions = curr_mappings %>%
-      dplyr::rename(current_study_type = study_type) %>%
-      dplyr::left_join(study_type_recs, by=c("study_group")) %>%
-      dplyr::bind_rows(all_suggestions) %>%
-      dplyr::distinct()
+  # Map recommendations to current source data
+  all_suggestions = curr_mappings %>%
+    dplyr::rename(current_study_type = study_type) %>%
+    dplyr::left_join(study_type_recs, by=c("study_group")) %>%
+    dplyr::bind_rows(all_suggestions) %>%
+    dplyr::distinct()
 
-    # Filter out entries that already match suggestion if specified
-    if(filter.matching) {
-      all_suggestions = all_suggestions %>%
-        dplyr::filter(current_study_type != study_type_suggestion)
-    }
+  # Filter out entries that already match suggestion if specified
+  if(filter.matching) {
+    all_suggestions = all_suggestions %>%
+      dplyr::filter(current_study_type != study_type_suggestion)
+  }
 
-    if(!report.only) {
-      # TODO: add logic to overwrite study_type values
-      cat("Logic to overwrite study_type not yet implemented\n")
-    }
+  if(!report.only) {
+    # TODO: add logic to overwrite study_type values
+    cat("Logic to overwrite study_type not yet implemented\n")
   }
 
   # Write combinations to output file

@@ -21,6 +21,8 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
   } else {
     slist = source
   }
+  source_string = slist %>%
+    paste0(., collapse="', '")
 
   # Handle addition of subsource for queries
   query_addition = ""
@@ -109,9 +111,12 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
       startPosition <- startPosition + batch_size
       incrementPosition <- startPosition + batch_size - 1
     }
-
-    # Generic strain fix
-    cat("Handle quotes in strains\n")
-    runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
   }
+  # Generic strain fix
+  cat("Handle quotes in strains\n")
+  runQuery(paste0("update toxval SET strain"," = ", "REPLACE",
+                  "( strain",  ",\'\"\',", " \"'\" ) WHERE strain",
+                  " LIKE \'%\"%\' and source in ('",source_string,"')",
+                  query_addition),
+           toxval.db)
 }

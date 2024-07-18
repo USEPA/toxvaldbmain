@@ -22,6 +22,9 @@ check.toxval_type.route.units <- function(toxval.db,
     output_file = paste0("Repo/QC Reports/toxval_type.route.units_to_check_", source, "_", Sys.Date(), ".xlsx")
   }
 
+  source_string = slist %>%
+    paste0(., collapse="', '")
+
   # Handle addition of subsource for queries and output_file
   query_addition = ""
   if(!is.null(subsource)) {
@@ -39,15 +42,13 @@ check.toxval_type.route.units <- function(toxval.db,
     toxval_units = character(),
   )
 
-  for(source in slist) {
-    # Get all type/route/units combinations for current source
-    curr_combo_query = paste0("SELECT DISTINCT source, study_type, exposure_route, toxval_type, toxval_units ",
-                              "FROM toxval WHERE source ='", source, "'", query_addition)
-    all_combinations = runQuery(curr_combo_query, toxval.db) %>%
-      # Append current source data to cumulative DF
-      dplyr::bind_rows(all_combinations) %>%
-      dplyr::distinct()
-  }
+  # Get all type/route/units combinations for current source
+  curr_combo_query = paste0("SELECT DISTINCT source, study_type, exposure_route, toxval_type, toxval_units ",
+                            "FROM toxval WHERE source in ('",source_string,"')", query_addition)
+  all_combinations = runQuery(curr_combo_query, toxval.db) %>%
+    # Append current source data to cumulative DF
+    dplyr::bind_rows(all_combinations) %>%
+    dplyr::distinct()
 
   # Read in dictionary containing expected combinations, if specified
   if(is.null(load.dict)) load.dict = "not a file"

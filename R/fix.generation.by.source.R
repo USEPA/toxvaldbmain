@@ -21,15 +21,20 @@ fix.generation.by.source <- function(toxval.db, source, subsource=NULL) {
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
+  slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  if(!is.null(source)) slist = source
+  source_string = slist %>%
+    paste0(collapse="', '")
+
   # Use dictionary to update generation values
   for(i in seq_len(nrow(full_dict))) {
     original <- full_dict[i,2]
     final <- full_dict[i,1]
     field <- full_dict[i,3]
-    query <- paste0("update toxval set ",field,"=\"",final,"\" where ",field,"=\"",original,"\" and source like '",source,"'",query_addition)
+    query <- paste0("update toxval set ",field,"=\"",final,"\" where ",field,"=\"",original,"\" and source IN ('",source_string,"')",query_addition)
     runInsert(query,toxval.db,T,F,T)
   }
   # Fill empty generation values
-  query <- paste0("update toxval set ",field,"='-' where ",field," is NULL and source like '",source,"'",query_addition)
+  query <- paste0("update toxval set ",field,"='-' where ",field," is NULL and source IN ('",source_string,"')",query_addition)
   runInsert(query,toxval.db,T,F,T)
 }

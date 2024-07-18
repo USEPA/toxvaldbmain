@@ -15,6 +15,11 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source, subsource=NULL)
     query_addition = paste0(" and subsource='", subsource, "'")
   }
 
+  slist = source
+  if(is.null(source)) slist = runQuery("select distinct source from toxval",toxval.db)[,1]
+  source_string = slist %>%
+    paste0(., collapse="', '")
+
   #####################################################################
   cat("extract dictionary info \n")
   #####################################################################
@@ -26,7 +31,7 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source, subsource=NULL)
   #####################################################################
   cat("extract critical effect info from toxval \n")
   #####################################################################
-  query <- paste0("select critical_effect_original,critical_effect,source from toxval where source like '",source,"'",query_addition)
+  query <- paste0("select critical_effect_original,critical_effect,source from toxval where source in ('",source_string,"')",query_addition)
   res <- runQuery(query,toxval.db)
 
   #####################################################################
@@ -79,7 +84,7 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source, subsource=NULL)
   # write.xlsx(dict_new, file)
 
   # find missing toxval critical effect values from the new dictionary
-  query <- paste0("select critical_effect_original,critical_effect,source from toxval where source like '",source,"'",query_addition)
+  query <- paste0("select critical_effect_original,critical_effect,source from toxval where source in ('",source_string,"')",query_addition)
   res <- runQuery(query,toxval.db)
   #print(View(res))
   x <- unique(res$critical_effect_original)
@@ -88,16 +93,21 @@ fix.critical_effect.icf.by.source <- function(toxval.db, source, subsource=NULL)
   # file <- paste0(toxval.config()$datapath,"dictionary/critical_effect_missing6_",Sys.Date(),".xlsx")
   # write.xlsx(x, file)
 
-  for(i in seq_len(nrow(dict_new))) {
-    original <- dict_new$critical_effect_original[i]
-    final <- dict_new$critical_effect[i]
-    #cat(original,":",final,"\n"); flush.console()
-    query <- paste0("update toxval set critical_effect =\"",final,"\" where critical_effect_original=\"",original,"\" and source like '",source,"'",query_addition)
-    runInsert(query,toxval.db,T,F,T)
-    if(i%%100==0) cat("finished ",i,"out of ",nrow(dict_new),"\n")
-  }
-  query <- paste0("update toxval set critical_effect ='-' where critical_effect_original is NULL and source like '",source,"'",query_addition)
-  runInsert(query,toxval.db,T,F,T)
-  query <- paste0("update toxval set critical_effect ='-' where critical_effect_original ='NA' and source like '",source,"'",query_addition)
-  runInsert(query,toxval.db,T,F,T)
+  # Generate CASE WHEN block containing all dictionary information to use for bulk SQL query
+  case_block = dict_new %>%
+    dplyr::mutate(
+      case_block = stringr::str_c(
+        "WHEN critical_effect_original='", critical_effect_original, "' ",
+        "THEN '", critical_effect, "'")
+    ) %>%
+    dplyr::pull(case_block) %>%
+    paste0(., collapse = "")
+
+  query = paste0("UPDATE toxval SET critical_effect = CASE ",
+                 case_block,
+                 " WHEN critical_effect_original IS NULL THEN '-'",
+                 " WHEN critical_effect_original='NA' THEN '-'",
+                 " ELSE critical_effect END ",
+                 "WHERE source IN ('",source_string,"')",query_addition)
+  runQuery(query, toxval.db)
 }
