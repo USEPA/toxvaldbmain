@@ -163,7 +163,7 @@ toxval.load.postprocess <- function(toxval.db,
                  "SET exposure_route = 'oral' ",
                  "WHERE (exposure_route = '-' OR exposure_route_original = '-') ",
                  "AND toxval_units = 'mg/kg-day' ",
-                 "AND ", paste0(paste0("toxval_type LIKE '", toxval_type_list, "%'"), collapse = " OR "), " ",
+                 "AND (", paste0(paste0("toxval_type LIKE '", toxval_type_list, "%'"), collapse = " OR "), ") ",
                  "AND source = '",source,"'",query_addition)
   runQuery(query, toxval.db)
 
