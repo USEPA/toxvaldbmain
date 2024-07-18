@@ -1,5 +1,4 @@
 #--------------------------------------------------------------------------------------
-#
 #' Load the COSMOS data from source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
@@ -52,7 +51,16 @@ toxval.load.cosmos <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Source-specific issues handled in import script
+  # Set qc_status='fail' for in vitro studies
+  res = res %>%
+    dplyr::mutate(
+      qc_status = dplyr::case_when(
+        !grepl("%", toxval_units) ~ qc_status,
+        qc_status %in% c(as.character(NA), "", "-") ~ "fail: in vitro study, not in vivo",
+        !grepl("fail", qc_status) ~ "fail: in vitro study, not in vivo",
+        TRUE ~ stringr::str_c(qc_status, "; in vitro study, not in vivo")
+      )
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
