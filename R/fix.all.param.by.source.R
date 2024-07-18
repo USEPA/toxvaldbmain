@@ -113,13 +113,6 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     where toxval_type in ('RFDo', 'Oral Slope Factor', 'oral TDI', 'oral SF', 'oral ADI', 'LDD50 (Lethal Dietary Dose)') and source = '",source,"'",query_addition)
     runQuery(query, toxval.db)
 
-    query = paste0("update toxval ",
-                   "SET exposure_route = 'oral' ",
-                   "WHERE (exposure_route = '-' or exposure_route_original = '-') and toxval_units = 'mg/kg-day' and ",
-                   "(toxval_type in ('NEL', 'LEL', 'LOEL', 'NOEL', 'NOAEL', 'LOAEL') or toxval_type like 'BMD%') and ",
-                   "source = '",source,"'",query_addition)
-    runQuery(query, toxval.db)
-
     cat("  study_duration_class\n")
     query = paste0("update toxval
     set study_duration_class = 'acute'

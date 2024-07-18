@@ -156,6 +156,19 @@ toxval.load.postprocess <- function(toxval.db,
   fix.units.by.source(toxval.db, source,subsource,do.convert.units)
 
   #####################################################################
+  cat("set exposure_route='oral' for select toxval_type and mg/kg-day\n")
+  #####################################################################
+  query = paste0("UPDATE toxval ",
+                 "SET exposure_route = 'oral' ",
+                 "WHERE (exposure_route = '-' OR exposure_route_original = '-') ",
+                 "AND toxval_units = 'mg/kg-day' ",
+                 "AND (toxval_type IN",
+                 " ('NEL', 'LEL', 'LOEL', 'NOEL', 'NOAEL', 'LOAEL')",
+                 " OR toxval_type LIKE 'BMD%') ",
+                 "AND source = '",source,"'",query_addition)
+  runQuery(query, toxval.db)
+
+  #####################################################################
   cat("fix study group by source\n")
   #####################################################################
   fix.study_group(toxval.db, source, subsource)
