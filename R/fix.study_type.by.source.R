@@ -70,26 +70,26 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       }
 
       query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
-                    "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
-                    "b.toxval_units, b.study_type_original, b.study_type, ",
-                    "b.study_type as study_type_corrected, b.study_duration_value, ",
-                    "b.study_duration_units, ",
-                    "d.common_name, ",
-                    "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
-                    "b.critical_effect, ",
-                    "f.long_ref, f.title, ",
-                    "b.source_hash ",
-                    "FROM toxval b ",
-                    "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
-                    "LEFT JOIN species d on b.species_id=d.species_id ",
-                    "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
-                    # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                    "WHERE b.source='", source, "'",
-                    query_addition %>%
-                      gsub("subsource", "b.subsource", .),
-                    " and b.source_hash NOT IN ('", import_logged, "')",
-                    " and b.qc_status NOT LIKE '%fail%'",
-                    " and human_eco = 'human health'")
+                     "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
+                     "b.toxval_units, b.study_type_original, b.study_type, ",
+                     "b.study_type as study_type_corrected, b.study_duration_value, ",
+                     "b.study_duration_units, ",
+                     "d.common_name, ",
+                     "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
+                     "b.critical_effect, ",
+                     "f.long_ref, f.title, ",
+                     "b.source_hash ",
+                     "FROM toxval b ",
+                     "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
+                     "LEFT JOIN species d on b.species_id=d.species_id ",
+                     "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
+                     # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                     "WHERE b.source='", source, "'",
+                     query_addition %>%
+                       gsub("subsource", "b.subsource", .),
+                     " and b.source_hash NOT IN ('", import_logged, "')",
+                     " and b.qc_status NOT LIKE '%fail%'",
+                     " and human_eco = 'human health'")
 
       cat("Pulling source_hash records not already accounted for...\n")
       mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
@@ -121,23 +121,25 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     # Store aggregate missing entries
     missing.all = data.frame()
 
-    # Set study_type to "-" for entries with non-"human health" human_eco values
-    query = paste0("UPDATE toxval SET study_type='-'  ",
-                   "WHERE source = '",source,"' ",
-                   "AND human_eco != 'human health'",
-                   query_addition)
-    runQuery(query, toxval.db)
+    if(!report.only) {
+      # Set study_type to "-" for entries with non-"human health" human_eco values
+      query = paste0("UPDATE toxval SET study_type='-'  ",
+                     "WHERE source = '",source,"' ",
+                     "AND human_eco != 'human health'",
+                     query_addition)
+      runQuery(query, toxval.db)
+    }
 
     for(source in slist) {
 
       file_list <- list.files(paste0(dir),
-                        pattern = paste0(source, " ", subsource) %>%
-                          stringr::str_squish() %>%
-                          # Escape parentheses for regex
-                          gsub("\\(", "\\\\(", .) %>%
-                          gsub("\\)", "\\\\)", .),
-                        recursive = TRUE,
-                        full.names = TRUE) %>%
+                              pattern = paste0(source, " ", subsource) %>%
+                                stringr::str_squish() %>%
+                                # Escape parentheses for regex
+                                gsub("\\(", "\\\\(", .) %>%
+                                gsub("\\)", "\\\\)", .),
+                              recursive = TRUE,
+                              full.names = TRUE) %>%
         # Ignore files in specific subfolders
         .[!grepl("export_temp|old files", .)]
 
@@ -170,10 +172,10 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       names(temp) = c("source_hash","study_type")
 
       temp.old = runQuery(paste0("SELECT b.source_hash, b.study_type from toxval b ",
-                                        # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                                        "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
-                                        " and b.qc_status NOT LIKE '%fail%' and b.human_eco = 'human health'",
-                                        query_addition %>%
+                                 # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                                 "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
+                                 " and b.qc_status NOT LIKE '%fail%' and b.human_eco = 'human health'",
+                                 query_addition %>%
                                    gsub("subsource", "b.subsource", .)), toxval.db)
 
       shlist = unique(temp0$source_hash)
