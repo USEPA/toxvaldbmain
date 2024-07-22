@@ -38,37 +38,34 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
                    "left join species c on a.species_id=c.species_id ",
                    # Only use record_source entries from the source, not ToxVal team cataloging
                    "where b.clowder_doc_id = '-' and b.record_source_level not in ('extraction', 'origin') ",
-                   "and a.source='",source,"'",
-                   query_addition %>% gsub("subsource", "a.subsource", .))
+                   "and a.source='",source,"'", query_addition)
 
     # Pull data
     temp = runQuery(query,toxval.db)
+
+    # Set non-hashing columns to ignore for study_group hashing
+    non_hashing_cols = c("toxval_id")
+
+    # Do not group by record_source fields for EFSA and HPVIS
+    if(source %in% c("EFSA", "HPVIS")){
+      non_hashing_cols = c("toxval_id", "long_ref", "title", "year")
+    }
+
     # Hash to identify duplicate groups
     temp.temp = temp %>%
-      tidyr::unite(hash_col, dplyr::all_of(sort(names(.)[!names(.) %in% c("toxval_id")])), sep="") %>%
+      tidyr::unite(hash_col, dplyr::all_of(sort(names(.)[!names(.) %in% non_hashing_cols])), sep="") %>%
       dplyr::rowwise() %>%
       dplyr::mutate(source_hash = paste0("ToxValhc_", digest::digest(hash_col, serialize = FALSE))) %>%
       dplyr::ungroup()
 
     temp_sg = temp %>%
       dplyr::mutate(source_hash = temp.temp$source_hash) %>%
-      dplyr::select(toxval_id, source, subsource, source_hash)
-
-    # Do not group by record_source fields for EFSA and HPVIS
-    if(source %in% c("EFSA", "HPVIS")) {
-      temp_sg = temp_sg %>%
-        dplyr::group_by(dplyr::across(-c(tidyselect::any_of(c("toxval_id", "long_ref", "title", "year"))))) %>%
-          dplyr::summarise(toxval_id = toString(toxval_id)) %>%
-          dplyr::ungroup()
-    } else {
-      temp_sg = temp_sg %>%
-        dplyr::group_by(dplyr::across(c(-toxval_id))) %>%
-        dplyr::summarise(toxval_id = toString(toxval_id)) %>%
-        dplyr::ungroup()
-    }
-
-    # Only account for those with duplicates
-    temp_sg = temp_sg %>%
+      dplyr::select(toxval_id, source, subsource, source_hash) %>%
+      # Collapse toxval_id for duplicate hashes
+      dplyr::group_by(dplyr::across(c(-toxval_id))) %>%
+      dplyr::summarise(toxval_id = toString(toxval_id)) %>%
+      dplyr::ungroup() %>%
+      # Only account for those with duplicates
       dplyr::filter(grepl(",", toxval_id))
 
     if(nrow(temp_sg)){
@@ -141,7 +138,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
   if(report.only){
     # Compare to what's currently in ToxVal
     stg = runQuery(paste0("SELECT toxval_id, study_group as study_group_toxval FROM toxval WHERE toxval_id IN (",
-                   toString(report.out$toxval_id), ")"),
+                          toString(report.out$toxval_id), ")"),
                    toxval.db)
     report.out %>%
       dplyr::left_join(stg,
