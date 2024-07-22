@@ -151,7 +151,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   }
 
   # Set species_id to human for specified toxval_type
-  human_tt_list = c("ADI", "AEGL*", "air contaminant limit", "cancer slope factor", "cancer unit risk",
+  human_tt_list = c("ADI", "air contaminant limit", "cancer slope factor", "cancer unit risk",
                     "carcinogenic HHBP", "CCC", "CMC", "DWEL", "HBSL", "HHBP", "HHBP (Organism)",
                     "HHBP (Water+Organism)", "IDLH", "Level of Distinct Odor Awareness (LOA)", "MCL",
                     "MCL-based SSL, groundwater", "MCLG", "MMCL", "MRDL", "MRL", "ORSG", "PMTDI",
@@ -160,7 +160,13 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                     "screening level (residential soil)", "screening level (tap water)", "SMCL", "TDI")
   query = paste0("UPDATE toxval SET species_id=", human_id, " ",
                  "WHERE source='", source, "' ",
-                 "AND toxval_type IN ('", paste0(human_tt_list, collapse="', '"), "')")
+                 "AND (toxval_type IN ('", paste0(human_tt_list, collapse="', '"), "') ",
+                 "OR toxval_type_original IN ('", paste0(human_tt_list, collapse="', '"), "'))")
+  runQuery(query, toxval.db)
+  # Handle special AEGL case
+  query = paste0("UPDATE toxval SET species_id=", human_id, " ",
+                 "WHERE source='", source, "' ",
+                 "AND (toxval_type LIKE 'AEGL%' OR toxval_type_original LIKE 'AEGL%')")
   runQuery(query, toxval.db)
 
   # Handle cases where two entries with the same species_original have different species_id values
