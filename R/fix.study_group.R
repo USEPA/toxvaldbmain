@@ -38,7 +38,8 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
                    "left join species c on a.species_id=c.species_id ",
                    # Only use record_source entries from the source, not ToxVal team cataloging
                    "where b.clowder_doc_id = '-' and b.record_source_level not in ('extraction', 'origin') ",
-                   "and a.source='",source,"'", query_addition)
+                   "and a.source='",source,"'",
+                   query_addition %>% gsub("subsource", "a.subsource", .))
 
     # Pull data
     temp = runQuery(query,toxval.db)
@@ -51,12 +52,23 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
 
     temp_sg = temp %>%
       dplyr::mutate(source_hash = temp.temp$source_hash) %>%
-      dplyr::select(toxval_id, source, subsource, source_hash) %>%
-      # Collapse toxval_id for duplicate hashes
-      dplyr::group_by(dplyr::across(c(-toxval_id))) %>%
-      dplyr::summarise(toxval_id = toString(toxval_id)) %>%
-      dplyr::ungroup() %>%
-      # Only account for those with duplicates
+      dplyr::select(toxval_id, source, subsource, source_hash)
+
+    # Do not group by record_source fields for EFSA and HPVIS
+    if(source %in% c("EFSA", "HPVIS")) {
+      temp_sg = temp_sg %>%
+        dplyr::group_by(dplyr::across(-c(tidyselect::any_of(c("toxval_id", "long_ref", "title", "year"))))) %>%
+          dplyr::summarise(toxval_id = toString(toxval_id)) %>%
+          dplyr::ungroup()
+    } else {
+      temp_sg = temp_sg %>%
+        dplyr::group_by(dplyr::across(c(-toxval_id))) %>%
+        dplyr::summarise(toxval_id = toString(toxval_id)) %>%
+        dplyr::ungroup()
+    }
+
+    # Only account for those with duplicates
+    temp_sg = temp_sg %>%
       dplyr::filter(grepl(",", toxval_id))
 
     if(nrow(temp_sg)){
