@@ -54,7 +54,7 @@ toxval.load.epa_ow_nrwqc_alc <- function(toxval.db,source.db, log=FALSE, remove_
   if(!"subsource_url" %in% names(res)) res$subsource_url = "-"
 
   res <- res %>%
-    dplyr::rename(year = year_updated) %>%
+    dplyr::rename(year = publication_year) %>%
     # Set redundant subsource_url values to "-"
     dplyr::mutate(
       subsource_url = dplyr::case_when(
