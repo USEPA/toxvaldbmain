@@ -57,7 +57,12 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
     dplyr::mutate(
       study_duration_value = study_duration_value %>%
         gsub(".*\\-", "", .) %>%
-        as.numeric()
+        as.numeric(),
+      # Set redundant subsource_url values to "-"
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
     )
 
   #####################################################################

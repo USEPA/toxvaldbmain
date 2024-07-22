@@ -35,7 +35,7 @@ toxval.set.mw <- function(toxval.db, source=NULL, subsource=NULL){
       httr::content()
 
     # Use bulk DTXSID CCTE Chemicals API pull (limit 200 per call)
-    if(!is.null(API_AUTH) & !grepl("404 Not Found", api_test)){
+    if(Sys.getenv("api_auth") != "" & !grepl("404 Not Found", api_test)){
       cat("...Pulling DSSTox mw using CCTE API...\n")
       # Split list into subsets of 200
       mw <- dlist %>%
@@ -50,7 +50,7 @@ toxval.set.mw <- function(toxval.db, source=NULL, subsource=NULL){
           httr::accept_json(),
           httr::content_type_json(),
           # Use API Key for authorization
-          httr::add_headers(`x-api-key` = API_AUTH),
+          httr::add_headers(`x-api-key` = Sys.getenv("api_auth")),
           encode = "json",
           body=as.list(mw[[i]])
         ) %>%

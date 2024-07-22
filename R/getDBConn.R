@@ -5,21 +5,24 @@
 #' @return print the database connection information
 #' @title getDBConn
 #' @details DETAILS
-#' @examples 
+#' @examples
 #' \dontrun{
 #' if(interactive()){
 #'  #EXAMPLE1
 #'  }
 #' }
 #' @rdname getDBConn
-#' @export 
+#' @export
 #--------------------------------------------------------------------------------------
 getDBConn <- function() {
   printCurrentFunction()
-  if(!exists("DB.SERVER")) cat("DB.SERVER not defined\n")
-  else cat("DB.SERVER: ",DB.SERVER,"\n")
-  if(!exists("DB.USER")) cat("DB.USER not defined\n")
-  else cat("DB.USER: ",DB.USER,"\n")
-  if(!exists("DB.PASSWORD")) cat("DB.PASSWORD not defined\n")
-  else cat("DB.PASSWORD: ",DB.PASSWORD,"\n")
+  # Check environment variables for database credentials are set
+  credentials = c("db_user", "db_pass", "db_server", "db_port")
+  for(cred in credentials){
+    if(Sys.getenv(cred) == ""){
+      cat(paste0("'", cred, "' environment variable not defined\n"))
+    } else {
+      cat(cred, ": ", Sys.getenv(cred), "\n")
+    }
+  }
 }

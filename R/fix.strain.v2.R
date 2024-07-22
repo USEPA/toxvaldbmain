@@ -8,14 +8,14 @@
 #' @param date_string The date of the latest dictionary version
 #' @export
 #--------------------------------------------------------------------------------------
-fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024-04-08",reset=FALSE) {
+fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2024-04-08", reset=FALSE) {
   printCurrentFunction()
-  if(reset) runQuery("update toxval set strain='-', strain_group='-'",db5)
 
   file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
-  dict = openxlsx::read.xlsx(file)
-  dict = dplyr::distinct(dict)
-  dict$common_name = tolower(dict$common_name)
+  dict = openxlsx::read.xlsx(file) %>%
+    dplyr::select(-common_name) %>%
+    dplyr::distinct()
+
   if(is.null(source)) {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   } else {
@@ -29,46 +29,88 @@ fix.strain.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="2024
   }
 
   for(source in slist) {
-    cat("fix strain:",source,subsource,"\n")
-    query = paste0("select a.species_original, a.strain_original, b.species_id, b.common_name ",
+    if(reset) {
+      runQuery(paste0("update toxval set strain='-', strain_group='-' ",
+                      "WHERE source='", source, "'", query_addition),
+               toxval.db)
+    }
+
+    cat("fix strain:", source, subsource, "\n")
+    query = paste0("select DISTINCT a.species_original, a.strain_original, b.species_id, b.common_name ",
                    "from toxval a, species b ",
                    "where a.species_id=b.species_id ",
                    # "and a.human_eco='human health' ",
-                   "and a.source='",source,"'",query_addition)
-    t1 = runQuery(query,toxval.db)
-    t1 = dplyr::distinct(t1)
-    if(nrow(t1)) {
-      spolist = sort(unique(t1$species_original))
-      for(spo in spolist) {
-        t2 = t1[is.element(t1$species_original,spo),]
-        if(nrow(t2)) {
-          if(is.element(spo,dict$species_original)) {
-            cat("  ",spo,"\n")
-            sid = unique(t2[t2$species_original==spo,"species_id"])
-            cn = unique(t2[t2$species_original==spo,"common_name"])
-            if(length(cn)>1) {
-              message("Multiple common names identified...how to proceed?")
-              browser()
-            }
-            t3 = t2[t2$common_name==cn,"strain_original"]
-            for(so in t3) {
-              so = stringr::str_replace_all(so,"\\'","")
-              d1 = dict[is.element(dict$species_original,spo),]
-              d2 = d1[is.element(d1$strain_original,so),]
-              if(nrow(d2)) {
-                if(nrow(d2)>1) {
-                  message("Multiple dictionary fixes identified...how to proceed?")
-                  browser()
-                }
-                query = paste0("update toxval set strain='",d2[1,"strain"],"', strain_group='",d2[1,"strain_group"],"' where source='",source,"' and strain_original='",so,"' and species_id=",sid,query_addition)
-                # if(d2[1,"strain_group"]=="Bird") browser()
-                runQuery(query,toxval.db)
-              }
-            }
-          }
-        }
-      }
+                   "and a.source='", source, "'", query_addition)
+    # Pull species-strain entries for source
+    t1 = runQuery(query,toxval.db) %>%
+      dplyr::mutate(strain_original = strain_original %>%
+                      stringr::str_replace_all(.,"\\'",""))
+
+    # Join to dictionary by original species and strain
+    mapped_strain = t1 %>%
+      dplyr::left_join(dict,
+                       by=c("species_original", "strain_original")) %>%
+      dplyr::distinct()
+
+    # Filter to missing
+    missing = mapped_strain %>%
+      dplyr::filter(is.na(strain)) %>%
+      dplyr::select(strain_original, strain, strain_group, species_original, common_name)
+
+    # Export for dictionary curation if any missing
+    if(nrow(missing)){
+      writexl::write_xlsx(missing, paste0(toxval.config()$datapath,"dictionary/missing/missing_", source, "_strain_mapping.xlsx"))
     }
+
+    # Filter out missing
+    mapped_strain = mapped_strain %>%
+      dplyr::filter(!is.na(strain)) %>%
+      dplyr::select(-common_name)
+
+    # Check for duplicate mappings - if species_original and strain_original ever map to different strain and strain group
+    dup_check = mapped_strain %>%
+      dplyr::select(-species_id) %>%
+      dplyr::distinct() %>%
+      dplyr::group_by(species_original, strain_original) %>%
+      dplyr::summarise(n=dplyr::n()) %>%
+      dplyr::filter(n>1)
+
+    if(nrow(dup_check)){
+      message("Multiple strain mappings identified for matching species_id...how to proceed?")
+      browser()
+    }
+
+    # Batch update strain
+    batch_size <- 50000
+    startPosition <- 1
+    endPosition <- nrow(mapped_strain)
+    incrementPosition <- batch_size
+
+    while(startPosition <= endPosition){
+      if(incrementPosition > endPosition) incrementPosition = endPosition
+      message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+              " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
+
+      update_query <- paste0("UPDATE toxval a ",
+                             "INNER JOIN z_updated_df b ",
+                             "ON (a.species_id = b.species_id AND ",
+                             "a.species_original = b.species_original AND ",
+                             "a.strain_original = b.strain_original) ",
+                             "SET a.strain = b.strain, ",
+                             "a.strain_group = b.strain_group ",
+                             "WHERE a.source = '", source, "'",
+                             query_addition)
+
+      runUpdate(table="toxval",
+                updateQuery = update_query,
+                updated_df = mapped_strain[startPosition:incrementPosition,],
+                db=toxval.db)
+
+      startPosition <- startPosition + batch_size
+      incrementPosition <- startPosition + batch_size - 1
+    }
+
+    # Generic strain fix
     cat("Handle quotes in strains\n")
     runQuery(paste0("update toxval SET strain"," = ", "REPLACE", "( strain",  ",\'\"\',", " \"'\" ) WHERE strain"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
   }

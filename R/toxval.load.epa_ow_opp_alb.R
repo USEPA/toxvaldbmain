@@ -51,10 +51,17 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("table_title", "url")
-  res = res[ , !(names(res) %in% cremove)]
+  if(!"subsource_url" %in% names(res)) res$subsource_url = "-"
+
   res <- res %>%
-    dplyr::rename(year = year_updated)
+    dplyr::rename(year = year_updated) %>%
+    # Set redundant subsource_url values to "-"
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -64,18 +71,27 @@ toxval.load.epa_ow_opp_alb <- function(toxval.db,source.db, log=FALSE, remove_nu
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+
+  # Check if any non-toxval column still remaining in nlist
+  nlist = names(res)
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
     browser()
   }
   print(dim(res))
-
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
 
   #####################################################################
   cat("Generic steps \n")

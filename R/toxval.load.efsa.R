@@ -61,11 +61,8 @@ toxval.load.efsa <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
         as.character() %>%
         tidyr::replace_na("-"),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-"),
-      url = paste0("https://doi.org/", doi)
-    ) %>%
-    tidyr::unite("long_ref", title, publication_date,
-                 sep=" ", remove=FALSE, na.rm=TRUE)
+        tidyr::replace_na("-")
+    )
     # # Filter to specific study_type values
     # dplyr::filter(study_type %in% c(
     #   "acute", "chronic/long-term", "subchronic", "reproductive", "short-term", "human"
