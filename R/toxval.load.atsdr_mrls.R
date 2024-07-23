@@ -58,12 +58,18 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
               'origin_document_date', 'curator_notes', 'target_species')
   res = res[ , !(names(res) %in% cremove)]
 
-  # Set redundant subsource_url values to "-"
   res = res %>%
     dplyr::mutate(
+      # Set redundant subsource_url values to "-"
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",
         TRUE ~ subsource_url
+      ),
+
+      # Set key_finding
+      key_finding = dplyr::case_when(
+        document_type == "ATSDR MRLs Toxicological Profile" ~ "key",
+        TRUE ~ "-"
       )
     )
 
