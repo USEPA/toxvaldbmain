@@ -70,7 +70,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       }
 
       query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
-                     "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
+                     "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
                      "b.toxval_units, b.study_type_original, b.study_type, ",
                      "b.study_type as study_type_corrected, b.study_duration_value, ",
                      "b.study_duration_units, ",
@@ -185,7 +185,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         cat("Missing source_hash in replacement file:",source," missing ",length(missing)," out of ",length(shlist.db),"\n")
 
         query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
-                       "b.source, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
+                       "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
                        "b.toxval_units, b.study_type_original, b.study_type, ",
                        "b.study_type as study_type_corrected, b.study_duration_value, ",
                        "b.study_duration_units, ",
