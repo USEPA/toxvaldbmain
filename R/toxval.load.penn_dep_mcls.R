@@ -1,14 +1,14 @@
 #--------------------------------------------------------------------------------------
 #
-#' Load the penn_dep_mcls data  from toxval_source to toxval
+#' Load the penn_dep_mscs data  from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.penn_dep_mcls <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "Pennsylvania DEP MCLs"
-  source_table = "source_penn_dep_mcls"
+toxval.load.penn_dep_mscs <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "Pennsylvania DEP MSCs"
+  source_table = "source_penn_dep_mscs"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")

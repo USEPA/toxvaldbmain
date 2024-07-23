@@ -84,7 +84,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.osha_air_limits(toxval.db, source.db, log)
     toxval.load.ow_dwsha(toxval.db, source.db, log)
     toxval.load.penn(toxval.db, source.db, log)
-    toxval.load.penn_dep_mcls(toxval.db, source.db, log)
+    toxval.load.penn_dep_mscs(toxval.db, source.db, log)
     toxval.load.pfas_150_sem_v2(toxval.db, source.db, log)
     toxval.load.pprtv.cphea(toxval.db, source.db, log)
     toxval.load.rsl(toxval.db, source.db, log)
