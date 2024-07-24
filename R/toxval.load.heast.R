@@ -63,27 +63,18 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
         gsub(".+\\-", "", .) %>%
         tidyr::replace_na("-"),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-")
-    ) %>%
-    # Set redundant subsource_url values to "-"
-    dplyr::mutate(
+        tidyr::replace_na("-"),
+      # Set redundant subsource_url values to "-"
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",
         TRUE ~ subsource_url
+      ),
+      # Set key_finding
+      key_finding = dplyr::case_when(
+        !toxval_type %in% c("RfD", "RfC") ~ "key",
+        TRUE ~ "no"
       )
     )
-
-  # Get key_finding map
-  key_finding_map = readxl::read_xlsx("Repo/key_finding/source_heast_key_finding_20240718_cw.xlsx") %>%
-    dplyr::rename(key_finding = `key_finding...19`) %>%
-    dplyr::select(source_hash, key_finding) %>%
-    dplyr::distinct()
-
-  # Map key_finding values to res
-  res = res %>%
-    dplyr::select(-key_finding) %>%
-    dplyr::left_join(key_finding_map, by=c("source_hash")) %>%
-    dplyr::mutate(key_finding = gsub("yes", "key", key_finding))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

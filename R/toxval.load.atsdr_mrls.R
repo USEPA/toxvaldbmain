@@ -69,7 +69,7 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
       # Set key_finding
       key_finding = dplyr::case_when(
         document_type == "ATSDR MRLs Toxicological Profile" ~ "key",
-        TRUE ~ "-"
+        TRUE ~ "no"
       )
     )
 
