@@ -176,6 +176,22 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
         )
     }
 
+    # Set appropriate QC Category for manually reviewed entries in IRIS/PPRTV (CPHEA)
+    if(src %in% c("IRIS", "PPRTV (CPHEA)")) {
+      # Get source document types
+      query = paste0("SELECT DISTINCT source_hash, subsource AS document_type FROM toxval WHERE source='",src,"'")
+      document_types = runQuery(query, toxval.db)
+
+      # Assign qc_category based on document_types
+      in_toxval = in_toxval %>%
+        dplyr::mutate(
+          qc_category_new = dplyr::case_when(
+
+          )
+        ) %>%
+        dplyr::select(-document_type)
+    }
+
 
     #--------------------------------------------------------------------------------------
     # TODO: Incorporate logic for adding additional qc_categories
