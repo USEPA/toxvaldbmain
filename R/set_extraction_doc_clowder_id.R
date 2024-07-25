@@ -58,7 +58,62 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
       clowder_doc_id = stringr::str_c("https://clowder.edap-cluster.com/files/", clowder_doc_id)
     )
 
+  # Split into 2 dataframes
+  extraction = res %>%
+    dplyr::filter(record_source_level == "extraction")
+  origin = res %>%
+    dplyr::filter(record_source_level == "origin")
+
+  # Check for multiple extraction documents
+  extract_multi = extraction %>%
+    dplyr::group_by(toxval_id) %>%
+    dplyr::summarise(n = dplyr::n()) %>%
+    dplyr::filter(n > 1)
+
+  # Error if multiple extraction documents
+  if(nrow(extract_multi)){
+    message("Source ", source, " with records with multiple extraction documents...")
+    browser()
+    stop("Source ", source, " with records with multiple extraction documents...")
+  }
+
+  # Merge extraction document information with default record_source entries
+  extraction = extraction %>%
+    dplyr::select(toxval_id, clowder_doc_id, clowder_doc_metadata)
+
+  ##############################################################################
+  ### Batch Update
+  ##############################################################################
+  batch_size <- 50000
+  startPosition <- 1
+  endPosition <- nrow(extraction)
+  incrementPosition <- batch_size
+
+  while(startPosition <= endPosition){
+    if(incrementPosition > endPosition) incrementPosition = endPosition
+    message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+            " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
+
+    update_query <- paste0("UPDATE record_source a ",
+                           "INNER JOIN z_updated_df b ",
+                           "ON (a.toxval_id = b.toxval_id) ",
+                           "SET a.clowder_doc_id = b.clowder_doc_id, a.clowder_doc_metadata = b.clowder_doc_metadata ",
+                           "WHERE a.toxval_id in (",toString(extraction$toxval_id[startPosition:incrementPosition]),") ",
+                           "AND b.record_source_level not in ('extraction', 'origin')")
+
+    runUpdate(table="record_source",
+              updateQuery = update_query,
+              updated_df = extraction[startPosition:incrementPosition,],
+              db=toxval.db)
+
+    startPosition <- startPosition + batch_size
+    incrementPosition <- startPosition + batch_size - 1
+  }
+
   message("Pushing clowder_doc_id information to record_source...")
-  # Run insert query
-  runInsertTable(mat=res, table='record_source', db=toxval.db)
+  # Push origin documents
+  if(nrow(origin)){
+    # Run insert query
+    runInsertTable(mat=origin, table='record_source', db=toxval.db)
+  }
 }
