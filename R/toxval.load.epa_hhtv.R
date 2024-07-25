@@ -52,12 +52,18 @@ toxval.load.epa_hhtv <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Set redundant subsource_url values to "-"
   res = res %>%
     dplyr::mutate(
+      # Set redundant subsource_url values to "-"
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",
         TRUE ~ subsource_url
+      ),
+
+      # Translate positive key_finding to "key"
+      key_finding = dplyr::case_when(
+        key_finding == "yes" ~ "key",
+        TRUE ~ key_finding
       )
     )
 
