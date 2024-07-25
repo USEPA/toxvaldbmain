@@ -58,7 +58,13 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
         gsub(".+\\-", "", .) %>%
         tidyr::replace_na("-"),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-")
+        tidyr::replace_na("-"),
+
+      # Translate positive key_finding to "key"
+      key_finding = dplyr::case_when(
+        key_finding == "yes" ~ "key",
+        TRUE ~ key_finding
+      )
     )
 
   #####################################################################
