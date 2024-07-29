@@ -116,36 +116,38 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
       startPosition <- startPosition + batch_size
       incrementPosition <- startPosition + batch_size - 1
     }
-  }
 
-  # Get missing entries
-  query = paste0("SELECT * FROM toxval WHERE risk_assessment_class='-' ",
-                 "AND source IN ('", source_string, "') ",
-                 "AND qc_status not like '%fail%' ",
-                 query_addition)
-  missing_rac = runQuery(query, toxval.db)
+    # Get missing entries
+    query = paste0("SELECT * FROM toxval WHERE risk_assessment_class='-' ",
+                   "AND source IN ('", source_string, "') ",
+                   "AND qc_status not like '%fail%' ",
+                   query_addition)
+    missing_rac = runQuery(query, toxval.db)
 
-  # Get list of toxval_type with dictionary entries
-  missing_check = rac_dict %>%
-    dplyr::select(toxval_type) %>%
-    dplyr::distinct() %>%
-    dplyr::mutate(missing_toxval_type_dict_entry = 0)
+    # Get list of toxval_type with dictionary entries
+    missing_check = rac_dict %>%
+      dplyr::select(toxval_type) %>%
+      dplyr::distinct() %>%
+      dplyr::mutate(missing_toxval_type_dict_entry = 0)
 
-  # Filter to those missing RAC and missing a toxval_type RAC dictionary entry
-  missing_rac = missing_rac %>%
-    dplyr::left_join(missing_check, by=c("toxval_type")) %>%
-    dplyr::mutate(missing_toxval_type_dict_entry = missing_toxval_type_dict_entry %>% tidyr::replace_na(1)) %>%
-    dplyr::filter(missing_toxval_type_dict_entry == 1)
+    # Filter to those missing RAC and missing a toxval_type RAC dictionary entry
+    missing_rac = missing_rac %>%
+      dplyr::left_join(missing_check, by=c("toxval_type")) %>%
+      dplyr::mutate(missing_toxval_type_dict_entry = missing_toxval_type_dict_entry %>% tidyr::replace_na(1)) %>%
+      dplyr::filter(missing_toxval_type_dict_entry == 1)
 
-  for(source in missing_rac %>% dplyr::pull(source) %>% unique()) {
-    # Generate filename
-    out_file = paste0("dictionary/missing/missing_rac/missing_RAC_", source,
-                      " ", subsource,".xlsx") %>%
-      gsub(" \\.xlsx", ".xlsx", .)
-    # Filter to current source
-    curr_missing = missing_rac %>%
-      dplyr::filter(source == !!source_string)
-    # Export for source
-    writexl::write_xlsx(curr_missing, out_file)
+    for(source in missing_rac %>% dplyr::pull(source) %>% unique()) {
+      # Generate filename
+      out_file = paste0("dictionary/missing/missing_rac/missing_RAC_", source,
+                        " ", subsource,".xlsx") %>%
+        gsub(" \\.xlsx", ".xlsx", .)
+      # Filter to current source
+      curr_missing = missing_rac %>%
+        dplyr::filter(source == !!source_string)
+      # Export for source
+      writexl::write_xlsx(curr_missing, out_file)
+    }
+  } else {
+    message("Need to implement report.only logic")
   }
 }

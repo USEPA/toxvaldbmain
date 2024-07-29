@@ -38,7 +38,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     query_addition = paste0(query_addition, " ", custom.query.filter)
   }
 
-  slist = runQuery("select distinct source from toxval",toxval.db) %>%
+  slist = runQuery("select distinct source from toxval", toxval.db) %>%
     dplyr::pull(source)
   if(!is.null(source)) slist = source
   source_string = slist %>%
@@ -49,22 +49,26 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   if(mode=="export") {
     query = paste0("SELECT a.*, b.toxval_type_supercategory ",
                    "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
-                   "WHERE (b.toxval_type_supercategory IN",
-                   " ('Dose Response Summary Value', 'Mortality Response Summary Value') ",
-                   "OR a.toxval_type NOT IN",
-                   " (SELECT DISTINCT toxval_type FROM toxval_type_dictionary))",
-                   "AND (a.study_type IS NULL OR a.study_type IN ('-', '')) ",
+                   "WHERE ",
+                   "(a.study_type IS NULL OR a.study_type IN ('-', '')) ",
                    "AND a.source IN ('", source_string, "') ",
+                   "AND a.qc_status not like '%fail%' ",
                    query_addition)
+
     missing_data = runQuery(query, toxval.db) %>%
       dplyr::distinct() %>%
       # Tag reason why entry is missing study_type
       dplyr::mutate(
         missing_toxval_type_dict_entry = dplyr::case_when(
+          # Specific supercategory to manually add study_type
           toxval_type_supercategory %in% c('Dose Response Summary Value', 'Mortality Response Summary Value') ~ 0,
-          TRUE ~ 1
+          # Ones that did not map to anything in toxval_type_dictionary
+          is.na(toxval_type_supercategory) ~ 1,
+          # Anything else, ignore
+          TRUE ~ NA
         )
-      )
+      ) %>%
+      dplyr::filter(!is.na(missing_toxval_type_dict_entry))
 
     # Write output by source
     for(source in missing_data %>% dplyr::pull(source)) {
@@ -75,7 +79,6 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         paste0(".xlsx")
       writexl::write_xlsx(curr_missing, out_file)
     }
-
   }
 
   #----------------------------------------------------------------------------
@@ -87,55 +90,63 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
     if(!report.only) {
       # Set study_type to toxval_type_supercategory for all but Response Summary supercategories
-      query = paste0("UPDATE toxval LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+      query = paste0("UPDATE toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
                      "SET a.study_type=b.toxval_type_supercategory ",
-                     "WHERE b.toxval_type_supercategory NOT IN",
-                     " ('Dose Response Summary Value', 'Mortality Response Summary Value) ",
+                     "WHERE b.toxval_type_supercategory NOT IN ",
+                     "('Dose Response Summary Value', 'Mortality Response Summary Value') ",
                      "AND a.source IN ('", source_string, "') ",
-                     "AND b.toxval_type_supercategory!=a.study_type",
+                     "AND b.toxval_type_supercategory != a.study_type ",
+                     "AND a.qc_status not like '%fail%' ",
                      query_addition)
       runQuery(query, toxval.db)
+
+      # Get entries that are still missing study_type
+      query = paste0("SELECT a.*, b.toxval_type_supercategory ",
+                     "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+                     "WHERE ",
+                     "(a.study_type IS NULL OR a.study_type IN ('-', '')) ",
+                     "AND a.source IN ('", source_string, "') ",
+                     "AND a.qc_status not like '%fail%' ",
+                     query_addition)
+
+      missing_data = runQuery(query, toxval.db) %>%
+        dplyr::distinct() %>%
+        # Tag reason why entry is missing study_type
+        dplyr::mutate(
+          missing_toxval_type_dict_entry = dplyr::case_when(
+            # Specific supercategory to manually add study_type
+            toxval_type_supercategory %in% c('Dose Response Summary Value', 'Mortality Response Summary Value') ~ 0,
+            # Ones that did not map to anything in toxval_type_dictionary
+            is.na(toxval_type_supercategory) ~ 1,
+            # Anything else, ignore
+            TRUE ~ NA
+          )
+        ) %>%
+        dplyr::filter(!is.na(missing_toxval_type_dict_entry))
+
+      # Write output by source
+      for(source in missing_data %>% dplyr::pull(source)) {
+        curr_missing = missing_data %>%
+          dplyr::filter(source == !!source)
+        out_file = paste0("Repo/dictionary/study_type_by_source/toxval_new_study_type ", source, " ", subsource) %>%
+          stringr::str_squish() %>%
+          paste0(".xlsx")
+        writexl::write_xlsx(curr_missing, out_file)
+      }
+
     } else {
       # If report.only, track study_type=toxval_type_supercategory change
       query = paste0("SELECT a.*, b.toxval_type_supercategory ",
                      "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
-                     "WHERE b.toxval_type_supercategory NOT IN",
-                     " ('Dose Response Summary Value', 'Mortality Response Summary Value) ",
+                     "WHERE b.toxval_type_supercategory NOT IN ",
+                     "('Dose Response Summary Value', 'Mortality Response Summary Value') ",
                      "AND a.source IN ('", source_string, "') ",
-                     "AND b.toxval_type_supercategory!=a.study_type",
+                     "AND b.toxval_type_supercategory != a.study_type ",
+                     "AND a.qc_status not like '%fail%' ",
                      query_addition)
       changed_data = runQuery(query, toxval.db) %>%
-        dplyr::mutate(study_type = toxval_type_supercategory)
-    }
-
-    # Get entries that are still missing study_type
-    query = paste0("SELECT a.*, b.toxval_type_supercategory ",
-                   "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
-                   "WHERE (b.toxval_type_supercategory IN",
-                   " ('Dose Response Summary Value', 'Mortality Response Summary Value') ",
-                   "OR a.toxval_type NOT IN",
-                   " (SELECT DISTINCT toxval_type FROM toxval_type_dictionary))",
-                   "AND (a.study_type IS NULL OR a.study_type IN ('-', '')) ",
-                   "AND a.source IN ('", source_string, "') ",
-                   query_addition)
-    missing_data = runQuery(query, toxval.db) %>%
-      dplyr::distinct() %>%
-      # Tag reason why entry is missing study_type
-      dplyr::mutate(
-        missing_toxval_type_dict_entry = dplyr::case_when(
-          toxval_type_supercategory %in% c('Dose Response Summary Value', 'Mortality Response Summary Value') ~ 0,
-          TRUE ~ 1
-        )
-      )
-
-    # Write output by source
-    for(source in missing_data %>% dplyr::pull(source) %>% unique()) {
-      curr_missing = missing_data %>%
-        dplyr::filter(source == !!source)
-      out_file = paste0("Repo/dictionary/study_type/missing_study_type ", source," ", subsource) %>%
-        stringr::str_squish() %>%
-        paste0(".xlsx")
-      writexl::write_xlsx(curr_missing, out_file)
+        dplyr::mutate(study_type = toxval_type_supercategory) %>%
+        return()
     }
   }
 }
