@@ -144,7 +144,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   human_source_list = c("EPA AEGL", "EPA OW NPDWR", "EPA OW NRWQC-HHC", "FDA CEDI",
                         "Mass. Drinking Water Standards", "NIOSH", "OSHA Air contaminants",
                         "OW Drinking Water Standards", "Pennsylvania DEP ToxValues", "RSL", "USGS HBSL",
-                       "EPA OPP")
+                       "EPA OPP", "EPA OW NPDWR")
   if(source %in% human_source_list){
     query = paste0("UPDATE toxval SET species_id=", human_id, " ",
                    "WHERE source='", source, "'")

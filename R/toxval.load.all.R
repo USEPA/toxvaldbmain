@@ -93,7 +93,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.usgs_hbsl(toxval.db, source.db, log)
     toxval.load.ut_hb(toxval.db, source.db, log)
     toxval.load.who_ipcs(toxval.db, source.db, log)
-    oxval.load.who_jecfa_adi(toxval.db, source.db, log)
+    toxval.load.who_jecfa_adi(toxval.db, source.db, log)
     toxval.load.who_jecfa_tox_studies(toxval.db, source.db, log)
 
   }

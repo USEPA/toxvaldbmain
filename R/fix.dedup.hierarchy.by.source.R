@@ -36,7 +36,8 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       "EnviroTox_v2" = "ECOTOX",
       "OW Drinking Water Standards" = "EPA OW NPDWR",
       "USGS HBSL" = "EPA OPP",
-      "TEST" = "ChemIDplus"
+      "TEST" = "ChemIDplus",
+      "RSL" = "HEAST"
     )
   } else {
     # Use input priority_list if available

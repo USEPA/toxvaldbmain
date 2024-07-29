@@ -139,6 +139,20 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "END ",
                     "WHERE human_eco in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
 
+    ############################################################################
+    ### source specific cases
+    ############################################################################
+    if(source == "DOE Wildlife Benchmarks"){
+      runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                      "WHEN qc_status like '%Not an experimental record%' THEN qc_status ",
+                      "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Not an experimental record') ",
+                      "ELSE 'fail:Not an experimental record'",
+                      "END ",
+                      "WHERE source = 'DOE Wildlife Benchmarks' AND ",
+                      "experimental_record = 'not experimental'",
+                      query_addition), toxval.db)
+    }
+
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric<0' where toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric is null' where toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_type not specified' where toxval_type='-' and source = '",source,"'",query_addition) ,toxval.db)

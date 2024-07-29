@@ -53,7 +53,8 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
 
   res = res %>%
-    dplyr::mutate(subsource = "HHBP")
+    dplyr::mutate(subsource = "HHBP",
+                  year = 2021)
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
