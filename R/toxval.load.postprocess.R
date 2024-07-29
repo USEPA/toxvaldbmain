@@ -101,8 +101,12 @@ toxval.load.postprocess <- function(toxval.db,
   cat("set qc_status='fail' for entries without toxval_type_supercategory\n")
   #####################################################################
   query = paste0("UPDATE toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
-                 "SET a.qc_status='fail' ",
-                 "WHERE (b.toxval_type_supercategory IS NULL OR b.toxval_type_supercategory IN ('-', '') ",
+                 "SET a.qc_status = CASE ",
+                 "WHEN a.qc_status like '%Out of scope, no toxval_type supercategory assignment%' THEN a.qc_status ",
+                 "WHEN a.qc_status like '%fail%' THEN CONCAT(a.qc_status, '; Out of scope, no toxval_type supercategory assignment') ",
+                 "ELSE 'fail:Out of scope, no toxval_type supercategory assignment'",
+                 "END ",
+                 "WHERE (b.toxval_type_supercategory IS NULL OR b.toxval_type_supercategory IN ('-', '')) ",
                  "AND a.source='", source, "'", query_addition %>% gsub("subsource", "a.subsource", .))
   runQuery(query, toxval.db)
 
