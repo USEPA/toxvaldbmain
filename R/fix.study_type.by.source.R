@@ -31,85 +31,53 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
-    query_addition = paste0(query_addition, " and subsource='", subsource, "'")
+    query_addition = paste0(query_addition, " and a.subsource='", subsource, "'")
   }
 
   if(!is.null(custom.query.filter)){
     query_addition = paste0(query_addition, " ", custom.query.filter)
   }
 
-  dir = paste0(toxval.config()$datapath,"dictionary/study_type_by_source/")
-  # dir = "data/study_type_by_source/"
-  slist = runQuery("select distinct source from toxval",toxval.db) %>%
+  slist = runQuery("select distinct source from toxval", toxval.db) %>%
     dplyr::pull(source)
   if(!is.null(source)) slist = source
+  source_string = slist %>%
+    paste0(collapse="', '")
   #----------------------------------------------------------------------------
   # Run the export process
   #----------------------------------------------------------------------------
   if(mode=="export") {
-    for(source in slist) {
+    query = paste0("SELECT a.*, b.toxval_type_supercategory ",
+                   "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+                   "WHERE ",
+                   "(a.study_type IS NULL OR a.study_type IN ('-', '')) ",
+                   "AND a.source IN ('", source_string, "') ",
+                   "AND a.qc_status not like '%fail%' ",
+                   query_addition)
 
-      cat("Checking old '", source,"'logged study_type already imported...\n")
-      import_logged <- list.files(paste0(dir),
-                                  pattern = source %>%
-                                    # Escape parentheses for regex
-                                    gsub("\\(", "\\\\(", .) %>%
-                                    gsub("\\)", "\\\\)", .),
-                                  recursive = TRUE,
-                                  full.names = TRUE) %>%
-        # Ignore files in specific subfolders
-        .[!grepl("export_temp|old files", .)] %>%
-        lapply(., readxl::read_xlsx) %>%
-        dplyr::bind_rows()
+    missing_data = runQuery(query, toxval.db) %>%
+      dplyr::distinct() %>%
+      # Tag reason why entry is missing study_type
+      dplyr::mutate(
+        missing_toxval_type_dict_entry = dplyr::case_when(
+          # Specific supercategory to manually add study_type
+          toxval_type_supercategory %in% c('Dose Response Summary Value', 'Mortality Response Summary Value') ~ 0,
+          # Ones that did not map to anything in toxval_type_dictionary
+          is.na(toxval_type_supercategory) ~ 1,
+          # Anything else, ignore
+          TRUE ~ NA
+        )
+      ) %>%
+      dplyr::filter(!is.na(missing_toxval_type_dict_entry))
 
-      if(nrow(import_logged)){
-        import_logged = import_logged %>%
-          dplyr::pull(source_hash) %>%
-          unique() %>%
-          paste0(collapse="', '")
-      }
-
-      query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
-                     "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
-                     "b.toxval_units, b.study_type_original, b.study_type, ",
-                     "b.study_type as study_type_corrected, b.study_duration_value, ",
-                     "b.study_duration_units, ",
-                     "d.common_name, ",
-                     "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
-                     "b.critical_effect, ",
-                     "f.long_ref, f.title, ",
-                     "b.source_hash ",
-                     "FROM toxval b ",
-                     "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
-                     "LEFT JOIN species d on b.species_id=d.species_id ",
-                     "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
-                     # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                     "WHERE b.source='", source, "'",
-                     query_addition %>%
-                       gsub("subsource", "b.subsource", .),
-                     " and b.source_hash NOT IN ('", import_logged, "')",
-                     " and b.qc_status NOT LIKE '%fail%'",
-                     " and human_eco = 'human health'")
-
-      cat("Pulling source_hash records not already accounted for...\n")
-      mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
-        dplyr::distinct() %>%
-        dplyr::mutate(fixed = 0)
-
-      if(!nrow(mat)){
-        cat("No source_hashes to export...all accounted for.\n")
-        return()
-      }
-      dir1 = paste0(dir,"export_temp/")
-      file = paste0(dir1,"/toxval_new_study_type ", source, " ", subsource) %>%
+    # Write output by source
+    for(source in missing_data %>% dplyr::pull(source)) {
+      curr_missing = missing_data %>%
+        dplyr::filter(source == !!source)
+      out_file = paste0("Repo/dictionary/study_type_by_source/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
-      sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-      openxlsx::write.xlsx(mat,file,firstRow=TRUE,headerStyle=sty)
-      # file = paste0(dir1,"/toxval_new_study_type ",source, " ", subsource) %>%
-      #   stringr::str_squish() %>%
-      #   paste0(".csv")
-      # write.csv(mat,file=file,row.names=FALSE)
+      writexl::write_xlsx(curr_missing, out_file)
     }
   }
 
@@ -117,159 +85,70 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   # Run the import process
   #----------------------------------------------------------------------------
   if(mode=="import") {
-
-    # Store aggregate missing entries
-    missing.all = data.frame()
+    # Track changed entries for report.only
+    changed_data = data.frame()
 
     if(!report.only) {
-      # Set study_type to "-" for entries with non-"human health" human_eco values
-      query = paste0("UPDATE toxval SET study_type='-'  ",
-                     "WHERE source = '",source,"' ",
-                     "AND human_eco != 'human health'",
+      # Set study_type to toxval_type_supercategory for all but Response Summary supercategories
+      query = paste0("UPDATE toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+                     "SET a.study_type=b.toxval_type_supercategory ",
+                     "WHERE b.toxval_type_supercategory NOT IN ",
+                     "('Dose Response Summary Value', 'Mortality Response Summary Value') ",
+                     "AND a.source IN ('", source_string, "') ",
+                     "AND b.toxval_type_supercategory != a.study_type ",
+                     "AND a.qc_status not like '%fail%' ",
                      query_addition)
       runQuery(query, toxval.db)
-    }
 
-    for(source in slist) {
+      # TODO Add back in logic to push from manual dictionaries
 
-      file_list <- list.files(paste0(dir),
-                              pattern = paste0(source, " ", subsource) %>%
-                                stringr::str_squish() %>%
-                                # Escape parentheses for regex
-                                gsub("\\(", "\\\\(", .) %>%
-                                gsub("\\)", "\\\\)", .),
-                              recursive = TRUE,
-                              full.names = TRUE) %>%
-        # Ignore files in specific subfolders
-        .[!grepl("export_temp|old files", .)]
+      # Get entries that are still missing study_type
+      query = paste0("SELECT a.*, b.toxval_type_supercategory ",
+                     "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+                     "WHERE ",
+                     "(a.study_type IS NULL OR a.study_type IN ('-', '')) ",
+                     "AND a.source IN ('", source_string, "') ",
+                     "AND a.qc_status not like '%fail%' ",
+                     query_addition)
 
-      if(length(file_list)){
-        cat("Pulling study_type maps for import...\n")
-        mat = lapply(file_list, readxl::read_xlsx) %>%
-          dplyr::bind_rows() %>%
-          dplyr::filter(!dtxsid %in% c(NA, "NODTXSID", "-")) %>%
-          dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~stringr::str_squish(.)))
-      } else {
-        # Create empty dataframe
-        mat = data.frame(matrix(ncol=4,nrow=0,
-                                dimnames=list(NULL, c("dtxsid", "source", "study_type_corrected", "source_hash"))))
+      missing_data = runQuery(query, toxval.db) %>%
+        dplyr::distinct() %>%
+        # Tag reason why entry is missing study_type
+        dplyr::mutate(
+          missing_toxval_type_dict_entry = dplyr::case_when(
+            # Specific supercategory to manually add study_type
+            toxval_type_supercategory %in% c('Dose Response Summary Value', 'Mortality Response Summary Value') ~ 0,
+            # Ones that did not map to anything in toxval_type_dictionary
+            is.na(toxval_type_supercategory) ~ 1,
+            # Anything else, ignore
+            TRUE ~ NA
+          )
+        ) %>%
+        dplyr::filter(!is.na(missing_toxval_type_dict_entry))
+
+      # Write output by source
+      for(source in missing_data %>% dplyr::pull(source)) {
+        curr_missing = missing_data %>%
+          dplyr::filter(source == !!source)
+        out_file = paste0("Repo/dictionary/study_type_by_source/toxval_new_study_type ", source, " ", subsource) %>%
+          stringr::str_squish() %>%
+          paste0(".xlsx")
+        writexl::write_xlsx(curr_missing, out_file)
       }
 
-      temp0 = mat %>%
-        dplyr::select(dtxsid, source_name=source, study_type_corrected, source_hash) %>%
-        dplyr::filter(source_name == source) %>%
-        dplyr::distinct()
-
-      if(any(duplicated(temp0$source_hash))){
-        cat("Unresolved duplicate source_hash mappings...")
-        browser()
-        stop()
-      }
-
-      cat(source,nrow(temp0),"\n")
-      temp0$key = paste(temp0$dtxsid,temp0$source_name,temp0$study_type_corrected,temp0$source_hash)
-      temp = unique(temp0[,c("source_hash","study_type_corrected")])
-      names(temp) = c("source_hash","study_type")
-
-      temp.old = runQuery(paste0("SELECT b.source_hash, b.study_type from toxval b ",
-                                 # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                                 "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
-                                 " and b.qc_status NOT LIKE '%fail%' and b.human_eco = 'human health'",
-                                 query_addition %>%
-                                   gsub("subsource", "b.subsource", .)), toxval.db)
-
-      shlist = unique(temp0$source_hash)
-      shlist.db = unique(temp.old$source_hash)
-      missing = shlist.db[!is.element(shlist.db,shlist)]
-      if(length(missing)>0) {
-        cat("Missing source_hash in replacement file:",source," missing ",length(missing)," out of ",length(shlist.db),"\n")
-
-        query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
-                       "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
-                       "b.toxval_units, b.study_type_original, b.study_type, ",
-                       "b.study_type as study_type_corrected, b.study_duration_value, ",
-                       "b.study_duration_units, ",
-                       "d.common_name, ",
-                       "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
-                       "b.critical_effect, ",
-                       "f.long_ref, f.title, ",
-                       "b.source_hash ",
-                       "FROM toxval b ",
-                       "INNER JOIN source_chemical a on a.chemical_id=b.chemical_id ",
-                       "LEFT JOIN species d on b.species_id=d.species_id ",
-                       "INNER JOIN record_source f on b.toxval_id=f.toxval_id ",
-                       # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                       "WHERE b.source='", source, "'",
-                       " and b.qc_status NOT LIKE '%fail%'",
-                       " and b.human_eco = 'human health'",
-                       query_addition %>%
-                         gsub("subsource", "b.subsource", .))
-
-        if(!is.null(subsource)) {
-          query = paste0(query, " and b.subsource='",subsource,"'")
-        }
-
-        replacements = runQuery(query,toxval.db,TRUE,FALSE)
-        # Check if any returned from query
-        if(nrow(replacements)){
-          replacements$fixed = 0
-          # Filter to entries from missing source_hash vector
-          replacements = replacements[is.element(replacements$source_hash,missing),] %>%
-            dplyr::mutate(
-              dplyr::across(tidyselect::where(is.character), ~stringr::str_trunc(., 32700, "right"))
-            )
-          # Check if any missing
-          if(nrow(replacements)){
-            if(!report.only) {
-              file = paste0(toxval.config()$datapath,"dictionary/study_type/missing_study_type ", source," ", subsource) %>%
-                stringr::str_squish() %>%
-                paste0(".xlsx")
-              writexl::write_xlsx(replacements,file)
-            }
-            missing.all = rbind(missing.all, replacements)
-          }
-        }
-      }
-
-      if(!report.only) {
-        temp$code = paste(temp$source_hash,temp$study_type)
-        temp.old$code = paste(temp.old$source_hash,temp.old$study_type)
-        n1 = nrow(temp)
-        n2 = nrow(temp.old)
-        temp3 = temp[!is.element(temp$code,temp.old$code),]
-        n3 = nrow(temp3)
-        cat("==============================================\n")
-        cat(source,subsource,n1,n2,n3," [n1 is new records, n2 is old records, n3 is number of records to be updated]\n")
-        cat("==============================================\n")
-        batch_size <- 500
-        startPosition <- 1
-        endPosition <- nrow(temp3)
-        incrementPosition <- batch_size
-
-        while(startPosition <= endPosition){
-          if(incrementPosition > endPosition) incrementPosition = endPosition
-          message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
-                  " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
-
-          updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                               "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type ",
-                               "WHERE a.source_hash in ('",
-                               paste0(temp3$source_hash[startPosition:incrementPosition], collapse="', '"), "') ",
-                               "AND a.qc_status NOT LIKE '%fail%' and a.human_eco = 'human health'")
-
-          runUpdate(table="toxval",
-                    updateQuery = updateQuery,
-                    updated_df = temp3 %>% dplyr::select(source_hash, study_type),
-                    db=toxval.db)
-
-          startPosition <- startPosition + batch_size
-          incrementPosition <- startPosition + batch_size - 1
-        }
-      }
-    }
-
-    if(report.only) {
-      return(missing.all)
+    } else {
+      # If report.only, track study_type=toxval_type_supercategory change
+      query = paste0("SELECT a.*, b.toxval_type_supercategory ",
+                     "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+                     "WHERE b.toxval_type_supercategory NOT IN ",
+                     "('Dose Response Summary Value', 'Mortality Response Summary Value') ",
+                     "AND a.source IN ('", source_string, "') ",
+                     "AND b.toxval_type_supercategory != a.study_type ",
+                     "AND a.qc_status not like '%fail%' ",
+                     query_addition)
+      changed_data = runQuery(query, toxval.db) %>%
+        dplyr::mutate(study_type = toxval_type_supercategory) %>%
+        return()
     }
   }
 }

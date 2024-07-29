@@ -140,19 +140,6 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "WHERE human_eco in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
 
     ############################################################################
-    ### risk_assessment_class cases
-    ############################################################################
-    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
-                    "WHEN qc_status like '%risk_assessment_class not specified%' THEN qc_status ",
-                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; risk_assessment_class not specified') ",
-                    "ELSE 'fail:risk_assessment_class not specified'",
-                    "END ",
-                    "WHERE source = '", source, "' AND",
-                    " (risk_assessment_class = 'not specified' OR",
-                    " (risk_assessment_class = '-' AND human_eco != 'eco'))",
-                    query_addition), toxval.db)
-
-    ############################################################################
     ### source specific cases
     ############################################################################
     if(source == "DOE Wildlife Benchmarks"){
