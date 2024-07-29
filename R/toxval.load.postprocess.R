@@ -90,6 +90,23 @@ toxval.load.postprocess <- function(toxval.db,
   fix.derived.toxval_type.by.source(toxval.db, source=source, subsource=subsource)
 
   #####################################################################
+  cat("fix escaped quotes in toxval_type\n")
+  #####################################################################
+  runQuery(paste0("update toxval SET toxval_type"," = ", "REPLACE",
+                  "( toxval_type",  ",\'\"\',", " \"'\" ) WHERE toxval_type",
+                  " LIKE \'%\"%\' and source = '",source,"'",query_addition),
+           toxval.db)
+
+  #####################################################################
+  cat("set qc_status='fail' for entries without toxval_type_supercategory\n")
+  #####################################################################
+  query = paste0("UPDATE toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+                 "SET a.qc_status='fail' ",
+                 "WHERE (b.toxval_type_supercategory IS NULL OR b.toxval_type_supercategory IN ('-', '') ",
+                 "AND a.source='", source, "'", query_addition %>% gsub("subsource", "a.subsource", .))
+  runQuery(query, toxval.db)
+
+  #####################################################################
   cat("check that the dictionaries are loaded\n")
   #####################################################################
   import.dictionary(toxval.db)

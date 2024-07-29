@@ -139,19 +139,6 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "END ",
                     "WHERE human_eco in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
 
-    ############################################################################
-    ### risk_assessment_class cases
-    ############################################################################
-    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
-                    "WHEN qc_status like '%risk_assessment_class not specified%' THEN qc_status ",
-                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; risk_assessment_class not specified') ",
-                    "ELSE 'fail:risk_assessment_class not specified'",
-                    "END ",
-                    "WHERE source = '", source, "' AND",
-                    " (risk_assessment_class = 'not specified' OR",
-                    " (risk_assessment_class = '-' AND human_eco != 'eco'))",
-                    query_addition), toxval.db)
-
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric<0' where toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric is null' where toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_type not specified' where toxval_type='-' and source = '",source,"'",query_addition) ,toxval.db)
