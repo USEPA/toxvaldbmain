@@ -43,7 +43,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
   if(restart & !report.only) {
     query = paste0("UPDATE toxval SET risk_assessment_class='-' WHERE source IN ('",source_string,"')",
                    query_addition)
-    # runQuery(query, toxval.db)
+    runQuery(query, toxval.db)
   }
 
   if(!report.only) {
@@ -59,7 +59,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                    "ELSE risk_assessment_class END ",
                    "WHERE source IN ('", source_string, "')",
                    query_addition)
-    # runQuery(query, toxval.db)
+    runQuery(query, toxval.db)
 
     # Make changes that are based on subtype
     case_block = rac_subtype %>%
@@ -76,7 +76,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
                    "ELSE risk_assessment_class END ",
                    "WHERE source IN ('", source_string, "')",
                    query_addition)
-    # runQuery(query, toxval.db)
+    runQuery(query, toxval.db)
   }
 
   # Get missing entries

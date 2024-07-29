@@ -94,7 +94,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                      "AND a.source IN ('", source_string, "') ",
                      "AND b.toxval_type_supercategory!=a.study_type",
                      query_addition)
-      # runQuery(query, toxval.db)
+      runQuery(query, toxval.db)
     } else {
       # If report.only, track study_type=toxval_type_supercategory change
       query = paste0("SELECT a.*, b.toxval_type_supercategory ",
