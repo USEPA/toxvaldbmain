@@ -100,6 +100,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                      query_addition)
       runQuery(query, toxval.db)
 
+      # TODO Add back in logic to push from manual dictionaries
+
       # Get entries that are still missing study_type
       query = paste0("SELECT a.*, b.toxval_type_supercategory ",
                      "FROM toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
