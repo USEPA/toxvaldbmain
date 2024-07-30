@@ -108,7 +108,7 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db, source.db, log=FALSE, r
     dplyr::mutate(
       # Choose when to select new toxval_subtype vs. keep original "-"
       toxval_subtype = dplyr::case_when(
-        grepl("\\|::\\|", name) ~ updated_subtype,
+        grepl("\\|::\\|", name) ~ stringr::str_c("chemical group: ", updated_subtype),
         TRUE ~ toxval_subtype
       ),
 

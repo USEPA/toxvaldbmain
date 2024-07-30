@@ -102,7 +102,7 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
     dplyr::mutate(
       # Choose when to select new toxval_subtype vs. keep original "-"
       toxval_subtype = dplyr::case_when(
-        grepl("\\|::\\|", name) ~ updated_subtype,
+        grepl("\\|::\\|", name) ~ stringr::str_c("chemical group: ", updated_subtype),
         TRUE ~ toxval_subtype
       ),
 
