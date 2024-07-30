@@ -113,6 +113,14 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     source,"'",query_addition) ,toxval.db)
 
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%Ambiguous toxval_units%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Ambiguous toxval_units') ",
+                    "ELSE 'fail:Ambiguous toxval_units'",
+                    "END ",
+                    "WHERE (toxval_units_original in ('g/kg', 'ug/mg/kg') OR toxval_units in ('g/kg', 'ug/mg/kg')) and source = '",
+                    source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
                     "WHEN qc_status like '%toxval_units not specified%' THEN qc_status ",
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_units not specified') ",
                     "ELSE 'fail:toxval_units not specified'",
@@ -138,6 +146,13 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "ELSE 'fail:human_eco not specified'",
                     "END ",
                     "WHERE human_eco in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%Eco data out of scope for ToxValDB%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Eco data out of scope for ToxValDB') ",
+                    "ELSE 'fail:Eco data out of scope for ToxValDB'",
+                    "END ",
+                    "WHERE human_eco = 'eco' and source = '",source,"'",query_addition) ,toxval.db)
 
     ############################################################################
     ### source specific cases
