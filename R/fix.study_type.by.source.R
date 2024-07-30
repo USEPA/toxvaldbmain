@@ -100,7 +100,89 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                      query_addition)
       runQuery(query, toxval.db)
 
-      # TODO Add back in logic to push from manual dictionaries
+      # Push study_type updates from manual dictionaries using source_hash
+      dir = paste0(toxval.config()$datapath,"dictionary/study_type_by_source/")
+      for(source in slist) {
+        file_list <- list.files(paste0(dir),
+                                pattern = paste0(source, " ", subsource) %>%
+                                  stringr::str_squish() %>%
+                                  # Escape parentheses for regex
+                                  gsub("\\(", "\\\\(", .) %>%
+                                  gsub("\\)", "\\\\)", .),
+                                recursive = TRUE,
+                                full.names = TRUE) %>%
+          # Ignore files in specific subfolders
+          .[!grepl("export_temp|old files", .)]
+
+        if(length(file_list)){
+          cat("Pulling study_type maps for import...\n")
+          mat = lapply(file_list, readxl::read_xlsx) %>%
+            dplyr::bind_rows() %>%
+            dplyr::filter(!dtxsid %in% c(NA, "NODTXSID", "-")) %>%
+            dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~stringr::str_squish(.)))
+        } else {
+          # Create empty dataframe
+          mat = data.frame(matrix(ncol=4,nrow=0,
+                                  dimnames=list(NULL, c("dtxsid", "source", "study_type_corrected", "source_hash"))))
+        }
+
+        temp0 = mat %>%
+          dplyr::select(dtxsid, source_name=source, study_type_corrected, source_hash) %>%
+          dplyr::filter(source_name == source) %>%
+          dplyr::distinct()
+
+        if(any(duplicated(temp0$source_hash))){
+          cat("Unresolved duplicate source_hash mappings...")
+          browser()
+          stop()
+        }
+
+        cat(source,nrow(temp0),"\n")
+        temp0$key = paste(temp0$dtxsid,temp0$source_name,temp0$study_type_corrected,temp0$source_hash)
+        temp = unique(temp0[,c("source_hash","study_type_corrected")])
+        names(temp) = c("source_hash","study_type")
+
+        temp.old = runQuery(paste0("SELECT b.source_hash, b.study_type from toxval b ",
+                                   # "INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
+                                   "where b.dtxsid != 'NODTXSID' and b.source = '", source, "'",
+                                   " and b.qc_status NOT LIKE '%fail%' and b.human_eco = 'human health'",
+                                   query_addition %>%
+                                     gsub("subsource", "b.subsource", .)), toxval.db)
+
+        temp$code = paste(temp$source_hash,temp$study_type)
+        temp.old$code = paste(temp.old$source_hash,temp.old$study_type)
+        n1 = nrow(temp)
+        n2 = nrow(temp.old)
+        temp3 = temp[!is.element(temp$code,temp.old$code),]
+        n3 = nrow(temp3)
+        cat("==============================================\n")
+        cat(source,subsource,n1,n2,n3," [n1 is new records, n2 is old records, n3 is number of records to be updated]\n")
+        cat("==============================================\n")
+        batch_size <- 500
+        startPosition <- 1
+        endPosition <- nrow(temp3)
+        incrementPosition <- batch_size
+
+        while(startPosition <= endPosition){
+          if(incrementPosition > endPosition) incrementPosition = endPosition
+          message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+                  " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
+
+          updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
+                               "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type ",
+                               "WHERE a.source_hash in ('",
+                               paste0(temp3$source_hash[startPosition:incrementPosition], collapse="', '"), "') ",
+                               "AND a.qc_status NOT LIKE '%fail%' and a.human_eco = 'human health'")
+
+          runUpdate(table="toxval",
+                    updateQuery = updateQuery,
+                    updated_df = temp3 %>% dplyr::select(source_hash, study_type),
+                    db=toxval.db)
+
+          startPosition <- startPosition + batch_size
+          incrementPosition <- startPosition + batch_size - 1
+        }
+      }
 
       # Get entries that are still missing study_type
       query = paste0("SELECT a.*, b.toxval_type_supercategory ",
