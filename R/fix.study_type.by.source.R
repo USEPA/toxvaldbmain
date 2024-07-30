@@ -115,7 +115,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     }
 
     # Write output by source
-    for(source in missing_data %>% dplyr::pull(source)) {
+    for(source in missing_data %>% dplyr::pull(source) %>% unique()) {
       curr_missing = missing_data %>%
         dplyr::filter(source == !!source)
       out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
@@ -257,7 +257,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       }
 
       # Write output by source
-      for(source in missing_data %>% dplyr::pull(source)) {
+      for(source in missing_data %>% dplyr::pull(source) %>% unique()) {
         curr_missing = missing_data %>%
           dplyr::filter(source == !!source)
         out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
