@@ -74,7 +74,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     for(source in missing_data %>% dplyr::pull(source)) {
       curr_missing = missing_data %>%
         dplyr::filter(source == !!source)
-      out_file = paste0("Repo/dictionary/study_type_by_source/toxval_new_study_type ", source, " ", subsource) %>%
+      out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
       writexl::write_xlsx(curr_missing, out_file)
@@ -130,7 +130,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       for(source in missing_data %>% dplyr::pull(source)) {
         curr_missing = missing_data %>%
           dplyr::filter(source == !!source)
-        out_file = paste0("Repo/dictionary/study_type_by_source/toxval_new_study_type ", source, " ", subsource) %>%
+        out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
           stringr::str_squish() %>%
           paste0(".xlsx")
         writexl::write_xlsx(curr_missing, out_file)
