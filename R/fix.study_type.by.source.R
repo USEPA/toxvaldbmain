@@ -60,7 +60,10 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                                 full.names = TRUE) %>%
       # Ignore files in specific subfolders
       .[!grepl("export_temp|old files", .)] %>%
-      lapply(., readxl::read_xlsx) %>%
+      lapply(., function(f){
+        readxl::read_xlsx(f) %>%
+          dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)))
+      }) %>%
       dplyr::bind_rows()
 
     if(nrow(import_logged)){
@@ -164,7 +167,10 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
         if(length(file_list)){
           cat("Pulling study_type maps for import...\n")
-          mat = lapply(file_list, readxl::read_xlsx) %>%
+          mat = lapply(file_list, function(f){
+            readxl::read_xlsx(f) %>%
+              dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)))
+          }) %>%
             dplyr::bind_rows() %>%
             dplyr::filter(!dtxsid %in% c(NA, "NODTXSID", "-")) %>%
             dplyr::mutate(dplyr::across(tidyselect::where(is.character), ~stringr::str_squish(.)))
