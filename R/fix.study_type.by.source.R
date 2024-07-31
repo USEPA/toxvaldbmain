@@ -156,7 +156,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       dir = paste0(toxval.config()$datapath,"dictionary/study_type_by_source/")
       for(source in slist) {
         file_list <- list.files(paste0(dir),
-                                pattern = paste0(source, " ", subsource) %>%
+                                pattern = source %>%
                                   stringr::str_squish() %>%
                                   # Escape parentheses for regex
                                   gsub("\\(", "\\\\(", .) %>%
@@ -183,8 +183,13 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
 
         temp0 = mat %>%
           dplyr::filter(source == !!source) %>%
-          dplyr::select(study_type=study_type_corrected, source_hash) %>%
+          dplyr::select(study_type=study_type_corrected, source_hash, subsource) %>%
           dplyr::distinct()
+
+        if(!is.null(subsource)){
+          temp0 = temp0 %>%
+            dplyr::filter(subsource == !!subsource)
+        }
 
         if(any(duplicated(temp0$source_hash))){
           cat("Unresolved duplicate source_hash mappings...")
