@@ -141,6 +141,10 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     cat("Add code to deal with specific issues for this source\n")
     #####################################################################
 
+    # Add subsource_url from source_url
+    res = res %>%
+      dplyr::rename(subsource_url = source_url)
+
     # Rename glp field to be pulled into record_source
     if("record_source_glp" %in% names(res)) {
       res = res %>%
