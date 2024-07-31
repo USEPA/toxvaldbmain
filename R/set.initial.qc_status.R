@@ -18,6 +18,8 @@ set.initial.qc_status <- function(toxval.db, source.db, source, subsource=NULL){
   }
 
   for(source in slist){
+    # Quick fix since WHO JECFA sources have load logic to set qc_status
+    if(source %in% c("WHO JECFA ADI", "WHO JECFA Tox Studies")) next
     # Get unique source tables for current source/subsource pair
     source_table_query = paste0("SELECT DISTINCT source_table FROM toxval WHERE source='",
                                 source, "'", query_addition)
