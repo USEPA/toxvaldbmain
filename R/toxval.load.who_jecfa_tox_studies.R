@@ -68,7 +68,12 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db, source.db, log=FALSE, r
   query = paste0("SELECT DISTINCT chemical_id, dtxsid FROM source_chemical WHERE source='", source, "'")
   dtxsid_map = runQuery(query, toxval.db)
   res = res %>%
-    dplyr::left_join(dtxsid_map, by=c("chemical_id"))
+    dplyr::left_join(dtxsid_map, by=c("chemical_id")) %>%
+
+    # Select newest record for entries with same name, dtxsid, and toxval_type
+    dplyr::group_by(name, dtxsid, toxval_type) %>%
+    dplyr::filter(year == max(year)) %>%
+    dplyr::ungroup()
 
   # Dedup based on DTXSID
   dedup_fields = c("name", "casrn", "chemical_id", "source_hash",
