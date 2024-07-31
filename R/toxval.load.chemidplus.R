@@ -7,7 +7,7 @@
 #' @param do.init if TRUE, read the data in from the file and set up the matrix
 #--------------------------------------------------------------------------------------
 toxval.load.chemidplus <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE, do.init=FALSE){
-  source = "ChemIDPlus"
+  source = "ChemIDplus"
   source_table = "direct load"
   verbose = log
   #####################################################################
@@ -35,7 +35,7 @@ toxval.load.chemidplus <- function(toxval.db, source.db, log=FALSE, remove_null_
   #####################################################################
   if(!exists("CHEMIDPLUS")) do.init=T
   if(do.init) {
-    file = paste0(toxval.config()$datapath,"ChemIDPlus/ChemIDplus Toxicity Experimental Records.xlsx")
+    file = paste0(toxval.config()$datapath,"ChemIDplus/ChemIDplus Toxicity Experimental Records.xlsx")
     mat = openxlsx::read.xlsx(file)
     nlist = c("casrn",
               "chemical_name",

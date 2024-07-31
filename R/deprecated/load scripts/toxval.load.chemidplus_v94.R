@@ -8,7 +8,7 @@
 #--------------------------------------------------------------------------------------
 toxval.load.chemidplus <- function(toxval.db,source.db,log=F,do.init=F) {
   printCurrentFunction(toxval.db)
-  source <- "ChemIDPlus"
+  source <- "ChemIDplus"
   source_table = "direct load"
   verbose=F
   #####################################################################
@@ -35,7 +35,7 @@ toxval.load.chemidplus <- function(toxval.db,source.db,log=F,do.init=F) {
   #####################################################################
   if(!exists("CHEMIDPLUS")) do.init=T
   if(do.init) {
-    file = paste0(toxval.config()$datapath,"ChemIDPlus/ChemIDplus Toxicity Experimental Records.xlsx")
+    file = paste0(toxval.config()$datapath,"ChemIDplus/ChemIDplus Toxicity Experimental Records.xlsx")
     mat = read.xlsx(file)
     nlist = c("casrn",
               "chemical_name",
