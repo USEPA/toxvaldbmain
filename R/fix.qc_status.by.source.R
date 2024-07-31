@@ -164,7 +164,7 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                       "ELSE 'fail:Not an experimental record'",
                       "END ",
                       "WHERE source = 'DOE Wildlife Benchmarks' AND ",
-                      "experimental_record = 'not experimental'",
+                      "experimental_record in ('not experimental', 'no', 'No')",
                       query_addition), toxval.db)
     }
 
