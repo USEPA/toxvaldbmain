@@ -84,65 +84,22 @@ toxval.load.who_jecfa_tox_studies <- function(toxval.db, source.db, log=FALSE, r
   res.temp = source_hash_vectorized(res, dtxsid_hash_cols)
   res$source_hash_temp = res.temp$source_hash
 
-  # Perform deduping
+  # Select one entry per DTXSID group; fail the others
   res = res %>%
     dplyr::group_by(source_hash_temp) %>%
-    dplyr::mutate(dplyr::across(dplyr::any_of(!!dedup_fields),
-                                ~paste0(.[!is.na(.)], collapse=" |::| ") %>%
-                                  dplyr::na_if("NA") %>%
-                                  dplyr::na_if("") %>%
-                                  dplyr::na_if("-")
-    )) %>%
-    dplyr::ungroup() %>%
-    dplyr::distinct()
-
-  # Get mapping of correctly formatted toxval_subtype as "name, (source_hash)" to source_hash_temp
-  toxval_subtype_res = res %>%
-    dplyr::group_by(source_hash_temp) %>%
-    tidyr::separate_rows(source_hash, name, sep=" \\|::\\| ") %>%
-    dplyr::mutate(source_hash = stringr::str_c("(", source_hash, ")")) %>%
-    tidyr::unite("combined_info", name, source_hash, sep=" ") %>%
-    dplyr::select(combined_info, source_hash_temp) %>%
-    dplyr::distinct() %>%
-    dplyr::summarise(updated_subtype = paste(combined_info, collapse=", ")) %>%
-    dplyr::select(source_hash_temp, updated_subtype) %>%
-    dplyr::distinct()
-
-  res = res %>%
-    dplyr::left_join(toxval_subtype_res, by=c("source_hash_temp")) %>%
     dplyr::mutate(
-      # Choose when to select new toxval_subtype vs. keep original "-"
-      toxval_subtype = dplyr::case_when(
-        grepl("\\|::\\|", name) ~ stringr::str_c("chemical group: ", updated_subtype),
-        TRUE ~ toxval_subtype
-      ),
+      # Check for row number in DTXSID group
+      row = dplyr::row_number(),
 
-      # Clean up name, source_hash, etc. to leave only parent info
-      name = name %>%
-        gsub(" \\|::\\|.+", "", .),
-      source_hash = source_hash %>%
-        gsub(" \\|::\\|.+", "", .),
-      casrn = casrn %>%
-        gsub(" \\|::\\|.+", "", .),
-      subsource_url = subsource_url %>%
-        gsub(" \\|::\\|.+", "", .),
-      chemical_id = chemical_id %>%
-        gsub(" \\|::\\|.+", "", .),
-
-      # Remove parent info from toxval_subtype
-      toxval_subtype = toxval_subtype %>%
-        stringr::str_replace(stringr::fixed(stringr::str_c(name, " (", source_hash, "), ")), "") %>%
-        stringr::str_squish(),
-
-      # Select single relationship (all collapsed values are the same)
-      relationship = dplyr::case_when(
-        grepl("Lower Range", relationship) ~ "Lower Range",
-        grepl("Upper Range", relationship) ~ "Upper Range",
-        grepl("\\-", relationship) ~ "-",
-        TRUE ~ relationship
+      # Update/append qc_status accordingly (arbitrarily select row 1 to pass)
+      qc_status = dplyr::case_when(
+        row == 1 ~ qc_status,
+        grepl("fail", qc_status) ~ stringr::str_c(qc_status, "; curated to same DTXSID, failed as duplicate"),
+        TRUE ~ "fail; curated to same DTXSID, failed as duplicate"
       )
     ) %>%
-    dplyr::select(-c("dtxsid", "source_hash_temp", "updated_subtype"))
+    dplyr::ungroup() %>%
+    dplyr::select(-c("source_hash_temp", "row", "dtxsid"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
