@@ -58,6 +58,43 @@ toxval.load.who_jecfa_adi <- function(toxvaldb,source.db, log=FALSE, remove_null
               "toxval_units_comments", "study_duration_qualifier", "specification", "source_version_date")
   res = res[ , !(names(res) %in% cremove)]
 
+  # Get DTXSID and temporarily add to res
+  query = paste0("SELECT DISTINCT chemical_id, dtxsid FROM source_chemical WHERE source='", source, "'")
+  dtxsid_map = runQuery(query, toxval.db)
+  res = res %>%
+    dplyr::left_join(dtxsid_map, by=c("chemical_id")) %>%
+
+    # Select newest record for entries with same name, dtxsid, and toxval_type
+    dplyr::group_by(name, dtxsid, toxval_type) %>%
+    dplyr::filter(year == max(year)) %>%
+    dplyr::ungroup()
+
+  # Dedup based on DTXSID
+  dedup_fields = c("name", "casrn", "chemical_id", "source_hash",
+                   "range_relationship_id", "relationship", "subsource_url")
+  dtxsid_hash_cols = names(res)[!names(res) %in% dedup_fields]
+
+  # Add source_hash_temp column
+  res.temp = source_hash_vectorized(res, dtxsid_hash_cols)
+  res$source_hash_temp = res.temp$source_hash
+
+  # Select one entry per DTXSID group; fail the others
+  res = res %>%
+    dplyr::group_by(source_hash_temp) %>%
+    dplyr::mutate(
+      # Check for row number in DTXSID group
+      row = dplyr::row_number(),
+
+      # Update/append qc_status accordingly (arbitrarily select row 1 to pass)
+      qc_status = dplyr::case_when(
+        row == 1 ~ qc_status,
+        grepl("fail", qc_status) ~ stringr::str_c(qc_status, "; curated to same DTXSID, failed as duplicate"),
+        TRUE ~ "fail; curated to same DTXSID, failed as duplicate"
+      )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-c("source_hash_temp", "row", "dtxsid"))
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
