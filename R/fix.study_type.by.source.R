@@ -29,7 +29,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
-    query_addition = paste0(query_addition, " and a.subsource='", subsource, "'")
+    query_addition = paste0(query_addition, " and subsource='", subsource, "'")
   }
 
   if(!is.null(custom.query.filter)){
@@ -148,7 +148,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                      "AND a.source IN ('", source_string, "') ",
                      "AND b.toxval_type_supercategory != a.study_type ",
                      "AND a.qc_status not like '%fail%' ",
-                     query_addition)
+                     query_addition %>%
+                       gsub("subsource", "a.subsource", .))
       runQuery(query, toxval.db)
 
       # Push study_type updates from manual dictionaries using source_hash
@@ -284,7 +285,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                      "AND a.source IN ('", source_string, "') ",
                      "AND b.toxval_type_supercategory != a.study_type ",
                      "AND a.qc_status not like '%fail%' ",
-                     query_addition)
+                     query_addition %>%
+                       gsub("subsource", "a.subsource", .))
       changed_data = runQuery(query, toxval.db) %>%
         dplyr::mutate(study_type = toxval_type_supercategory) %>%
         return()
