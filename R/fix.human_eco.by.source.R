@@ -23,7 +23,6 @@ fix.human_eco.by.source <- function(toxval.db, source=NULL, subsource=NULL){
   eco_list = c(
     "DOD ERED",
     "DOE LANL ECORISK",
-    "DOE Protective Action Criteria",
     "EnviroTox_v2",
     "EPA OW OPP-ALB",
     "EPA OW NRWQC-ALC"

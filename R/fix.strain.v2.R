@@ -42,7 +42,7 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
                    "from toxval a, species b ",
                    "where a.species_id=b.species_id ",
                    # "and a.human_eco='human health' ",
-                   "and a.source='", source, "'", query_addition)
+                   "and a.source='", source, "'", query_addition %>% gsub("subsource", "a.subsource", .))
     # Pull species-strain entries for source
     t1 = runQuery(query,toxval.db) %>%
       dplyr::mutate(strain_original = strain_original %>%
@@ -101,7 +101,7 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
                              "SET a.strain = b.strain, ",
                              "a.strain_group = b.strain_group ",
                              "WHERE a.source = '", source, "'",
-                             query_addition)
+                             query_addition %>% gsub("subsource", "a.subsource", .))
 
       runUpdate(table="toxval",
                 updateQuery = update_query,

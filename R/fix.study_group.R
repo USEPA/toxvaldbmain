@@ -42,14 +42,23 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
                  "and a.source in ('",source_string,"')",
                  gsub("subsource", "a.subsource", query_addition))
 
-  # Pull data
-  temp = runQuery(query,toxval.db)
-  # Hash to identify duplicate groups
-  temp.temp = temp %>%
-    tidyr::unite(hash_col, dplyr::all_of(sort(names(.)[!names(.) %in% c("toxval_id")])), sep="") %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(source_hash = paste0("ToxValhc_", digest::digest(hash_col, serialize = FALSE))) %>%
-    dplyr::ungroup()
+    # Pull data
+    temp = runQuery(query,toxval.db)
+
+    # Set non-hashing columns to ignore for study_group hashing
+    non_hashing_cols = c("toxval_id")
+
+    # Do not group by record_source fields for EFSA and HPVIS
+    if(source %in% c("EFSA", "HPVIS")){
+      non_hashing_cols = c("toxval_id", "long_ref", "title", "year")
+    }
+
+    # Hash to identify duplicate groups
+    temp.temp = temp %>%
+      tidyr::unite(hash_col, dplyr::all_of(sort(names(.)[!names(.) %in% non_hashing_cols])), sep="") %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(source_hash = paste0("ToxValhc_", digest::digest(hash_col, serialize = FALSE))) %>%
+      dplyr::ungroup()
 
   temp_sg = temp %>%
     dplyr::mutate(source_hash = temp.temp$source_hash) %>%
@@ -130,7 +139,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
   if(report.only){
     # Compare to what's currently in ToxVal
     stg = runQuery(paste0("SELECT toxval_id, study_group as study_group_toxval FROM toxval WHERE toxval_id IN (",
-                   toString(report.out$toxval_id), ")"),
+                          toString(report.out$toxval_id), ")"),
                    toxval.db)
     report.out %>%
       dplyr::left_join(stg,

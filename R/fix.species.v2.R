@@ -118,8 +118,61 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
     }
   }
   # Handle edge cases
-  runQuery("update toxval set species_id=4510 where species_id=23410",toxval.db)
-  runQuery("update toxval set species_id=1000000 where species_id=-1",toxval.db)
+  runQuery(paste0("update toxval set species_id=4510 where species_id=23410 AND source IN ('", source_string, "')"),
+                  toxval.db)
+  runQuery(paste0("update toxval set species_id=1000000 where species_id=-1 AND source IN ('", source_string, "')"),
+           toxval.db)
+
+  # Get species_id for 'Human'
+  human_id = runQuery("SELECT DISTINCT species_id FROM species WHERE common_name='Human'", toxval.db)[[1]]
+
+  # Handle ATSDR MRLs special human MRL case
+  if("ATSDR MRLs" %in% slist){
+    query = paste0("UPDATE toxval SET species_id = ", human_id, " ",
+                   "WHERE source = 'ATSDR MRLs' AND toxval_type = 'MRL'")
+    runQuery(query, toxval.db)
+  }
+
+  # Handle Health Canada special human case
+  if("Health Canada" %in% slist){
+    query = paste0("UPDATE toxval SET species_id = ", human_id, " ",
+                   "WHERE source='Health Canada' ",
+                   "AND toxval_type IN ",
+                   "('TDI', 'ADI', 'cancer slope factor', 'cancer unit risk',",
+                   " 'UL', 'tolerable concentration in air')")
+    runQuery(query, toxval.db)
+  }
+
+  # Set species_id to human for specified sources
+  human_source_list = c("EPA AEGL", "EPA OW NPDWR", "EPA OW NRWQC-HHC", "FDA CEDI",
+                        "Mass. Drinking Water Standards", "NIOSH", "OSHA Air contaminants",
+                        "OW Drinking Water Standards", "Pennsylvania DEP ToxValues", "RSL", "USGS HBSL",
+                       "EPA OPP", "EPA OW NPDWR")
+  query = paste0("UPDATE toxval SET species_id=", human_id, " ",
+                 "WHERE source IN ('", source_string, "') ",
+                 "AND source IN ('", paste0(human_source_list, collapse="', '"), "')")
+  runQuery(query, toxval.db)
+
+
+  # Set species_id to human for specified toxval_type
+  human_tt_list = c("ADI", "air contaminant limit", "cancer slope factor", "cancer unit risk",
+                    "carcinogenic HHBP", "CCC", "CMC", "DWEL", "HBSL", "HHBP", "HHBP (Organism)",
+                    "HHBP (Water+Organism)", "IDLH", "Level of Distinct Odor Awareness (LOA)", "MCL",
+                    "MCL-based SSL, groundwater", "MCLG", "MMCL", "MRDL", "MRL", "ORSG", "PMTDI",
+                    "PTWI", "risk-based SSL, groundwater", "screening level (industrial air)",
+                    "screening level (industrial soil)", "screening level (MCL)", "screening level (residential air)",
+                    "screening level (residential soil)", "screening level (tap water)", "SMCL", "TDI")
+  query = paste0("UPDATE toxval SET species_id=", human_id, " ",
+                 "WHERE source IN ('", source_string, "') ",
+                 "AND (toxval_type IN ('", paste0(human_tt_list, collapse="', '"), "') ",
+                 "OR toxval_type_original IN ('", paste0(human_tt_list, collapse="', '"), "'))")
+  runQuery(query, toxval.db)
+  # Handle special AEGL case
+  query = paste0("UPDATE toxval SET species_id=", human_id, " ",
+                 "WHERE source IN ('", source_string, "') ",
+                 "AND (toxval_type LIKE 'AEGL%' OR toxval_type_original LIKE 'AEGL%')")
+  runQuery(query, toxval.db)
+
   # Handle cases where two entries with the same species_original have different species_id values
   fix.species.duplicates(toxval.db, source, subsource)
 }

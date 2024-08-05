@@ -59,6 +59,9 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
 
     # Run through different Failure cases
     # Only append if not already present as a failure flag
+    ############################################################################
+    ### toxval_numeric cases
+    ############################################################################
     runQuery(paste0("UPDATE toxval SET qc_status = CASE ",
                     "WHEN qc_status like '%toxval_numeric<0%' THEN qc_status ",
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_numeric<0') ",
@@ -72,7 +75,9 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "ELSE 'fail:toxval_numeric is null'",
                     "END ",
                     "WHERE toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
-
+    ############################################################################
+    ### toxval_type cases
+    ############################################################################
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
                     "WHEN qc_status like '%toxval_type not specified%' THEN qc_status ",
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_type not specified') ",
@@ -81,12 +86,50 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "WHERE toxval_type = '-' and source = '",source,"'",query_addition) ,toxval.db)
 
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%Do not have the relative chemical identifier in the record for toxval_type%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Do not have the relative chemical identifier in the record for toxval_type') ",
+                    "ELSE 'fail:Do not have the relative chemical identifier in the record for toxval_type'",
+                    "END ",
+                    "WHERE (toxval_type_original in ('RPF', 'TEF') OR toxval_type in ('RPF', 'TEF')) and source = '",
+                    source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%toxval_type out of scope for ToxValDB%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_type out of scope for ToxValDB') ",
+                    "ELSE 'fail:toxval_type out of scope for ToxValDB'",
+                    "END ",
+                    "WHERE (toxval_type_original in ('soil saturation limit') OR toxval_type in ('soil saturation limit')) and source = '",
+                    source,"'",query_addition) ,toxval.db)
+
+    ############################################################################
+    ### toxval_units cases
+    ############################################################################
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%toxval_units out of scope for ToxValDB%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_units out of scope for ToxValDB') ",
+                    "ELSE 'fail:toxval_units out of scope for ToxValDB'",
+                    "END ",
+                    "WHERE (toxval_units_original in ('gamma') OR toxval_units in ('gamma')) and source = '",
+                    source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%Ambiguous toxval_units%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Ambiguous toxval_units') ",
+                    "ELSE 'fail:Ambiguous toxval_units'",
+                    "END ",
+                    "WHERE (toxval_units_original in ('g/kg', 'ug/mg/kg') OR toxval_units in ('g/kg', 'ug/mg/kg')) and source = '",
+                    source,"'",query_addition) ,toxval.db)
+
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
                     "WHEN qc_status like '%toxval_units not specified%' THEN qc_status ",
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_units not specified') ",
                     "ELSE 'fail:toxval_units not specified'",
                     "END ",
                     "WHERE toxval_units = '-' and source = '",source,"'",query_addition) ,toxval.db)
 
+    ############################################################################
+    ### dtxsid cases
+    ############################################################################
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
                     "WHEN qc_status like '%dtxsid not specified%' THEN qc_status ",
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; dtxsid not specified') ",
@@ -94,6 +137,9 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "END ",
                     "WHERE dtxsid = 'NODTXSID' and source = '",source,"'",query_addition) ,toxval.db)
 
+    ############################################################################
+    ### human_eco cases
+    ############################################################################
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
                     "WHEN qc_status like '%human_eco not specified%' THEN qc_status ",
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; human_eco not specified') ",
@@ -102,14 +148,25 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "WHERE human_eco in ('-','not specified') and source = '",source,"'",query_addition) ,toxval.db)
 
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
-                    "WHEN qc_status like '%risk_assessment_class not specified%' THEN qc_status ",
-                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; risk_assessment_class not specified') ",
-                    "ELSE 'fail:risk_assessment_class not specified'",
+                    "WHEN qc_status like '%Eco data out of scope for ToxValDB%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Eco data out of scope for ToxValDB') ",
+                    "ELSE 'fail:Eco data out of scope for ToxValDB'",
                     "END ",
-                    "WHERE source = '", source, "' AND",
-                    " (risk_assessment_class = 'not specified' OR",
-                    " (risk_assessment_class = '-' AND human_eco != 'eco'))",
-                    query_addition), toxval.db)
+                    "WHERE human_eco = 'eco' and source = '",source,"'",query_addition) ,toxval.db)
+
+    ############################################################################
+    ### source specific cases
+    ############################################################################
+    if(source == "DOE Wildlife Benchmarks"){
+      runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                      "WHEN qc_status like '%Not an experimental record%' THEN qc_status ",
+                      "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Not an experimental record') ",
+                      "ELSE 'fail:Not an experimental record'",
+                      "END ",
+                      "WHERE source = 'DOE Wildlife Benchmarks' AND ",
+                      "experimental_record in ('not experimental', 'no', 'No')",
+                      query_addition), toxval.db)
+    }
 
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric<0' where toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric is null' where toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)

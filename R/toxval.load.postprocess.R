@@ -34,7 +34,16 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix deduping hierarchy by source\n")
   #####################################################################
-  fix.dedup.hierarchy.by.source(toxval.db, source, subsource)
+  # Source specific criteria
+  if(source %in% c("USGS HBSL", "EPA OPP")){
+    criteria = c("dtxsid", "toxval_type")
+  } else {
+    criteria = c("dtxsid")
+  }
+
+  fix.dedup.hierarchy.by.source(toxval.db=toxval.db,
+                                source=source, subsource=subsource,
+                                criteria=criteria)
 
   #####################################################################
   cat("set redundant source_url to '-'\n")
@@ -79,6 +88,14 @@ toxval.load.postprocess <- function(toxval.db,
   cat("fix derived toxval_type by source\n")
   #####################################################################
   fix.derived.toxval_type.by.source(toxval.db, source=source, subsource=subsource)
+
+  #####################################################################
+  cat("fix escaped quotes in toxval_type\n")
+  #####################################################################
+  runQuery(paste0("update toxval SET toxval_type"," = ", "REPLACE",
+                  "( toxval_type",  ",\'\"\',", " \"'\" ) WHERE toxval_type",
+                  " LIKE \'%\"%\' and source = '",source,"'",query_addition),
+           toxval.db)
 
   #####################################################################
   cat("check that the dictionaries are loaded\n")
@@ -134,15 +151,35 @@ toxval.load.postprocess <- function(toxval.db,
 
   #####################################################################
   cat("fix all.parameters (exposure_method, exposure_route, sex,strain,
-    study_duration_class, study_duration_units, study_type,toxval_type,
+    study_duration_class, study_duration_units, study_type, toxval_type,
     exposure_form, media, toxval_subtype) by source\n")
   #####################################################################
   fix.all.param.by.source(toxval.db,source,subsource,fill.toxval_fix=TRUE)
 
   #####################################################################
-  cat("special case for study_duration_value\n")
+  cat("special case for NULL study_duration_value and units\n")
   #####################################################################
-  runQuery(paste0("update toxval set study_duration_value=-999 where study_duration_value is NULL and source='",source,"'",query_addition),toxval.db)
+  runQuery(paste0("update toxval set study_duration_value=-999 ",
+                  "where (study_duration_value is NULL OR study_duration_units='-') ",
+                  "and source='",source,"'",query_addition),
+           toxval.db)
+  runQuery(paste0("update toxval set study_duration_units='-' ",
+                  "where study_duration_value=-999 ",
+                  "and source='",source,"'",query_addition),
+           toxval.db)
+
+  #####################################################################
+  cat("set qc_status='fail' for entries without toxval_type_supercategory\n")
+  #####################################################################
+  query = paste0("UPDATE toxval a LEFT JOIN toxval_type_dictionary b ON a.toxval_type=b.toxval_type ",
+                 "SET a.qc_status = CASE ",
+                 "WHEN a.qc_status like '%Out of scope, no toxval_type supercategory assignment%' THEN a.qc_status ",
+                 "WHEN a.qc_status like '%fail%' THEN CONCAT(a.qc_status, '; Out of scope, no toxval_type supercategory assignment') ",
+                 "ELSE 'fail:Out of scope, no toxval_type supercategory assignment'",
+                 "END ",
+                 "WHERE (b.toxval_type_supercategory IS NULL OR b.toxval_type_supercategory IN ('-', '')) ",
+                 "AND a.source='", source, "'", query_addition %>% gsub("subsource", "a.subsource", .))
+  runQuery(query, toxval.db)
 
   #####################################################################
   cat("add the manual study_type fixes\n")
@@ -154,6 +191,18 @@ toxval.load.postprocess <- function(toxval.db,
   cat("fix units by source\n")
   #####################################################################
   fix.units.by.source(toxval.db, source,subsource,do.convert.units)
+
+  #####################################################################
+  cat("set exposure_route='oral' for select toxval_type and mg/kg-day\n")
+  #####################################################################
+  toxval_type_list = c("BMD", 'NEL', 'LEL', 'LOEL', 'NOEL', 'NOAEL', 'LOAEL')
+  query = paste0("UPDATE toxval ",
+                 "SET exposure_route = 'oral' ",
+                 "WHERE (exposure_route = '-' OR exposure_route_original = '-') ",
+                 "AND toxval_units = 'mg/kg-day' ",
+                 "AND (", paste0(paste0("toxval_type LIKE '", toxval_type_list, "%'"), collapse = " OR "), ") ",
+                 "AND source = '",source,"'",query_addition)
+  runQuery(query, toxval.db)
 
   #####################################################################
   cat("fix study group by source\n")

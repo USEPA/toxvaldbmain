@@ -31,12 +31,15 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
     writexl::write_xlsx(occurrences, file.path(outDir, out_file))
   }
 
+  db_server_list = list(in.toxval.db, compare.toxval.db)
+  names(db_server_list) = c(in.toxval.host, compare.toxval.host)
+
   # Loop through input databases
-  for(toxval.db in c(in.toxval.db, compare.toxval.db)){
+  for(toxval.db in names(db_server_list)){
 
     # Set server host
-    if(toxval.db == in.toxval.db) Sys.setenv(db_server = in.toxval.host)
-    if(toxval.db == compare.toxval.db) Sys.setenv(db_server = compare.toxval.host)
+    Sys.setenv(db_server = toxval.db)
+    toxval.db = db_server_list[[toxval.db]]
 
     message("Summarizing '", toxval.db, "' from ", Sys.getenv("db_server"))
 

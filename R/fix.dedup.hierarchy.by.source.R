@@ -34,7 +34,10 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       "HAWC PFAS 150" = "PFAS 150 SEM v2",
       "California DPH" = "Cal OEHHA",
       "EnviroTox_v2" = "ECOTOX",
-      "OW Drinking Water Standards" = "EPA OW NPDWR"
+      "OW Drinking Water Standards" = "EPA OW NPDWR",
+      "USGS HBSL" = "EPA OPP",
+      "TEST" = "ChemIDplus",
+      "RSL" = "HEAST"
     )
   } else {
     # Use input priority_list if available
@@ -55,6 +58,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   report.out = data.frame()
 
   for(source in slist) {
+
     if(source %in% already_finished) {
       cat("Already handled hierarchical deduping relevant to", source, "\n")
       next
@@ -97,16 +101,11 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
                               toxval.db)
 
       # Identify entries present in both sets of data
-      intersection = dplyr::inner_join(low_entries %>%
-                                         dplyr::select(-toxval_id) %>%
-                                         dplyr::distinct(),
-                                       high_entries %>%
-                                         dplyr::distinct(),
-                                       by=criteria) %>%
-        dplyr::pull(dtxsid)
-
-      source_ids_to_fail = low_entries %>%
-        dplyr::filter(dtxsid %in% intersection) %>%
+      source_ids_to_fail = dplyr::inner_join(low_entries %>%
+                                               dplyr::distinct(),
+                                             high_entries %>%
+                                               dplyr::distinct(),
+                                             by=criteria) %>%
         dplyr::select(toxval_id)
     } else {
       high_priority = as.character(NA)
@@ -169,10 +168,14 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
 
       if(report.only) {
         all_failures = source_ids_to_fail %>%
-          dplyr::mutate(add_qc_status = stringr::str_c("Duplicate of ", !!high_priority, " chemical entry")) %>%
-          dplyr::bind_rows(subsource_ids_to_fail) %>%
-          dplyr::mutate(add_qc_status = tidyr::replace_na(add_qc_status,
-                                                          paste0("Subsource in ", !!no_apostrophe)))
+          dplyr::mutate(add_qc_status = stringr::str_c("Duplicate of ", !!high_priority, " chemical entry"))
+
+        if(nrow(subsource_ids_to_fail)){
+          all_failures = all_failures %>%
+            dplyr::bind_rows(subsource_ids_to_fail) %>%
+            dplyr::mutate(add_qc_status = tidyr::replace_na(add_qc_status,
+                                                            paste0("Subsource in ", !!no_apostrophe)))
+        }
 
         all_failures_string = all_failures %>%
           dplyr::pull(toxval_id) %>%

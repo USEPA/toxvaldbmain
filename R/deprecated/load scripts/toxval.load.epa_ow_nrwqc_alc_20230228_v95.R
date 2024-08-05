@@ -1,14 +1,14 @@
 #--------------------------------------------------------------------------------------
 #
-#' Load the penn_dep_mcls data  from toxval_source to toxval
+#' Loading EPA OW NRWQC-ALC to toxval from toxval_source
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.penn_dep_mcls <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "Pennsylvania DEP MCLs"
-  source_table = "source_penn_dep_mcls"
+toxval.load.epa_ow_nrwqc_alc <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "EPA OW NRWQC-ALC"
+  source_table = "source_epa_ow_nrwqc_alc"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -51,16 +51,17 @@ toxval.load.penn_dep_mcls <- function(toxval.db,source.db, log=FALSE, remove_nul
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
+  if(!"subsource_url" %in% names(res)) res$subsource_url = "-"
 
-  # Set redundant subsource_url values to "-"
-  res = res %>%
+  res <- res %>%
+    dplyr::rename(year = publication_year) %>%
+    # Set redundant subsource_url values to "-"
     dplyr::mutate(
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",
         TRUE ~ subsource_url
       )
     )
-
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -98,6 +99,7 @@ toxval.load.penn_dep_mcls <- function(toxval.db,source.db, log=FALSE, remove_nul
   res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -140,7 +142,6 @@ toxval.load.penn_dep_mcls <- function(toxval.db,source.db, log=FALSE, remove_nul
   refs$record_source_type = "-"
   refs$record_source_note = "-"
   refs$record_source_level = "-"
-  refs$url = res$source_url
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################

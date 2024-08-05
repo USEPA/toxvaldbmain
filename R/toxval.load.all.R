@@ -51,9 +51,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.copper(toxval.db, source.db, log)
     toxval.load.cosmos(toxval.db, source.db, log)
     toxval.load.dod(toxval.db, source.db, log)
-    toxval.load.dod.ered(toxval.db, source.db, log)
     toxval.load.doe.benchmarks(toxval.db, source.db, log)
-    toxval.load.doe.lanl.ecorisk(toxval.db, source.db, log)
     toxval.load.doe.pac(toxval.db, source.db, log)
     toxval.load.echa_iuclid(toxval.db, source.db, log)
     toxval.load.ecotox(toxval.db, source.db, log)
@@ -61,13 +59,10 @@ toxval.load.all <- function(toxval.db,
     # Special case for EFSA that needs postprocessing twice
     # due to study_type and human_eco reassignment
     toxval.load.postprocess(toxval.db, source.db, "EFSA")
-    toxval.load.envirotox(toxval.db, source.db, log)
     toxval.load.epa_aegl(toxval.db, source.db, log)
     toxval.load.epa_hhtv(toxval.db, source.db, log)
     toxval.load.epa_ow_npdwr(toxval.db, source.db, log)
-    toxval.load.epa_ow_nrwqc_alc(toxval.db, source.db, log)
     toxval.load.epa_ow_nrwqc_hhc(toxval.db, source.db, log)
-    toxval.load.epa_ow_opp_alb(toxval.db, source.db, log)
     toxval.load.gestis.dnel(toxval.db, source.db, log)
     toxval.load.hawc(toxval.db, source.db, log)
     toxval.load.hawc_pfas_150(toxval.db, source.db, log)
@@ -84,7 +79,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.osha_air_limits(toxval.db, source.db, log)
     toxval.load.ow_dwsha(toxval.db, source.db, log)
     toxval.load.penn(toxval.db, source.db, log)
-    toxval.load.penn_dep_mcls(toxval.db, source.db, log)
+    toxval.load.penn_dep_mscs(toxval.db, source.db, log)
     toxval.load.pfas_150_sem_v2(toxval.db, source.db, log)
     toxval.load.pprtv.cphea(toxval.db, source.db, log)
     toxval.load.rsl(toxval.db, source.db, log)
@@ -93,7 +88,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.usgs_hbsl(toxval.db, source.db, log)
     toxval.load.ut_hb(toxval.db, source.db, log)
     toxval.load.who_ipcs(toxval.db, source.db, log)
-    oxval.load.who_jecfa_adi(toxval.db, source.db, log)
+    toxval.load.who_jecfa_adi(toxval.db, source.db, log)
     toxval.load.who_jecfa_tox_studies(toxval.db, source.db, log)
 
   }

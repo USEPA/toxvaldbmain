@@ -1,14 +1,14 @@
 #--------------------------------------------------------------------------------------
 #
-#' Loading EPA OW NRWQC-ALC to toxval from toxval_source
+#' Load the penn_dep_mscs data  from toxval_source to toxval
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.epa_ow_nrwqc_alc <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "EPA OW NRWQC-ALC"
-  source_table = "source_epa_ow_nrwqc_alc"
+toxval.load.penn_dep_mscs <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "Pennsylvania DEP MSCs"
+  source_table = "source_penn_dep_mscs"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -51,17 +51,16 @@ toxval.load.epa_ow_nrwqc_alc <- function(toxval.db,source.db, log=FALSE, remove_
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("table_title","priority_pollutant","notes","","url")
-  res = res[ , !(names(res) %in% cremove)]
-  res <- res %>%
-    dplyr::rename(year = publication_year) %>%
-    # Set redundant subsource_url values to "-"
+
+  # Set redundant subsource_url values to "-"
+  res = res %>%
     dplyr::mutate(
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",
         TRUE ~ subsource_url
       )
     )
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -71,8 +70,21 @@ toxval.load.epa_ow_nrwqc_alc <- function(toxval.db,source.db, log=FALSE, remove_
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+
+  # Check if any non-toxval column still remaining in nlist
+  nlist = names(res)
+  nlist = nlist[!nlist %in% c("casrn","name",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
@@ -80,17 +92,12 @@ toxval.load.epa_ow_nrwqc_alc <- function(toxval.db,source.db, log=FALSE, remove_
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
   res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
@@ -133,6 +140,7 @@ toxval.load.epa_ow_nrwqc_alc <- function(toxval.db,source.db, log=FALSE, remove_
   refs$record_source_type = "-"
   refs$record_source_note = "-"
   refs$record_source_level = "-"
+  refs$url = res$source_url
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################

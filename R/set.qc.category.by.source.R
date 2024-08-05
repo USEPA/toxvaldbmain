@@ -176,6 +176,26 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
         )
     }
 
+    # Set appropriate QC Category for summary entries in IRIS/PPRTV (CPHEA)
+    if(src %in% c("IRIS", "PPRTV (CPHEA)")) {
+      # Get source document types
+      query = paste0("SELECT DISTINCT source_hash, subsource FROM toxval WHERE source='",src,"'")
+      document_types = runQuery(query, toxval.db)
+
+      # Assign qc_category based on document_types
+      in_toxval = in_toxval %>%
+        dplyr::left_join(document_types, by=c("source_hash")) %>%
+        dplyr::mutate(
+          qc_category_new = dplyr::case_when(
+            subsource %in% c("PPRTV Summary", "IRIS Summary") ~
+              paste0("Manually extracted from unstructured data source; ",
+                     "Source overall passed QC, and this record was manually checked"),
+            TRUE ~ qc_category_new
+          )
+        ) %>%
+        dplyr::select(-subsource)
+    }
+
 
     #--------------------------------------------------------------------------------------
     # TODO: Incorporate logic for adding additional qc_categories

@@ -77,8 +77,6 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
   runQuery(paste0("update toxval SET media"," = ", "REPLACE", "( media",  ",\'\"\',", " \"'\" ) WHERE media"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
   cat("   study_type\n")
   runQuery(paste0("update toxval SET study_type"," = ", "REPLACE", "( study_type",  ",\'\"\',", " \"'\" ) WHERE study_type"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
-  cat("   toxval_type\n")
-  runQuery(paste0("update toxval SET toxval_type"," = ", "REPLACE", "( toxval_type",  ",\'\"\',", " \"'\" ) WHERE toxval_type"," LIKE \'%\"%\' and source in ('",source_string,"')",query_addition),toxval.db)
   cat(" iterate through the full_dict\n")
   flist = unique(full_dict$field)
   for(field in flist) {

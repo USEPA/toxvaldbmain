@@ -86,4 +86,9 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
   # Bulk assign based on study_type
   runQuery("UPDATE toxval SET experimental_record = 'not experimental' WHERE study_type in ('epidemiologic', 'occupational', 'toxicity value')",
            toxval.db)
+
+  # Bulk assignment based on source
+  runQuery(paste0("UPDATE toxval SET experimental_record='experimental' ",
+                  "WHERE source IN ('HAWC Project', 'HAWC PFAS 150', 'HAWC PFAS 430')"),
+           toxval.db)
 }
