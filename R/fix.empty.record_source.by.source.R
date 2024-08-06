@@ -19,13 +19,10 @@ fix.empty.record_source.by.source <- function(toxval.db, source=NULL){
   # For each field, set empty values to "-"
   for(col in cols) {
     print(col)
-    query <- paste0("update record_source set ",col,"='-' where ",col,"='' and source in ('",source_string,"')")
+    query = paste0("UPDATE record_source SET ", col, "='-' ",
+                   "WHERE (", col, " IN ('', ' ', '  ') OR ", col, " IS NULL) ",
+                   "AND source IN ('", source_string, "')",
+                   query_addition)
     runQuery(query,toxval.db)
-    query <- paste0("update record_source set ",col,"='-' where ",col," is null and source in ('",source_string,"')")
-    runQuery(query,toxval.db)
-    query <- paste0("update record_source set ",col,"='-' where ",col,"=' ' and source in ('",source_string,"')")
-    runQuery(query,toxval.db)
-    query <- paste0("update record_source set ",col,"='-' where ",col,"='  ' and source in ('",source_string,"')")
-    runQuery(query,toxval.db)
- }
+  }
 }

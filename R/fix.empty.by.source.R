@@ -27,13 +27,10 @@ fix.empty.by.source <- function(toxval.db,source=NULL,subsource=NULL){
   # For each field, set empty values to "-"
   for(col in cols) {
     print(col)
-    query <- paste0("update toxval set ",col,"='-' where ",col,"='' and source in ('",source_string,"')",query_addition)
-    runQuery(query,toxval.db)
-    query <- paste0("update toxval set ",col,"='-' where ",col," is null and source in ('",source_string,"')",query_addition)
-    runQuery(query,toxval.db)
-    query <- paste0("update toxval set ",col,"='-' where ",col,"=' ' and source in ('",source_string,"')",query_addition)
-    runQuery(query,toxval.db)
-    query <- paste0("update toxval set ",col,"='-' where ",col,"='  ' and source in ('",source_string,"')",query_addition)
+    query = paste0("UPDATE toxval SET ", col, "='-' ",
+                   "WHERE (", col, " IN ('', ' ', '  ') OR ", col, " IS NULL) ",
+                   "AND source IN ('", source_string, "')",
+                   query_addition)
     runQuery(query,toxval.db)
   }
 }

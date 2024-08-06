@@ -33,21 +33,10 @@ check.toxval_type.route.units <- function(toxval.db,
                          source, "_", subsource, "_", Sys.Date(), ".xlsx")
   }
 
-  # Track all type/route/units combinations identified
-  all_combinations = tibble::tibble(
-    source = character(),
-    study_type = character(),
-    exposure_route = character(),
-    toxval_type = character(),
-    toxval_units = character(),
-  )
-
   # Get all type/route/units combinations for current source
   curr_combo_query = paste0("SELECT DISTINCT source, study_type, exposure_route, toxval_type, toxval_units ",
                             "FROM toxval WHERE source in ('",source_string,"')", query_addition)
   all_combinations = runQuery(curr_combo_query, toxval.db) %>%
-    # Append current source data to cumulative DF
-    dplyr::bind_rows(all_combinations) %>%
     dplyr::distinct()
 
   # Read in dictionary containing expected combinations, if specified

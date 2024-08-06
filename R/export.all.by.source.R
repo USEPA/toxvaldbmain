@@ -37,7 +37,7 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
-    query_addition = paste0(" and subsource='", subsource, "'")
+    query_addition = paste0(" and b.subsource='", subsource, "'")
   }
 
   query = paste0("SELECT
@@ -90,10 +90,8 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
                   INNER JOIN toxval_type_dictionary e on b.toxval_type=e.toxval_type
                   INNER JOIN record_source f on b.toxval_id=f.toxval_id
                   WHERE
-                  b.source IN ('",source_string,"')")
-  if(!is.null(subsource)) {
-    query = paste0(query, " and b.subsource='",subsource,"'")
-  }
+                  b.source IN ('",source_string,"')",
+                 query_addition)
 
   mat = runQuery(query,toxval.db,T,F)
   mat[is.na(mat$casrn),"casrn"] = mat[is.na(mat$casrn),"cleaned_casrn"]
