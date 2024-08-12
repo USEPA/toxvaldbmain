@@ -145,10 +145,14 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     res = res %>%
       dplyr::rename(subsource_url = source_url)
 
-    # Rename glp field to be pulled into record_source
+    # Rename glp/guideline field to be pulled into record_source
     if("record_source_glp" %in% names(res)) {
       res = res %>%
         dplyr::rename(glp = record_source_glp)
+    }
+    if("record_source_guideline" %in% names(res)) {
+      res = res %>%
+        dplyr::rename(guideline = record_source_guideline)
     }
 
     #####################################################################
