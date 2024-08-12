@@ -50,7 +50,7 @@ toxval.load.ut_hb <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
                                        "toxval_numeric",
                                        "toxval_numeric_qualifier",
                                        "toxval_units",
-                                       "critical_effect",
+                                       "response",
                                        "species",
                                        "exposure_route",
                                        "study_duration_value",
@@ -64,7 +64,8 @@ toxval.load.ut_hb <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
       url = "https://ntp.niehs.nih.gov/go/40658",
       exposure_method = "-",
       strain = "-"
-    )
+    ) %>%
+    dplyr::rename(critical_effect = response)
 
   # Read in Hershberger data
   file = paste0(toxval.config()$datapath,"ut_hb/HB for ToxValDB.xlsx")
