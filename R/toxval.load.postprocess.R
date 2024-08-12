@@ -188,6 +188,14 @@ toxval.load.postprocess <- function(toxval.db,
                            subsource=subsource)
 
   #####################################################################
+  cat("set blank study_duration_class for developmental study_type\n")
+  #####################################################################
+  query = paste0("UPDATE toxval SET study_duration_class='-' ",
+                 "WHERE source='", source, "' AND study_type='developmental'",
+                 query_addition)
+  runQuery(query, toxval.db)
+
+  #####################################################################
   cat("fix units by source\n")
   #####################################################################
   fix.units.by.source(toxval.db, source,subsource,do.convert.units)
