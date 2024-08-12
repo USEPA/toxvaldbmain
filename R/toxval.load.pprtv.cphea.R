@@ -70,7 +70,18 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
       human_eco = "human health",
 
       # Set subsource as document_type
-      subsource = document_type
+      subsource = document_type,
+
+      # Append experimental species information to critical_effect for derived toxval_type
+      critical_effect = dplyr::case_when(
+        !grepl("\\bRfC\\b|\\bRfD\\b", toxval_type) |
+          critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
+        TRUE ~ stringr::str_c(critical_effect, " in ", generation, " ", sex, " ", species, "s") %>%
+          gsub(" \\- |\\-s\\b", " ", .) %>%
+          gsub("in \\- ", "in ", .) %>%
+          gsub("mouses", "mice", .) %>%
+          stringr::str_squish()
+      )
     ) %>%
     # Set collapsed subsource values as "PPRTV Summary"
     dplyr::mutate(subsource = "PPRTV Summary")

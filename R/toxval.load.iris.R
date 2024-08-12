@@ -104,7 +104,20 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
       gsub(".+\\-", "", .) %>%
       tidyr::replace_na("-"),
     study_duration_units = study_duration_units %>%
-      tidyr::replace_na("-")
+      tidyr::replace_na("-"),
+
+    # Append experimental species information to critical_effect for derived toxval_type
+    critical_effect = dplyr::case_when(
+      !grepl("\\bRfC\\b|\\bRfD\\b", toxval_type) |
+        critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
+      TRUE ~ stringr::str_c(critical_effect %>%
+                              gsub("\\bin\\b.+", "", .),
+                            " in ", generation, " ", sex, " ", species, "s") %>%
+        gsub(" \\- |\\-s\\b", " ", .) %>%
+        gsub("in \\- ", "in ", .) %>%
+        gsub("mouses", "mice", .) %>%
+        stringr::str_squish()
+    )
   )
 
   #####################################################################
