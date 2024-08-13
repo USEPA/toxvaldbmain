@@ -52,12 +52,12 @@ toxval.load.hess <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Select higher value in ranged study_duration
   res = res %>%
     dplyr::mutate(
-      study_duration_value = study_duration_value %>%
-        gsub(".*\\-", "", .) %>%
-        as.numeric(),
+      # Handle ranged study_duration values - maintain original range, set database values to NA
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value),
+
       # Set redundant subsource_url values to "-"
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",

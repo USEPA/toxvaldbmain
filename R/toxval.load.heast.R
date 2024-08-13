@@ -58,12 +58,10 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
         TRUE ~ study_duration_units
       ),
 
-      # Select higher value in ranged study_duration
-      study_duration_value = study_duration_value %>%
-        gsub(".+\\-", "", .) %>%
-        tidyr::replace_na("-"),
-      study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-"),
+      # Handle ranged study_duration values - maintain original range, set database values to NA
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value),
+
       # Set redundant subsource_url values to "-"
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",
