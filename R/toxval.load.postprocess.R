@@ -259,7 +259,7 @@ toxval.load.postprocess <- function(toxval.db,
   if(nrow(not_specified)) {
     out_file = paste0("Repo/dictionary/missing/missing_species_", source, "_", subsource, ".xlsx") %>%
       gsub("_\\.xlsx", ".xlsx", .)
-    cat(nrow(not_specified), " entries have 'Not Specified' species")
+    cat(nrow(not_specified), " entries have 'Not Specified' species\n")
     writexl::write_xlsx(not_specified, paste0("Repo/dictionary/missing/missing"))
   }
 
