@@ -51,9 +51,12 @@ toxval.load.atsdr.pfas.2021 <- function(toxval.db, source.db, log=FALSE, remove_
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Select high value for study_duration_value
   res = res %>% dplyr::mutate(
-    study_duration_value = gsub(".+\\-", "", study_duration_value)
+    # Handle ranged study_duration values - maintain original range, set database values to NA
+    study_duration_value_original = study_duration_value,
+    study_duration_value = as.numeric(study_duration_value),
+    study_duration_units = study_duration_units %>%
+      gsub(", ?", "-", .)
   )
 
   #####################################################################

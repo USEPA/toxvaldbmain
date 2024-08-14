@@ -53,12 +53,11 @@ toxval.load.caloehha <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   #####################################################################
   res = res %>%
     dplyr::mutate(
-      # Select higher value in ranged study_duration
-      study_duration_value = study_duration_value %>%
-        gsub(".+\\-", "", .) %>%
-        tidyr::replace_na("-"),
+      # Handle ranged study_duration values - maintain original range, set database values to NA
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-"),
+        gsub(", ?", "-", .),
 
       # Translate positive key_finding to "key"
       key_finding = dplyr::case_when(
