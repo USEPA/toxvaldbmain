@@ -62,6 +62,8 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
     # Handle ranged study_duration values - maintain original range, set database values to NA
     study_duration_value_original = study_duration_value,
     study_duration_value = as.numeric(study_duration_value),
+    study_duration_units = study_duration_units %>%
+      gsub(", ?", "-", .),
 
     # Add subsource_url field
     subsource_url = endpoint_url

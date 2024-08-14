@@ -61,6 +61,8 @@ toxval.load.heast <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsi
       # Handle ranged study_duration values - maintain original range, set database values to NA
       study_duration_value_original = study_duration_value,
       study_duration_value = as.numeric(study_duration_value),
+      study_duration_units = study_duration_units %>%
+        gsub(", ?", "-", .),
 
       # Set redundant subsource_url values to "-"
       subsource_url = dplyr::case_when(
