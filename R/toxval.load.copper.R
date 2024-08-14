@@ -59,7 +59,9 @@ toxval.load.copper <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
         subsource_url == source_url ~ "-",
         TRUE ~ subsource_url
       )
-    )
+    ) %>%
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("chemical_id", "year", "long_ref"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

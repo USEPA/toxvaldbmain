@@ -65,7 +65,9 @@ toxval.load.healthcanada <- function(toxval.db,source.db, log=FALSE, remove_null
       key_finding == "yes" ~ "key",
       TRUE ~ key_finding
     )
-  )
+  ) %>%
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("chemical_id", "long_ref"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

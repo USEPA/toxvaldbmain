@@ -7,6 +7,9 @@
 fix.associated.pod.critical_effect <- function(res, map_fields){
   # Get study-species/sex/generation mapping to handle associated PODs
   study_species_map = res %>%
+    # Separate initial sex/species to better handle duplicate mappings
+    tidyr::separate_rows(sex, sep=",\\s?") %>%
+    tidyr::separate_rows(species, sep=",\\s?") %>%
     # Map using input map_fields
     dplyr::select(tidyselect::all_of(c(map_fields, "species", "sex", "generation"))) %>%
     dplyr::distinct() %>%
@@ -19,14 +22,16 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
       species = species %>%
         paste0(., "s") %>%
         gsub("ss$", "s", .) %>%
-        gsub("mouses", "mice", .),
+        gsub("mouses|mices", "mice", .),
 
       dplyr::across(dplyr::where(is.character),
                     ~dplyr::na_if(., "-") %>%
                       dplyr::na_if("-s")),
 
       species = paste0(sort(unique(species[!is.na(species)])), collapse="/"),
-      sex = paste0(sort(unique(sex[!is.na(sex)])), collapse="/"),
+      sex = paste0(sort(unique(sex[!is.na(sex)])), collapse="/") %>%
+        gsub("\\bF\\b", "female", .) %>%
+        gsub("\\bM\\b", "male", .),
       generation = paste0(sort(unique(generation[!is.na(generation)])), collapse="/"),
     ) %>%
     dplyr::distinct() %>%
@@ -43,7 +48,8 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
     dplyr::mutate(
       # Append experimental species information to critical_effect for derived toxval_type
       critical_effect = dplyr::case_when(
-        !grepl("\\bRfC\\b|\\bRfD\\b|\\bunit risk\\b|\\bslope factor\\b|\\bMRL\\b", toxval_type, ignore.case=TRUE) |
+        # Check for derived toxval_types
+        !grepl("\\bRfC\\b|\\bRfD\\b|\\bunit risk\\b|\\bslope factor\\b|\\bMRL\\b|\\bSF\\b|\\bUR\\b", toxval_type, ignore.case=TRUE) |
           critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
         TRUE ~ stringr::str_c(critical_effect %>%
                                 gsub("\\bin\\b.+", "", .),
