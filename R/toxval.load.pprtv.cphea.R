@@ -53,45 +53,9 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
 
-  # Get study-species/sex/generation mapping to handle associated PODs
-  study_species_map = res %>%
-    # Map using chemical_id and study_reference
-    dplyr::select(chemical_id, study_reference, species, sex, generation) %>%
-    # Break up rows to ensure distinct species/sex only mentioned once
-    tidyr::separate_rows(species, sep=", ") %>%
-    tidyr::separate_rows(sex, sep="/") %>%
-    dplyr::distinct() %>%
-    # Remove entries where species is missing or human
-    dplyr::filter(!grepl("human", species, ignore.case=TRUE),
-                  !species %in% c("-", as.character(NA))) %>%
-    dplyr::group_by(chemical_id, study_reference) %>%
-    # Collapse species/sex/generation mappings
-    dplyr::mutate(
-      species = species %>%
-        paste0(., "s") %>%
-        gsub("ss$", "s", .) %>%
-        gsub("mouses", "mice", .),
-
-      dplyr::across(dplyr::where(is.character),
-                    ~dplyr::na_if(., "-") %>%
-                      dplyr::na_if("-s")),
-
-      species = paste0(sort(unique(species[!is.na(species)])), collapse="/"),
-      sex = paste0(sort(unique(sex[!is.na(sex)])), collapse="/"),
-      generation = paste0(sort(unique(generation[!is.na(generation)])), collapse="/"),
-    ) %>%
-    dplyr::distinct() %>%
-    dplyr::ungroup() %>%
-    dplyr::rename(
-      associated_species = species,
-      associated_sex = sex,
-      associated_generation = generation
-    )
-
   res = res %>%
     # Use only PPRTV Summary records
     dplyr::filter(grepl("PPRTV Summary", document_type)) %>%
-    dplyr::left_join(study_species_map, by=c("chemical_id", "study_reference")) %>%
     dplyr::mutate(
       # Handle ranged study_duration values - maintain original range, set database values to NA
       study_duration_value_original = study_duration_value,
@@ -102,23 +66,11 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
       # Add human_eco field
       human_eco = "human health",
 
-      # Set subsource as document_type
-      subsource = document_type,
-
-      # Append experimental species information to critical_effect for derived toxval_type
-      critical_effect = dplyr::case_when(
-        !grepl("\\bRfC\\b|\\bRfD\\b|\\bunit risk\\b|\\bslope factor\\b|\\bMRL\\b", toxval_type) |
-          critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
-        TRUE ~ stringr::str_c(critical_effect %>%
-                                gsub("\\bin\\b.+", "", .),
-                              " in ", associated_generation, " ", associated_sex, " ", associated_species) %>%
-          gsub(" \\- |\\-s\\b", " ", .) %>%
-          gsub("in \\- ", "in ", .) %>%
-          stringr::str_squish()
-      )
+      # Set collapsed subsource values as "PPRTV Summary"
+      subsource = "PPRTV Summary",
     ) %>%
-    # Set collapsed subsource values as "PPRTV Summary"
-    dplyr::mutate(subsource = "PPRTV Summary")
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("study_reference", "chemical_id"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

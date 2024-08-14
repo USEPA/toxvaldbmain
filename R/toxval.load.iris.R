@@ -86,62 +86,17 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
 
   res = res[ , !(names(res) %in% cremove)]
 
-  # Get study-species/sex/generation mapping to handle associated PODs
-  study_species_map = res %>%
-    # Map using iris_chemical_id and principal_study
-    dplyr::select(iris_chemical_id, principal_study, species, sex, generation) %>%
-    dplyr::distinct() %>%
-    # Remove entries where species is missing or human
-    dplyr::filter(!grepl("human", species, ignore.case=TRUE),
-                  !species %in% c("-", as.character(NA))) %>%
-    dplyr::group_by(iris_chemical_id, principal_study) %>%
-    # Collapse species/sex/generation mappings
-    dplyr::mutate(
-      species = species %>%
-        paste0(., "s") %>%
-        gsub("ss$", "s", .) %>%
-        gsub("mouses", "mice", .),
-
-      dplyr::across(dplyr::where(is.character),
-                    ~dplyr::na_if(., "-") %>%
-                      dplyr::na_if("-s")),
-
-      species = paste0(sort(unique(species[!is.na(species)])), collapse="/"),
-      sex = paste0(sort(unique(sex[!is.na(sex)])), collapse="/"),
-      generation = paste0(sort(unique(generation[!is.na(generation)])), collapse="/"),
-    ) %>%
-    dplyr::distinct() %>%
-    dplyr::ungroup() %>%
-    dplyr::rename(
-      associated_species = species,
-      associated_sex = sex,
-      associated_generation = generation
-    )
-
   res = res %>%
-    # Map associated POD species/sex/generation
-    dplyr::left_join(study_species_map, by=c("iris_chemical_id", "principal_study")) %>%
     dplyr::mutate(
       # Handle ranged study_duration values - maintain original range, set database values to NA
       study_duration_value_original = study_duration_value,
       study_duration_value = as.numeric(study_duration_value),
       study_duration_units = study_duration_units %>%
-        gsub(", ?", "-", .),
-
-      # Append experimental species information to critical_effect for derived toxval_type
-      critical_effect = dplyr::case_when(
-        !grepl("\\bRfC\\b|\\bRfD\\b|\\bunit risk\\b|\\bslope factor\\b|\\bMRL\\b", toxval_type) |
-          critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
-        TRUE ~ stringr::str_c(critical_effect %>%
-                                gsub("\\bin\\b.+", "", .),
-                              " in ", associated_generation, " ", associated_sex, " ", associated_species) %>%
-          gsub(" \\- |\\-s\\b", " ", .) %>%
-          gsub("in \\- ", "in ", .) %>%
-          stringr::str_squish()
-      )
+        gsub(", ?", "-", .)
     ) %>%
-    dplyr::select(-c("associated_generation", "associated_sex", "associated_species",
-                     "principal_study", "iris_chemical_id"))
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("principal_study", "iris_chemical_id")) %>%
+    dplyr::select(-c("principal_study", "iris_chemical_id"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
