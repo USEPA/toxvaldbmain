@@ -57,14 +57,11 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
     # Use only PPRTV Summary records
     dplyr::filter(grepl("PPRTV Summary", document_type)) %>%
     dplyr::mutate(
-      # Select high value for study_duration_value
-      study_duration_value = study_duration_value %>%
-        gsub(".*\\-", "", .)  %>%
-        # Replace empty string NA
-        dplyr::na_if("") %>%
-        tidyr::replace_na("-"),
+      # Handle ranged study_duration values - maintain original range, set database values to NA
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value),
       study_duration_units = study_duration_units %>%
-        tidyr::replace_na("-"),
+        gsub(", ?", "-", .),
 
       # Add human_eco field
       human_eco = "human health",

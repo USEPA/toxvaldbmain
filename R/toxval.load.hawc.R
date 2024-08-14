@@ -53,23 +53,17 @@ toxval.load.hawc <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid
   #####################################################################
 
   res = res %>% dplyr::mutate(
-    # Set NA study_duration for entries with both GD and PND values
-    study_duration_value = dplyr::case_when(
-      grepl("PND", study_duration_value) & grepl("GD", study_duration_value) ~ as.character(NA),
-      grepl("weeks", study_duration_value) & grepl("GD", study_duration_value) ~ as.character(NA),
-      TRUE ~ study_duration_value
-    ),
     # Set NA for units without values
     study_duration_units = dplyr::case_when(
       is.na(study_duration_value) ~ as.character(NA),
       TRUE ~ study_duration_units
     ),
-    # Select higher value in ranged study_duration
-    study_duration_value = study_duration_value %>%
-      gsub(".+\\-", "", .) %>%
-      tidyr::replace_na("-"),
+
+    # Handle ranged study_duration values - maintain original range, set database values to NA
+    study_duration_value_original = study_duration_value,
+    study_duration_value = as.numeric(study_duration_value),
     study_duration_units = study_duration_units %>%
-      tidyr::replace_na("-"),
+      gsub(", ?", "-", .),
 
     # Add subsource_url field
     subsource_url = endpoint_url

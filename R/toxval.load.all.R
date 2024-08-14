@@ -49,7 +49,6 @@ toxval.load.all <- function(toxval.db,
     toxval.load.caloehha(toxval.db, source.db, log)
     toxval.load.chemidplus(toxval.db, source.db, log)
     toxval.load.copper(toxval.db, source.db, log)
-    toxval.load.cosmos(toxval.db, source.db, log)
     toxval.load.dod(toxval.db, source.db, log)
     toxval.load.doe.benchmarks(toxval.db, source.db, log)
     toxval.load.doe.pac(toxval.db, source.db, log)

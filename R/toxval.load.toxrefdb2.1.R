@@ -36,7 +36,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
   cat("load data to res\n")
   #####################################################################
   # Local file provided by ToxRefDB team (v2.1) special query/R Script
-  res0 = readxl::read_xlsx(paste0(toxval.config()$datapath, "toxrefdb/toxrefdb_files/toxref-toxval_pod_11APR2024.xlsx"))
+  res0 = readxl::read_xlsx(paste0(toxval.config()$datapath, "toxrefdb/toxrefdb_files/toxref-toxval_pod_13AUG2024.xlsx"))
 
   res = res0 %>%
     dplyr::rename(name = preferred_name,
@@ -63,19 +63,6 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
       exposure_form = vehicle,
       source = !!source,
       toxval_units = "mg/kg-day",
-      study_type = dplyr::case_when(
-        study_type == "SUB" ~ "subchronic",
-        study_type == "CHR" ~ "chronic",
-        study_type == "DEV" ~ "developmental",
-        study_type == "MGR" ~ "reproductive",
-        study_type == "SAC" ~ "subacute",
-        study_type == "DNT" ~ "developmental neurotoxicity",
-        study_type == "NEU" ~ "neurotoxicity",
-        study_type == "REP" ~ "reproductive",
-        study_type == "OTH" ~ "OTH",
-        study_type == "ACU" ~ "acute",
-        TRUE ~ study_type
-      ),
       sex = dplyr::case_when(
         sex == "M" ~ "male",
         sex == "F" ~ "female",
@@ -119,7 +106,31 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
       critical_effect = critical_effect %>%
         dplyr::na_if("NA"),
       endpoint_category = endpoint_category %>%
-        dplyr::na_if("NA")
+        dplyr::na_if("NA"),
+
+      # Set correct study_duration for DEV/MGR entries
+      study_duration_value = dplyr::case_when(
+        study_type %in% c("DEV", "MGR") ~ stringr::str_c(dose_start, "-", study_duration_value),
+        TRUE ~ as.character(study_duration_value)
+      ),
+      study_duration_units = dplyr::case_when(
+        study_type %in% c("DEV", "MGR") ~ stringr::str_c(dose_start_unit, "-", study_duration_units),
+        TRUE ~ study_duration_units
+      ),
+
+      study_type = dplyr::case_when(
+        study_type == "SUB" ~ "subchronic",
+        study_type == "CHR" ~ "chronic",
+        study_type == "DEV" ~ "developmental",
+        study_type == "MGR" ~ "reproductive",
+        study_type == "SAC" ~ "subacute",
+        study_type == "DNT" ~ "developmental neurotoxicity",
+        study_type == "NEU" ~ "neurotoxicity",
+        study_type == "REP" ~ "reproductive",
+        study_type == "OTH" ~ "OTH",
+        study_type == "ACU" ~ "acute",
+        TRUE ~ study_type
+      ),
     ) %>%
     tidyr::drop_na(toxval_type, toxval_numeric, toxval_units) %>%
     tidyr::unite("critical_effect", endpoint_category, critical_effect, sep=": ", na.rm=TRUE, remove=FALSE) %>%
@@ -171,6 +182,12 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
               "dose_level", "vehicle", "study_duration_qualifier")
 
   res = res[ , !(names(res) %in% cremove)]
+
+  res = res %>%
+    dplyr::mutate(
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value)
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
