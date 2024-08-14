@@ -59,12 +59,6 @@ toxval.load.hawc_pfas_150 <- function(toxval.db, source.db, log=FALSE, remove_nu
       study_duration_units = study_duration_units %>%
         gsub(", ?", "-", .),
 
-      # Set NA for units without values
-      study_duration_units = dplyr::case_when(
-        is.na(study_duration_value) ~ as.character(NA),
-        TRUE ~ study_duration_units
-      ),
-
       # Add subsource_url field
       subsource_url = record_url
     )
