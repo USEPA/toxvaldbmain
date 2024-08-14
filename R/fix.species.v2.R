@@ -188,4 +188,24 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
 
   # Handle cases where two entries with the same species_original have different species_id values
   fix.species.duplicates(toxval.db, source, subsource)
+
+  #####################################################################
+  cat("generate export for entries with 'Not Specified' species\n")
+  #####################################################################
+  query = paste0("SELECT a.source, a.source_hash, a.species_original, ",
+                 "a.toxval_type_original, a.study_type_original ",
+                 "FROM toxval a INNER JOIN species b ON a.species_id=b.species_id ",
+                 "WHERE b.common_name LIKE '%Not Specified%' ",
+                 "AND a.source='", source, "' ",
+                 "AND qc_status not like '%fail%' ",
+                 query_addition %>% gsub("subsource", "a.subsource", .)
+                 )
+  not_specified = runQuery(query, toxval.db)
+
+  if(nrow(not_specified)) {
+    out_file = paste0("Repo/dictionary/missing/missing_", source, "_", subsource, "_species.xlsx") %>%
+      gsub("__", "_", .)
+    cat(nrow(not_specified), " entries have 'Not Specified' species\n")
+    writexl::write_xlsx(not_specified, out_file)
+  }
 }

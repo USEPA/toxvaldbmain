@@ -246,25 +246,6 @@ toxval.load.postprocess <- function(toxval.db,
   set.experimental_record.by.source(toxval.db, source)
 
   #####################################################################
-  cat("generate export for entries with 'Not Specified' species\n")
-  #####################################################################
-  query = paste0("SELECT a.source_hash, a.species_original, ",
-                 "a.toxval_type_original, a.study_type_original ",
-                 "FROM toxval a INNER JOIN species b ON a.species_id=b.species_id ",
-                 "WHERE b.common_name LIKE '%Not Specified%' ",
-                 "AND a.source='", source, "'",
-                 query_addition %>% gsub("subsource", "a.subsource", .))
-  not_specified = runQuery(query, toxval.db)
-
-  if(nrow(not_specified)) {
-    out_file = paste0("Repo/dictionary/missing/missing_species_", source, "_", subsource, ".xlsx") %>%
-      gsub("_\\.xlsx", ".xlsx", .)
-    cat(nrow(not_specified), " entries have 'Not Specified' species\n")
-    writexl::write_xlsx(not_specified, paste0("Repo/dictionary/missing/missing"))
-  }
-
-
-  #####################################################################
   cat("export by source\n")
   #####################################################################
   export.all.by.source(toxval.db, source, subsource)
