@@ -114,7 +114,7 @@ toxval.load.toxrefdb2.1 <- function(toxval.db, source.db, log=FALSE, remove_null
         TRUE ~ as.character(study_duration_value)
       ),
       study_duration_units = dplyr::case_when(
-        study_type %in% c("DEV", "MGR") ~ stringr::str_c(dose_start_unit, ", ", study_duration_units),
+        study_type %in% c("DEV", "MGR") ~ stringr::str_c(dose_start_unit, "-", study_duration_units),
         TRUE ~ study_duration_units
       ),
 
