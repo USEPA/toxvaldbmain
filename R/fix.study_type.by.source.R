@@ -184,7 +184,30 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
         temp0 = mat %>%
           dplyr::filter(source == !!source) %>%
           dplyr::select(study_type=study_type_corrected, source_hash, subsource) %>%
-          dplyr::distinct()
+          dplyr::distinct() %>%
+          # Drop remaining duplicate cases where entries are identical except for NA subsource
+          dplyr::group_by(study_type, source_hash) %>%
+          dplyr::mutate(n = dplyr::n()) %>%
+          dplyr::ungroup() %>%
+          dplyr::filter(!((n > 1) * is.na(subsource))) %>%
+          dplyr::select(-n)
+
+        # Get source_hash to subsource mappings from current ToxVal data
+        query = paste0("SELECT DISTINCT source_hash, subsource as subsource_current FROM toxval ",
+                       "WHERE source='", source, "'",
+                       query_addition)
+        source_hash_subsource_mappings = runQuery(query, toxval.db)
+
+        # Replace missing subsource values
+        temp0 = temp0 %>%
+          dplyr::left_join(source_hash_subsource_mappings, by=c("source_hash")) %>%
+          dplyr::mutate(
+            subsource = dplyr::case_when(
+              is.na(subsource) ~ subsource_current,
+              TRUE ~ subsource
+            )
+          ) %>%
+          dplyr::select(-subsource_current)
 
         if(!is.null(subsource)){
           temp0 = temp0 %>%
