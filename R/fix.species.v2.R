@@ -170,6 +170,22 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "AND (toxval_type LIKE 'AEGL%' OR toxval_type_original LIKE 'AEGL%')")
   runQuery(query, toxval.db)
 
+  # QC fail entries with out of scope species
+  out_of_scope = readxl::read_xlsx("Repo/species/out_of_scope_species_ToxValDB.xlsx") %>%
+    dplyr::pull(common_name) %>%
+    unique() %>%
+    paste0(collapse="', '")
+  query = paste0("UPDATE toxval a LEFT JOIN species b ON a.species_id=b.species_id ",
+                 "SET a.qc_status = CASE ",
+                 "WHEN a.qc_status like '%species out of scope%' THEN a.qc_status ",
+                 "WHEN a.qc_status LIKE '%fail%' THEN CONCAT(a.qc_status, '; species out of scope') ",
+                 "ELSE 'fail: species out of scope' ",
+                 "END ",
+                 "WHERE b.common_name IN ('", out_of_scope, "') ",
+                 "AND a.source='", source, "'",
+                 query_addition %>% gsub("subsource", "a.subsource", .))
+  runQuery(query, toxval.db)
+
   # Handle cases where two entries with the same species_original have different species_id values
   fix.species.duplicates(toxval.db, source, subsource)
 }
