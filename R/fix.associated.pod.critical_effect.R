@@ -60,6 +60,7 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
         # Check for derived toxval_types
         !grepl("\\bRfC\\b|\\bRfD\\b|\\bunit risk\\b|\\bslope factor\\b|\\bMRL\\b|\\bSF\\b|\\bUR\\b", toxval_type, ignore.case=TRUE) |
           critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
+        is.na(associated_species) & is.na(associated_generation) & is.na(associated_sex) ~ critical_effect,
         TRUE ~ stringr::str_c(critical_effect %>%
                                 gsub("creased? in", "CHANGE PLACEHOLDER TOXVAL", .) %>%
                                 gsub(" \\bin\\b.+?(,|\\||;|$)", "\\1", .) %>%
