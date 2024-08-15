@@ -71,7 +71,9 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
         document_type == "ATSDR MRLs Toxicological Profile" ~ "key",
         TRUE ~ "no"
       )
-    )
+    ) %>%
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("chemical_id", "study_reference"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

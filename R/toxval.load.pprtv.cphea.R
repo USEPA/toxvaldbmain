@@ -66,11 +66,11 @@ toxval.load.pprtv.cphea <- function(toxval.db, source.db, log=FALSE, remove_null
       # Add human_eco field
       human_eco = "human health",
 
-      # Set subsource as document_type
-      subsource = document_type
+      # Set collapsed subsource values as "PPRTV Summary"
+      subsource = "PPRTV Summary",
     ) %>%
-    # Set collapsed subsource values as "PPRTV Summary"
-    dplyr::mutate(subsource = "PPRTV Summary")
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("study_reference", "chemical_id"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

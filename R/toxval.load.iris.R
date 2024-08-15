@@ -47,8 +47,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
   res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                               c("chemical_id", "document_name", "source_hash", "qc_status")]]
 
-  non_toxval_cols <- c('iris_chemical_id',
-                       'woe_characterization',
+  non_toxval_cols <- c('woe_characterization',
                        'iris_revision_history',
                        'archived',
                        # 'principal_study',
@@ -58,7 +57,7 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
                        'data_confidence',
                        # 'overall_confidence',
                        'dose_type',
-                       "endpoint", "principal_study", "study_duration_qualifier",
+                       "endpoint", "study_duration_qualifier",
                        "full_reference",
                        "target_species")
   # Rename non-toxval columns
@@ -87,13 +86,17 @@ toxval.load.iris <- function(toxval.db,source.db, log=FALSE, remove_null_dtxsid=
 
   res = res[ , !(names(res) %in% cremove)]
 
-  res = res %>% dplyr::mutate(
-    # Handle ranged study_duration values - maintain original range, set database values to NA
-    study_duration_value_original = study_duration_value,
-    study_duration_value = as.numeric(study_duration_value),
-    study_duration_units = study_duration_units %>%
-      gsub(", ?", "-", .)
-  )
+  res = res %>%
+    dplyr::mutate(
+      # Handle ranged study_duration values - maintain original range, set database values to NA
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value),
+      study_duration_units = study_duration_units %>%
+        gsub(", ?", "-", .)
+    ) %>%
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("principal_study", "iris_chemical_id")) %>%
+    dplyr::select(-c("principal_study", "iris_chemical_id"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
