@@ -9,6 +9,7 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
   study_species_map = res %>%
     # Separate initial sex/species to better handle duplicate mappings
     tidyr::separate_rows(sex, sep=",\\s?") %>%
+    tidyr::separate_rows(sex, sep="/") %>%
     tidyr::separate_rows(species, sep=",\\s?") %>%
     # Map using input map_fields
     dplyr::select(tidyselect::all_of(c(map_fields, "species", "sex", "generation"))) %>%
@@ -32,6 +33,10 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
       sex = paste0(sort(unique(sex[!is.na(sex)])), collapse="/") %>%
         gsub("\\bF\\b", "female", .) %>%
         gsub("\\bM\\b", "male", .),
+      sex = dplyr::case_when(
+        grepl("\\bmale", sex) & grepl("female", sex) ~ "male/female",
+        TRUE ~ sex
+      ),
       generation = paste0(sort(unique(generation[!is.na(generation)])), collapse="/"),
     ) %>%
     dplyr::distinct() %>%
@@ -45,6 +50,10 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
   res = res %>%
     # Map associated POD species/sex/generation
     dplyr::left_join(study_species_map, by=map_fields) %>%
+    # Separate critical_effect components to append associated POD information to each
+    dplyr::mutate(original_row = dplyr::row_number()) %>%
+    tidyr::separate_rows(critical_effect, sep="\\|") %>%
+    tidyr::separate_rows(critical_effect, sep="; ") %>%
     dplyr::mutate(
       # Append experimental species information to critical_effect for derived toxval_type
       critical_effect = dplyr::case_when(
@@ -52,14 +61,18 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
         !grepl("\\bRfC\\b|\\bRfD\\b|\\bunit risk\\b|\\bslope factor\\b|\\bMRL\\b|\\bSF\\b|\\bUR\\b", toxval_type, ignore.case=TRUE) |
           critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
         TRUE ~ stringr::str_c(critical_effect %>%
-                                gsub("\\bin\\b.+", "", .),
+                                gsub("crease in", "CHANGE PLACEHOLDER TOXVAL", .) %>%
+                                gsub(" \\bin\\b.+", "", .) %>%
+                                gsub("CHANGE PLACEHOLDER TOXVAL", "crease in", .),
                               " in ", associated_generation, " ", associated_sex, " ", associated_species) %>%
           gsub(" \\- |\\-s\\b", " ", .) %>%
           gsub("in \\- ", "in ", .) %>%
           stringr::str_squish()
       )
     ) %>%
+    # Recombine critical_effect information
+    toxval.load.dedup(., hashing_cols=c("original_row"), dedup_fields=c("critical_effect"), delim="|") %>%
     # Drop helper fields
-    dplyr::select(-c("associated_generation", "associated_sex", "associated_species")) %>%
+    dplyr::select(-c("associated_generation", "associated_sex", "associated_species", "original_row")) %>%
     return()
 }
