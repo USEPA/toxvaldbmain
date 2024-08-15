@@ -62,7 +62,7 @@ fix.associated.pod.critical_effect <- function(res, map_fields){
           critical_effect %in% c("-", as.character(NA)) ~ critical_effect,
         TRUE ~ stringr::str_c(critical_effect %>%
                                 gsub("creased? in", "CHANGE PLACEHOLDER TOXVAL", .) %>%
-                                gsub(" \\bin\\b.+", "", .) %>%
+                                gsub(" \\bin\\b.+?(,|\\||;|$)", "\\1", .) %>%
                                 gsub("CHANGE PLACEHOLDER TOXVAL", "crease in", .),
                               " in ", associated_generation, " ", associated_sex, " ", associated_species) %>%
           gsub(" \\- |\\-s\\b", " ", .) %>%
