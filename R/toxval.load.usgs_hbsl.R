@@ -86,7 +86,7 @@ toxval.load.usgs_hbsl <- function(toxval.db, source.db,log=F){
   res = unique(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
+  if(is.element("species_original",names(res))) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(dim(res))
   res=fix.non_ascii.v2(res,source)

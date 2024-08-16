@@ -15,7 +15,7 @@ fix.derived.toxval_type.by.source <- function(toxval.db, source=NULL, subsource=
   #####################################################################
 
   # Hardcode species as human for RfD, RfD, HED, HED, Slope Factor, Unit Risk, MRL
-  derived_toxval_type = c("RfD", "unit risk", "RfC", "slope factor", "MRL")
+  derived_toxval_type = c("RfD", "unit risk", "RfC", "slope factor", "MRL", "SF", "UR")
   blank_hash_cols = c("exposure_method", "exposure_form", "media",
                       "generation", "lifestage", "population",
                       "study_duration_qualifier", "study_duration_value", "study_duration_units",
