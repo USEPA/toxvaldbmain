@@ -41,38 +41,40 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     dplyr::pull(source_table)
 
   # Create translation dictionary to go from table name to human-readable name
-  name_translator = c("source_iuclid_acutetoxicitydermal"="Acute Toxicity Dermal",
-                      "source_iuclid_acutetoxicityinhalation"="Acute Toxicity Inhalation",
-                      "source_iuclid_acutetoxicityoral"="Acute Toxicity Oral",
-                      "source_iuclid_acutetoxicityotherroutes"="Acute Toxicity Other Routes",
-                      "source_iuclid_carcinogenicity"="Carcinogenicity",
-                      "source_iuclid_repeateddosetoxicitydermal"="Repeated Dose Toxicity Dermal",
-                      "source_iuclid_repeateddosetoxicityinhalation"="Repeated Dose Toxicity Inhalation",
-                      "source_iuclid_repeateddosetoxicityoral"="Repeated Dose Toxicity Oral",
-                      "source_iuclid_repeateddosetoxicityother"="Repeated Dose Toxicity Other",
-                      "source_iuclid_toxicitytoaquaticalgae"="Toxicity to Aquatic Algae",
-                      "source_iuclid_toxicitytoaquaticplant"="Toxicity to Aquatic Plants",
-                      "source_iuclid_toxicitytobirds"="Toxicity to Birds",
-                      "source_iuclid_toxicitytomicroorganisms"="Toxicity to Microorganisms",
-                      "source_iuclid_toxicitytootherabovegroundorganisms"="Toxicity to Other Aboveground Organisms",
-                      "source_iuclid_toxicitytootheraqua"="Toxicity to Other Aquatic Organisms",
-                      "source_iuclid_toxicitytosoilmacroorganismsexceptarthropods"="Toxicity to Soil Macroorganisms Except Arthropods",
-                      "source_iuclid_toxicitytosoilmicroorganisms"="Toxicity to Soil Microorganisms",
-                      "source_iuclid_toxicitytoterrestrialarthropods"="Toxicity to Terrestrial Arthropods",
-                      "source_iuclid_toxicitytoterrestrialplants"="Toxicity to Terrestrial Plants",
-                      "source_iuclid_endocrinedisruptermammalianscreening"="Endocrine Disrupter Mammalian Screening",
-                      "source_iuclid_eyeirritation"="Eye Irritation",
-                      "source_iuclid_immunotoxicity"="Immunotoxicity",
-                      "source_iuclid_longtermtoxicitytoaquainv"="Long Term Toxicity to Aquatic Invertebrates",
-                      "source_iuclid_longtermtoxtofish"="Long Term Toxicity to Fish",
-                      "source_iuclid_neurotoxicity"="Neurotoxicity",
-                      "source_iuclid_sedimenttoxicity"="Sediment Toxicity",
-                      "source_iuclid_shorttermtoxicitytoaquainv"="Short Term Toxicity to Aquatic Invertebrates",
-                      "source_iuclid_shorttermtoxicitytofish"="Short Term Toxicity to Fish",
-                      "source_iuclid_skinirritationcorrosion"="Skin Irritation Corrosion",
-                      "source_iuclid_skinsensitisation"="Skin Sensitisation",
-                      "source_iuclid_developmentaltoxicityteratogenicity"="Developmental Toxicity Teratogenicity",
-                      "source_iuclid_toxicityreproduction"="Toxicity Reproduction")
+  name_translator = c(
+    # "source_iuclid_acutetoxicitydermal"="Acute Toxicity Dermal",
+    # "source_iuclid_acutetoxicityinhalation"="Acute Toxicity Inhalation",
+    # "source_iuclid_acutetoxicityoral"="Acute Toxicity Oral",
+    # "source_iuclid_acutetoxicityotherroutes"="Acute Toxicity Other Routes",
+    "source_iuclid_carcinogenicity"="Carcinogenicity",
+    # "source_iuclid_repeateddosetoxicitydermal"="Repeated Dose Toxicity Dermal",
+    # "source_iuclid_repeateddosetoxicityinhalation"="Repeated Dose Toxicity Inhalation",
+    "source_iuclid_repeateddosetoxicityoral"="Repeated Dose Toxicity Oral",
+    # "source_iuclid_repeateddosetoxicityother"="Repeated Dose Toxicity Other",
+    # "source_iuclid_toxicitytoaquaticalgae"="Toxicity to Aquatic Algae",
+    # "source_iuclid_toxicitytoaquaticplant"="Toxicity to Aquatic Plants",
+    # "source_iuclid_toxicitytobirds"="Toxicity to Birds",
+    # "source_iuclid_toxicitytomicroorganisms"="Toxicity to Microorganisms",
+    # "source_iuclid_toxicitytootherabovegroundorganisms"="Toxicity to Other Aboveground Organisms",
+    # "source_iuclid_toxicitytootheraqua"="Toxicity to Other Aquatic Organisms",
+    # "source_iuclid_toxicitytosoilmacroorganismsexceptarthropods"="Toxicity to Soil Macroorganisms Except Arthropods",
+    # "source_iuclid_toxicitytosoilmicroorganisms"="Toxicity to Soil Microorganisms",
+    # "source_iuclid_toxicitytoterrestrialarthropods"="Toxicity to Terrestrial Arthropods",
+    # "source_iuclid_toxicitytoterrestrialplants"="Toxicity to Terrestrial Plants",
+    # "source_iuclid_endocrinedisruptermammalianscreening"="Endocrine Disrupter Mammalian Screening",
+    # "source_iuclid_eyeirritation"="Eye Irritation",
+    "source_iuclid_immunotoxicity"="Immunotoxicity",
+    # "source_iuclid_longtermtoxicitytoaquainv"="Long Term Toxicity to Aquatic Invertebrates",
+    # "source_iuclid_longtermtoxtofish"="Long Term Toxicity to Fish",
+    "source_iuclid_neurotoxicity"="Neurotoxicity",
+    # "source_iuclid_sedimenttoxicity"="Sediment Toxicity",
+    # "source_iuclid_shorttermtoxicitytoaquainv"="Short Term Toxicity to Aquatic Invertebrates",
+    # "source_iuclid_shorttermtoxicitytofish"="Short Term Toxicity to Fish",
+    # "source_iuclid_skinirritationcorrosion"="Skin Irritation Corrosion",
+    # "source_iuclid_skinsensitisation"="Skin Sensitisation",
+    "source_iuclid_developmentaltoxicityteratogenicity"="Developmental Toxicity Teratogenicity",
+    "source_iuclid_toxicityreproduction"="Toxicity Reproduction"
+  )
 
   # Load each source
   for(oht in iuclid_source_tables) {
@@ -82,7 +84,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
       source_date = as.POSIXct(unique(runQuery(paste0("SELECT create_time FROM ",
                                                       oht), source.db))$create_time[1])
       toxval_date = as.POSIXct(unique(runQuery(paste0("SELECT datestamp FROM toxval WHERE source_table='",
-                                           oht, "'"), toxval.db))$datestamp[1])
+                                                      oht, "'"), toxval.db))$datestamp[1])
 
       # If ToxVal data is newer than source data, skip loading this OHT
       if(toxval_date > source_date) {
