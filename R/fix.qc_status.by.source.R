@@ -168,6 +168,19 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                       query_addition), toxval.db)
     }
 
+    ############################################################################
+    ### study_type cases
+    ############################################################################
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%study_type out of scope%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; study_type out of scope') ",
+                    "ELSE 'fail:study_type out of scope' ",
+                    "END ",
+                    "WHERE (study_type_original in ('in vitro') or ",
+                    "study_type in ('in vitro')) ",
+                    "and source = '", source, "'", query_addition),
+             toxval.db)
+
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric<0' where toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_numeric is null' where toxval_numeric is null and source = '",source,"'",query_addition) ,toxval.db)
     # runQuery(paste0("update toxval set qc_status='fail:toxval_type not specified' where toxval_type='-' and source = '",source,"'",query_addition) ,toxval.db)
