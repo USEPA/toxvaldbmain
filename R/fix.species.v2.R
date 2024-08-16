@@ -181,7 +181,8 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "WHEN a.qc_status LIKE '%fail%' THEN CONCAT(a.qc_status, '; species out of scope') ",
                  "ELSE 'fail: species out of scope' ",
                  "END ",
-                 "WHERE b.common_name IN ('", out_of_scope, "') ",
+                 "WHERE b.common_name IN ('", out_of_scope, "') or ",
+                 "a.species_original IN ('", out_of_scope, "') ",
                  "AND a.source='", source, "'",
                  query_addition %>% gsub("subsource", "a.subsource", .))
   runQuery(query, toxval.db)
