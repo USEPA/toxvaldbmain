@@ -170,7 +170,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           cat("Pulling study_type maps for import...\n")
           mat = lapply(file_list, function(f){
             readxl::read_xlsx(f) %>%
-              dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)))
+              dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)),
+                            dict_filename = f)
           }) %>%
             dplyr::bind_rows() %>%
             dplyr::filter(!dtxsid %in% c(NA, "NODTXSID", "-")) %>%
@@ -179,6 +180,12 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           # Create empty dataframe
           mat = data.frame(matrix(ncol=4,nrow=0,
                                   dimnames=list(NULL, c("dtxsid", "source", "study_type_corrected", "source_hash"))))
+        }
+
+        # Filter to subsource if provided (include NA subsource dict cases)
+        if(!is.null(subsource)){
+          mat = mat %>%
+            dplyr::filter(subsource %in% c(!!subsource, NA))
         }
 
         temp0 = mat %>%
