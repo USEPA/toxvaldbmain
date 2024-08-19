@@ -105,6 +105,11 @@ toxval.load.all <- function(toxval.db,
     toxval.load.skin.eye(toxval.db, source.db, verbose=FALSE)
   }
 
+  #####################################################################
+  cat("fix deduping hierarchy by source\n")
+  #####################################################################
+  fix.dedup.hierarchy.by.source(toxval.db=toxval.db)
+
   # Set QC Category - need Jira and Confluence API tokens
   set.qc.category.by.source(toxval.db, source.db,
                             confluence_access_token=confluence_access_token,

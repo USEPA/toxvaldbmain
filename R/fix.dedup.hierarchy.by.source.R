@@ -59,6 +59,13 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
 
   for(source in slist) {
 
+    # Source specific criteria
+    if(source %in% c("USGS HBSL", "EPA OPP")){
+      criteria = c("dtxsid", "toxval_type")
+    } else {
+      criteria = c("dtxsid")
+    }
+
     if(source %in% already_finished) {
       cat("Already handled hierarchical deduping relevant to", source, "\n")
       next

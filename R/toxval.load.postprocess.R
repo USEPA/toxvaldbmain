@@ -34,16 +34,8 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix deduping hierarchy by source\n")
   #####################################################################
-  # Source specific criteria
-  if(source %in% c("USGS HBSL", "EPA OPP")){
-    criteria = c("dtxsid", "toxval_type")
-  } else {
-    criteria = c("dtxsid")
-  }
-
   fix.dedup.hierarchy.by.source(toxval.db=toxval.db,
-                                source=source, subsource=subsource,
-                                criteria=criteria)
+                                source=source, subsource=subsource)
 
   #####################################################################
   cat("set redundant source_url to '-'\n")

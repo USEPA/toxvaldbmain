@@ -38,7 +38,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     ## "source_iuclid_carcinogenicity"="Carcinogenicity",
     # "source_iuclid_repeateddosetoxicitydermal"="Repeated Dose Toxicity Dermal",
     # "source_iuclid_repeateddosetoxicityinhalation"="Repeated Dose Toxicity Inhalation",
-    "source_iuclid_repeateddosetoxicityoral"="Repeated Dose Toxicity Oral"#,
+    ## "source_iuclid_repeateddosetoxicityoral"="Repeated Dose Toxicity Oral",
     # "source_iuclid_repeateddosetoxicityother"="Repeated Dose Toxicity Other",
     # "source_iuclid_toxicitytoaquaticalgae"="Toxicity to Aquatic Algae",
     # "source_iuclid_toxicitytoaquaticplant"="Toxicity to Aquatic Plants",
@@ -62,7 +62,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     # "source_iuclid_skinirritationcorrosion"="Skin Irritation Corrosion",
     # "source_iuclid_skinsensitisation"="Skin Sensitisation",
     ## "source_iuclid_developmentaltoxicityteratogenicity"="Developmental Toxicity Teratogenicity",
-    ## "source_iuclid_toxicityreproduction"="Toxicity Reproduction"
+    "source_iuclid_toxicityreproduction"="Toxicity Reproduction"
   )
 
   # Get list of IUCLID tables in toxval_source
