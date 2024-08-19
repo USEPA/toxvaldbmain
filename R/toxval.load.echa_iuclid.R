@@ -29,24 +29,13 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
   #####################################################################
   import.source.info.by.source(toxval.db, source)
 
-  # Get list of IUCLID tables in toxval_source
-  iuclid_source_tables = runQuery("SHOW TABLES", source.db) %>%
-    dplyr::filter(grepl("source_iuclid", Tables_in_res_toxval_source_v5),
-                  !grepl("_v94", Tables_in_res_toxval_source_v5)) %>%
-    dplyr::pull(Tables_in_res_toxval_source_v5)
-
-  # Get list of IUCLID OHTs represented in ToxVal
-  iuclid_toxval_ohts = runQuery("SELECT DISTINCT source_table FROM toxval", toxval.db) %>%
-    dplyr::filter(grepl("iuclid", source_table)) %>%
-    dplyr::pull(source_table)
-
   # Create translation dictionary to go from table name to human-readable name
   name_translator = c(
     # "source_iuclid_acutetoxicitydermal"="Acute Toxicity Dermal",
     # "source_iuclid_acutetoxicityinhalation"="Acute Toxicity Inhalation",
     # "source_iuclid_acutetoxicityoral"="Acute Toxicity Oral",
     # "source_iuclid_acutetoxicityotherroutes"="Acute Toxicity Other Routes",
-    "source_iuclid_carcinogenicity"="Carcinogenicity",
+     "source_iuclid_carcinogenicity"="Carcinogenicity",
     # "source_iuclid_repeateddosetoxicitydermal"="Repeated Dose Toxicity Dermal",
     # "source_iuclid_repeateddosetoxicityinhalation"="Repeated Dose Toxicity Inhalation",
     "source_iuclid_repeateddosetoxicityoral"="Repeated Dose Toxicity Oral",
@@ -63,7 +52,7 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     # "source_iuclid_toxicitytoterrestrialplants"="Toxicity to Terrestrial Plants",
     # "source_iuclid_endocrinedisruptermammalianscreening"="Endocrine Disrupter Mammalian Screening",
     # "source_iuclid_eyeirritation"="Eye Irritation",
-    "source_iuclid_immunotoxicity"="Immunotoxicity",
+     "source_iuclid_immunotoxicity"="Immunotoxicity",
     # "source_iuclid_longtermtoxicitytoaquainv"="Long Term Toxicity to Aquatic Invertebrates",
     # "source_iuclid_longtermtoxtofish"="Long Term Toxicity to Fish",
     "source_iuclid_neurotoxicity"="Neurotoxicity",
@@ -76,21 +65,31 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
     "source_iuclid_toxicityreproduction"="Toxicity Reproduction"
   )
 
+  # Get list of IUCLID tables in toxval_source
+  iuclid_source_tables = runQuery("SHOW TABLES", source.db) %>%
+    dplyr::filter(Tables_in_res_toxval_source_v5 %in% names(name_translator)) %>%
+    dplyr::pull(Tables_in_res_toxval_source_v5)
+
+  # Get list of IUCLID OHTs represented in ToxVal
+  iuclid_toxval_ohts = runQuery("SELECT DISTINCT source_table FROM toxval", toxval.db) %>%
+    dplyr::filter(grepl("iuclid", source_table)) %>%
+    dplyr::pull(source_table)
+
   # Load each source
   for(oht in iuclid_source_tables) {
     # Check if source has already been loaded
-    if(oht %in% iuclid_toxval_ohts) {
-      # Get load/import dates
-      source_date = as.POSIXct(unique(runQuery(paste0("SELECT create_time FROM ",
-                                                      oht), source.db))$create_time[1])
-      toxval_date = as.POSIXct(unique(runQuery(paste0("SELECT datestamp FROM toxval WHERE source_table='",
-                                                      oht, "'"), toxval.db))$datestamp[1])
-
-      # If ToxVal data is newer than source data, skip loading this OHT
-      if(toxval_date > source_date) {
-        next
-      }
-    }
+    # if(oht %in% iuclid_toxval_ohts) {
+    #   # Get load/import dates
+    #   source_date = as.POSIXct(unique(runQuery(paste0("SELECT create_time FROM ",
+    #                                                   oht), source.db))$create_time[1])
+    #   toxval_date = as.POSIXct(unique(runQuery(paste0("SELECT datestamp FROM toxval WHERE source_table='",
+    #                                                   oht, "'"), toxval.db))$datestamp[1])
+    #
+    #   # If ToxVal data is newer than source data, skip loading this OHT
+    #   if(toxval_date > source_date) {
+    #     next
+    #   }
+    # }
 
     # Get human-readable name for OHT
     ohtname = name_translator[[oht]]

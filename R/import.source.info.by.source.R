@@ -29,7 +29,7 @@ import.source.info.by.source <- function(toxval.db, source=NULL) {
       browser()
     }
     # Refresh source_info to be from latest dictionary
-    runInsert(paste0("delete from source_info where source='",source,"'"), toxval.db)
+    runQuery(paste0("delete from source_info where source='",source,"'"), toxval.db)
     mat1 = mat[mat$source %in% source,]
     runInsertTable(mat1,"source_info",toxval.db,do.halt=T,verbose=T)
   }
