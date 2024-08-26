@@ -37,7 +37,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
                    "left join record_source b on a.toxval_id=b.toxval_id ",
                    "left join species c on a.species_id=c.species_id ",
                    # Only use record_source entries from the source, not ToxVal team cataloging
-                   "where b.clowder_doc_id = '-' and b.record_source_level not in ('extraction', 'origin') ",
+                   "where b.record_source_level not in ('extraction', 'origin') ",
                    "and a.source='",source,"'", query_addition)
 
     # Pull data
@@ -48,7 +48,9 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
 
     # Do not group by record_source fields for EFSA and HPVIS
     if(source %in% c("EFSA", "HPVIS")){
-      non_hashing_cols = c("toxval_id", "long_ref", "title", "year")
+      non_hashing_cols = c("toxval_id", "long_ref", "title", "year", "record_year")
+    } else if (source %in% c("ECHA IUCLID")){
+      non_hashing_cols = c("toxval_id", "year", "record_year")
     }
 
     # Hash to identify duplicate groups
