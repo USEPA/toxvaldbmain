@@ -35,11 +35,10 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
   names(db_server_list) = c(in.toxval.host, compare.toxval.host)
 
   # Loop through input databases
-  for(toxval.db in names(db_server_list)){
-
+  for(i in seq_len(length(db_server_list))){
     # Set server host
-    Sys.setenv(db_server = toxval.db)
-    toxval.db = db_server_list[[toxval.db]]
+    Sys.setenv(db_server = names(db_server_list)[i])
+    toxval.db = db_server_list[[i]]
 
     message("Summarizing '", toxval.db, "' from ", Sys.getenv("db_server"))
 
@@ -87,7 +86,13 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
       # Write DDLs by table
       tmp <- runQuery(paste0("SHOW CREATE TABLE ", tbl_n),
                       toxval.db)
-      writeLines(tmp$`Create Table`, paste0(outDir, "/DDL/", tbl_n, "_DDL.txt"))
+      tryCatch({
+        writeLines(tmp$`Create Table`, paste0(outDir, "/DDL/", tbl_n, "_DDL.txt"))
+      },
+      error = function(e){
+        message("Could not write file: ", paste0(outDir, "/DDL/", tbl_n, "_DDL.txt"))
+      })
+
       # Get accurate row count
       runQuery(paste0("SELECT count(*) as n_tbl_row FROM ", tbl_n), toxval.db) %>%
         mutate(table_name = tbl_n) %>%
@@ -168,6 +173,10 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
                     n_tbl_row_est_diff = round(n_tbl_row_est-old_n_tbl_row_est, 3),
                     n_tbl_row_diff = round(n_tbl_row-old_n_tbl_row, 3))
   )
+
+  # Shorten hostname for filepath length sake
+  if(grepl("aws", compare.toxval.host)) compare.toxval.host = "aws"
+  if(grepl("aws", in.toxval.host)) in.toxval.host = "aws"
 
   writexl::write_xlsx(comparison,
                       paste0(toxval.config()$datapath, "/toxvaldb_release_summaries/",
