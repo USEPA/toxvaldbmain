@@ -3,13 +3,14 @@
 #' The information is in the file ~/dictionary/source_info 2023-11-30.xlsx
 #' @param toxval.db The version of toxval into which the source info is loaded.
 #' @param source The specific source to be loaded, If NULL, load for all sources
+#' @param dict_date Date stamp of the dictionary file to update
 #' @export
 #--------------------------------------------------------------------------------------
-import.source.info.by.source <- function(toxval.db, source=NULL) {
+import.source.info.by.source <- function(toxval.db, source=NULL, dict_date = "2024-08-28") {
   printCurrentFunction(toxval.db)
 
   # Read latest source_info dictionary
-  file = paste0(toxval.config()$datapath,"dictionary/source_info 2024-05-31.xlsx")
+  file = paste0(toxval.config()$datapath,"dictionary/source_info ", dict_date,".xlsx")
   print(file)
   mat = readxl::read_xlsx(file) %>% # openxlsx::read.xlsx(file)
     dplyr::filter(!retired == 1)
