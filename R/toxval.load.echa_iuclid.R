@@ -67,8 +67,8 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
 
   # Get list of IUCLID tables in toxval_source
   iuclid_source_tables = runQuery("SHOW TABLES", source.db) %>%
-    dplyr::filter(Tables_in_res_toxval_source_v5 %in% names(name_translator)) %>%
-    dplyr::pull(Tables_in_res_toxval_source_v5)
+    dplyr::filter(.[[paste0("Tables_in_", source.db)]] %in% names(name_translator)) %>%
+    dplyr::pull(paste0("Tables_in_", source.db))
 
   # Get list of IUCLID OHTs represented in ToxVal
   iuclid_toxval_ohts = runQuery("SELECT DISTINCT source_table FROM toxval", toxval.db) %>%
