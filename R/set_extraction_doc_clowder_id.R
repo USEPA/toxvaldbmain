@@ -79,7 +79,7 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
 
   # Merge extraction document information with default record_source entries
   extraction = extraction %>%
-    dplyr::select(toxval_id, clowder_doc_id, clowder_doc_metadata)
+    dplyr::select(toxval_id, clowder_doc_id, clowder_doc_metadata, document_name)
 
   ##############################################################################
   ### Batch Update
@@ -97,7 +97,8 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
     update_query <- paste0("UPDATE record_source a ",
                            "INNER JOIN z_updated_df b ",
                            "ON (a.toxval_id = b.toxval_id) ",
-                           "SET a.clowder_doc_id = b.clowder_doc_id, a.clowder_doc_metadata = b.clowder_doc_metadata ",
+                           "SET a.clowder_doc_id = b.clowder_doc_id, a.clowder_doc_metadata = b.clowder_doc_metadata, ",
+                           "a.document_name = b.document_name ",
                            "WHERE a.toxval_id in (",toString(extraction$toxval_id[startPosition:incrementPosition]),") ",
                            "AND b.record_source_level not in ('extraction', 'origin')")
 
