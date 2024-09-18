@@ -2,9 +2,12 @@
 #' Generate summary statistics on the toxval database
 #'
 #' @param toxval.db The version of toxval into which the tables are loaded.
+#' @param export Boolean whether to export a file. Default FALSE.
+#' @export
+#' @return DataFrame of record qc_status summary by source.
 #'
 #--------------------------------------------------------------------------------------
-toxval.summary.stats <- function(toxval.db) {
+toxval.summary.stats <- function(toxval.db, export=FALSE) {
   printCurrentFunction(toxval.db)
 
   # Get chemical DTXSID (represented by chemical_id) and record count
@@ -48,7 +51,11 @@ toxval.summary.stats <- function(toxval.db) {
     dplyr::select(source, chemicals, `total records`, pass,
                   `not determined`, `pass percent`, dplyr::everything())
 
-  file = paste0(toxval.config()$datapath,"export/source_count ",Sys.Date(),".xlsx")
-  sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-  openxlsx::write.xlsx(out,file,firstRow=T,headerStyle=sty)
+  if(export){
+    file = paste0(toxval.config()$datapath,"export/source_count ",Sys.Date(),".xlsx")
+    sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+    openxlsx::write.xlsx(out,file,firstRow=T,headerStyle=sty)
+  }
+
+  return(out)
 }

@@ -1,0 +1,132 @@
+---
+title: "ToxValDB v Release Notes"
+author: Taylor Wall
+description: >
+  The following are notes to accompany a release for ToxValDB.
+resource_files:
+  - images/toxvaldb_workflow.jpg
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_float:
+      collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(collapse = T, comment = "#>")
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+devtools::load_all()
+toxval.db = toxval.config()$toxval.db
+source.db = toxval.config()$source.db
+toxval_version = "v9.6"
+# library(DT)
+# https://stackoverflow.com/questions/37755037/how-to-add-code-folding-to-output-chunks-in-rmarkdown-html-documents
+# https://stackoverflow.com/questions/56550878/in-r-markdown-how-to-output-sortable-table-while-r-chunk-is-set-to-results-a
+# https://bookdown.org/yihui/rmarkdown/html-document.html
+# https://rmd4sci.njtierney.com/figures-tables-captions-.html
+```
+
+```{r, echo=FALSE}
+# ToxValDB Stats
+n_records = runQuery("SELECT count(*) as n FROM toxval", toxval.db)
+n_chemicals = runQuery("SELECT count(distinct dtxsid) as n FROM toxval", toxval.db)
+n_sources = runQuery("SELECT count(distinct source) as n FROM toxval", toxval.db)
+```
+
+# Overview
+The Toxicity Values Database (ToxValDB) contains summary data on in vivo toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB v9.5 contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals from over `r format(plyr::round_any(n_sources$n, 10), big.mark=",")` sources.
+
+In addition to this release note, the following summary files are available:
+
+* Data file column dictionary_v95.xlsx
+* source_count 2024-09-04.xlsx
+* source_info 2024-08-28.xlsx
+
+# Workflow
+The overall workflow is illustrated in Figure \@ref(fig:toxvaldb-workflow).
+
+Applicable data are identified from a number of sources (see Table 1) and loaded into the toxval_source MySQL database. Each source has different fields and uses different terminology, so a custom source-specific database table is developed for each source. A custom R script is written to pre-process and load each source, although these functions follow a standard template and use common, generic functions when possible. 
+
+Records are reviewed in the "toxval_source" database by source. To facilitate this quality control (QC) process, the source documents are collected and uploaded to the CCTE Clowder cloud-based document repository and linked to corresponding records in toxval_source.
+
+The extent of QC for ToxValDB data is determined by source and is based on whether data were extracted manually from an unstructured data source or extracted computationally from a structured data source. Documentation of source-level QC prior to ToxValDB import is also considered. There are two tiers of QC, Level 0 and Level 1. 
+
+Level 0 QC is a manual evaluation within a source to check for any systematic errors (e.g., duration 
+field is populated with duration values). For any sources that fail Level 0 QC, the source import process is reviewed and revised until all fields containing information from the source are correctly displayed in ToxValDB.
+
+Level 1 QC evaluates extraction accuracy by comparing ToxValDB records to the original document(s). For computationally extracted sources, records are reviewed in export XSLX files. For manually extracted sources, records are reviewed using CCTE’s Data Accuracy Tool (DAT) application, which facilitates dataset review and audit workflows. If errors are identified during Level 1 QC, the record is corrected and adjustments are made to the full set of source records based on the error type (e.g., systematic, semantic). Level 1 QC examines a sample of the full source records, where the number of records reviewed is based on the data extraction method. For programmatically extracted sources, a random subsample of 100 records is reviewed from each source. For manually extracted sources, a minimum of 20% of records are manually and independently reviewed for accuracy under Level 1. Specific authoritative sources underwent Level 1 review for 100% of records, including EPA sources including IRIS, PPRTV, and HHTV, as well as records derived from Health Canada, and NTP PFAS. For data derived from EPA databases like ToxRefDB and ECOTOX, no additional Level 1 QC was required prior to inclusion within ToxValDB because QC is conducted for inclusion in the original databases.
+
+In addition to source Level 0 and Level 1 QC, a series of data profiling reports are generated on the complete database to flag records or fields for review that could be potentially erroneous. For example, a report of unique combinations of effect type, exposure route, and dose units is reviewed for consistency (e.g., a record with an oral exposure route and units in mg/m3 {common inhalation exposure unit} would be evaluated against the source document). Additional reports are generated to flag potential duplicate records as well as records with a large numeric spread or deviation within a chemical.
+
+After import into toxval_source and QC, the data for all sources are transferred to the main "toxval" database and mapped to a common set of database fields. Most fields have an "original" column (indicated by the stem "_original"), to reflect the value exactly as is present in the source database (and the source files), and a "final" column, to reflect standardized values using ToxValDB vocabularies and unit conversions.  Examples of changes in the original to final mappings are to correct misspellings, to convert between scientific and common species names, and variant terms for study types. 
+
+An important part of both "toxval_source" and "toxval" databases is making sure that chemicals are correctly identified. The sources provides chemical identifiers, which may include  name and/or a CAS Registry Number (CASRN). These values are collected and reviewed for matches in EPA’s Distributed Structure-Searchable Toxicity (DSSTox)  database by an expert chemical curation team via the ChemReg internal-to-EPA application. This effort results in a curated DSSTox substance ID (DTXSID), which can be used as the primary chemical identifier in ToxValDB. 
+
+With a few exceptions, the complete workflow is carried out using code in an R package. Originally derived from the toxvaldb92 R package, the package is now split into two to reflect the separate "import" and "load" processes. The names have been changed to "[toxvaldbstage](https://github.com/USEPA/toxvaldbstage)" (import) and "[toxvaldbmain](https://github.com/USEPA/toxvaldbmain)" (load), respectively. Both are accessible on the USEPA GitHub.
+
+```{r toxvaldb-workflow, out.height = "600px", out.width = "600px", echo = FALSE, fig.cap = "Overall dataflow for the construction of ToxValDB."}
+knitr::include_graphics("images/toxvaldb_workflow.jpg")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Data Source Highlights
+
+## New Sources
+
+## Future Sources
+
+## Updated Sources
+
+## Renamed Sources
+
+## Archived Sources
+
+# Features
+
+## Schema Changes
+
+## Processing Changes
+
+# Known Issues
+
+# Term Definitions and Acronyms
+
+# Table 1
+```{r qc-status-summ, out.height = "600px", out.width = "600px", echo = FALSE, warning=FALSE, message=FALSE, error=FALSE, results='hide' }
+qc_status_summ = toxval.summary.stats(toxval.db)
+qc_pass = qc_status_summ %>%
+  dplyr::select(-dplyr::starts_with("fail"))
+qc_fail = qc_status_summ %>%
+  dplyr::select(-pass, -`not determined`, -`pass percent`, -chemicals)
+
+# create 19 breaks and 20 rgb color values ranging from white to red
+brks <- quantile(qc_pass %>% select(-source), probs = seq(.05, .95, .05), na.rm = TRUE)
+clrs <- round(seq(255, 40, length.out = length(brks) + 1), 0) %>%
+  {paste0("rgb(255,", ., ",", ., ")")}
+DT::datatable(qc_pass) %>% DT::formatStyle(names(qc_pass)[!names(qc_pass) %in% c("source")], backgroundColor = DT::styleInterval(brks, clrs))
+
+# https://stackoverflow.com/questions/65327289/how-to-represent-a-datatable-in-r-as-a-heatmap
+# https://stackoverflow.com/questions/61721852/how-to-color-column-cells-according-to-the-column-values-in-dtdatatable-in-r
+max_scale = max(qc_status_summ$`total records`)
+qc_pass %>%
+  # DT::datatable() %>%
+  gt::gt() %>%
+  gt::data_color(columns = 2:5,
+                 colors = scales::col_numeric(palette = c("red", "white"),
+                                              domain = c(0, max_scale))) %>%
+    gt::data_color(columns = 6,
+                 colors = scales::col_numeric(palette = c("white", "lightblue", "blue", "darkblue"),
+                                              domain = c(0, 100))) %>%
+  gt::fmt_percent(columns = 6, scale_values = FALSE, decimals = 1)
+
+```
+
+`r DT::datatable(qc_pass, list(scrollX = TRUE), caption = paste0("Sources and Counts with the QC pass status included in ToxValDB ", toxval_version))`
+
+# Table 2
+
+`r DT::datatable(qc_fail, list(scrollX = TRUE), caption = paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version))`
+
