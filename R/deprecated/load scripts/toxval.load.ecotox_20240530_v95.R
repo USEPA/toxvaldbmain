@@ -6,7 +6,7 @@
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #' @param sys.date The version of the data to be used
 #--------------------------------------------------------------------------------------
-toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE, sys.date="2024-09-19"){
+toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE, sys.date="2024-05-30"){
   source = "ECOTOX"
   source_table = "direct load"
   verbose = log
@@ -41,9 +41,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     cat("load ECOTOX data\n")
     file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX ",sys.date,".RData")
     load(file=file)
-    ECOTOX <- ECOTOX %T>%
-      # lowercase names
-      { names(.) <- tolower(names(.)) } %>%
+    ECOTOX <- ECOTOX %>%
       # Filter out NA DTXSID values
       dplyr::filter(!is.na(dsstox_substance_id)) %>%
       dplyr::distinct()
@@ -53,7 +51,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     # Write dictionary for current ECOTOX version
     dict = dplyr::distinct(ECOTOX[,c("species_scientific_name","species_common_name","species_group","habitat")])
     file = paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX_dictionary_",sys.date,".xlsx")
-    writexl::write_xlsx(dict, file)
+    openxlsx::write.xlsx(dict,file)
   } else {
     res0 <- ECOTOX
   }
@@ -61,8 +59,8 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   # Create column renaming map
   rename_list <- c(
     dtxsid = "dsstox_substance_id",
-    casrn = "cas_number",
-    name = "chemical_name",
+    casrn = "dsstox_casrn",
+    name = "dsstox_pref_nm",
     species_id = "species_number",
     common_name = "species_common_name",
     latin_name = "species_scientific_name",
@@ -92,25 +90,15 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     external_source_id = "reference_number",
     observed_duration_std="observed_duration_std",
     observed_duration_units_std="observed_duration_units_std",
-    observed_duration_mean_op="observ_duration_mean_op",
-    observed_duration_mean="observ_duration_mean",
-    observed_duration_min_op="observ_duration_min_op",
-    observed_duration_min="observ_duration_min",
-    observed_duration_max_op="observ_duration_max_op",
-    observed_duration_max="observ_duration_max",
-    observed_duration_unit="observ_duration_unit",
-    observed_duration_unit_desc="observ_duration_unit_desc",
+    observ_duration_mean_op="observ_duration_mean_op",
+    observ_duration_mean="observ_duration_mean",
+    observ_duration_min_op="observ_duration_min_op",
+    observ_duration_min="observ_duration_min",
+    observ_duration_max_op="observ_duration_max_op",
+    observ_duration_max="observ_duration_max",
+    observ_duration_unit="observ_duration_unit",
+    observ_duration_unit_desc="observ_duration_unit_desc",
     effect_measurement = "effect_measurement",
-    exposure_duration_mean_op = "exposure_duration_mean_op",
-    exposure_duration_mean = "exposure_duration_mean",
-    exposure_duration_min_op = "exposure_duration_min_op",
-    exposure_duration_min = "exposure_duration_min",
-    exposure_duration_max_op = "exposure_duration_max_op",
-    exposure_duration_max = "exposure_duration_max",
-    exposure_duration_unit = "exposure_duration_unit",
-    exposure_duration_unit_desc = "exposure_duration_unit_desc",
-    exposure_duration_std = "exposure_duration_std",
-    exposure_duration_units_std = "exposure_duration_units_std",
     quality = "control_type",
     organism_lifestage = "organism_lifestage",
     organism_lifestage_age_tom = "organism_lifestage_age_tom",
@@ -244,7 +232,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     ) %>%
 
     # Programmatically set study_duration, units, and qualifier from observ* fields
-    ecotox.select.study.duration(in_data = ., dur_col = "exposure_duration") %>%
+    ecotox.select.study.duration(in_data = .) %>%
 
     dplyr::mutate(
       # Clean study_duration_units
