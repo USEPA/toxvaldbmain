@@ -7,13 +7,19 @@
 #' @param confluence_url URL to QC tracking Confluence page
 #' @param jira_access_token A personal access token for authentication in Jira
 #' @param confluence_access_token A personal access token for authentication in Confluence
+#' @param jira_rdata Local RData file of Jira data to use for jira_tickets object
 #' @export
 #--------------------------------------------------------------------------------------
 set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                                       confluence_url = "https://confluence.epa.gov/x/VuCkFg",
-                                      confluence_access_token, jira_access_token){
+                                      confluence_access_token, jira_access_token,
+                                      jira_rdata = "qc_category/toxval_jira_tickets_qc_20240628.RData"){
   if(is.null(confluence_access_token) || is.na(confluence_access_token)) stop("Must provide confluence_access_token")
   if(is.null(jira_access_token) || is.na(jira_access_token)) stop("Must provide jira_access_token")
+
+  if(!is.null(jira_rdata) && !is.na(jira_rdata)){
+    jira_rdata = paste0(toxval.config()$datapath, jira_rdata)
+  }
 
   printCurrentFunction(toxval.db)
   if(!is.null(source)) {
@@ -48,8 +54,12 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     dplyr::filter(!`QC Status` %in% c(NA, "Ice Box", "Icebox"),
                   `Source Name` %in% slist)
 
-  # Retrieve Jira ticket data
-  jira_tickets <- pull_jira_info(in_file = NULL, auth_token = jira_access_token, ticket_filter_list = unique(table_df$`Jira Ticket`))
+  if(file.exists(jira_rdata)){
+    load(jira_rdata)
+  } else {
+    # Retrieve Jira ticket data
+    jira_tickets <- pull_jira_info(in_file = NULL, auth_token = jira_access_token, ticket_filter_list = unique(table_df$`Jira Ticket`))
+  }
 
   # Filter to relevant Jira tickets
   in_data <- jira_tickets$in_data %>%
@@ -236,5 +246,13 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                          "WHERE a.qc_category IS NOT NULL")
     # Run update query
     runUpdate(table="toxval", updateQuery=updateQuery, updated_df=res, db=toxval.db)
+
+    # Update statement to set qc_status = pass where qc_category is "and this record was manually checked"
+    # and qc_status is "not determined" (not already pass or fail)
+    runQuery(paste0("UPDATE toxval SET qc_status = CASE ",
+                    "WHEN qc_category like '%and this record was manually checked%' THEN 'pass' ",
+                    "ELSE qc_status ",
+                    "END ",
+                    "WHERE qc_status = 'not determined'"), toxval.db)
   }
 }
