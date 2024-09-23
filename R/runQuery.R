@@ -62,13 +62,17 @@ runQuery <- function(query=NULL, db, do.halt=TRUE, verbose=FALSE) {
     RMySQL::dbDisconnect(con)
     return(d1)
   }, warning = function(w) {
-    cat("WARNING:",query,"\n")
+    cat("WARNING:\n",
+        paste0(w, collapse=" | "), "\n",
+        query,"\n")
     RMySQL::dbDisconnect(con)
     if(do.halt) browser()
     return(NULL)
   }, error = function(e) {
     #cat("ERROR:",query,"\n")
-    cat("Error messge: ",paste0(e, collapse=" | "), "\n")
+    cat("Error messge:\n",
+        paste0(e, collapse=" | "), "\n",
+        query, "\n")
     RMySQL::dbDisconnect(con)
     if(do.halt) browser()
     return(NULL)
