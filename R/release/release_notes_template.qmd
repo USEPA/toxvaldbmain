@@ -102,7 +102,8 @@ With a few exceptions, the complete workflow is carried out using code in an R p
 #| results: 'asis'
 
 # stacked area chart
-version_comparison = ggplot2::ggplot(toxvaldb_release_comparison,
+version_comparison = ggplot2::ggplot(toxvaldb_release_comparison %>%
+                                        dplyr::arrange(version, stat),
                 ggplot2::aes(x=as.numeric(version), y=count, fill=stat)) +
   ggplot2::geom_area(position = 'identity') +
   # ggplot2::facet_wrap(~stat, scales = "free") +
@@ -112,7 +113,7 @@ version_comparison = ggplot2::ggplot(toxvaldb_release_comparison,
                 x = "ToxValDB Version",
                 title = "ToxValDB Version Comparison")
 
-vc_stat_list = unique(toxvaldb_release_comparison$stat)
+vc_stat_list = sort(unique(toxvaldb_release_comparison$stat))
 
 # Paginate facets  
 vc_plots = lapply(seq_len(length(vc_stat_list)), 

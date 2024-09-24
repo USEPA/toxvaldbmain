@@ -32,7 +32,8 @@ toxvaldb_release_comparison_stats <- function(repoDir){
     # Set database host server
     Sys.setenv(db_server = toxvaldb_list[[db]][2])
 
-    if(grepl("dev", toxval.db)){
+    # Early versions used "species_common" instead of "common_name"
+    if(db %in% c("v8", "v9.1", "v9.1.1")){
       human_species_rel = human_species_rel_orig %>%
         gsub("common_name", "species_common", .)
     } else {
@@ -49,7 +50,10 @@ toxvaldb_release_comparison_stats <- function(repoDir){
       # Count of records with human-relevant species
       # common_name %in% c("Rat", "Mouse", "Dog", "Rabbit", "Human")
       n_human_species_rel = runQuery(paste0("SELECT count(*) as n_human_species_rel FROM toxval a ",
-                                            "LEFT JOIN species b ON a.species_id = b.species_id ",
+                                            "LEFT JOIN ",
+                                            # v9 had a separate species_ecotox table
+                                            ifelse(db == "v9", "species_ecotox ", "species "),
+                                            "b ON a.species_id = b.species_id ",
                                             "WHERE ", human_species_rel),
                                      toxval.db
       )
@@ -72,8 +76,7 @@ toxvaldb_release_comparison_stats <- function(repoDir){
     )
 
   # Save RData
-  message(getwd())
-  message(paste0(repoDir, "release_files/version_comparison/",
+  message("Saving stats to: ", paste0(repoDir, "release_files/version_comparison/",
                  names(toxvaldb_list)[1], ".RData"))
   save(toxvaldb_release_comparison,
        file = paste0(repoDir, "release_files/version_comparison/",
