@@ -38,8 +38,8 @@ toxval.config <- function() {
     'long_ref' #, 'title', 'author', 'journal', 'volume', 'issue', 'page'
   )
 
-  non_hash_cols = c("chemical_id", "parent_chemical_id", "source_id","clowder_id","document_name","source_hash","qc_status",
-                    "parent_hash","create_time","modify_time","created_by", "qc_flags", "qc_notes", "version",
+  non_hash_cols = c("source_hash", "chemical_id", "parent_chemical_id", "source_id","clowder_id","document_name","source_hash","qc_status",
+                    "parent_hash","create_time","modify_time","created_by", "qc_flags", "qc_notes", "qc_category", "version",
                     "raw_input_file", "source_version_date")
 
   # Return configuration variables
