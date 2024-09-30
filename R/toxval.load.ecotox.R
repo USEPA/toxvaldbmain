@@ -314,6 +314,19 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   # Remove intermediates
   rm(res1, res2, ECOTOX)
 
+  # Filter out identified "fail" studies by long_ref
+  fail_studies = readxl::read_xlsx(paste0(toxval.config()$datapath,"ecotox/ecotox_files/ecotox_studies_fail.xlsx")) %>%
+    dplyr::select(long_ref, `fail or revise`) %>%
+    tidyr::separate_rows(long_ref, sep = "\\|") %>%
+    dplyr::mutate(long_ref = stringr::str_squish(long_ref)) %>%
+    dplyr::filter(`fail or revise` %in% c("fail"),
+                  !long_ref %in% c("-")) %>%
+    dplyr::pull(long_ref) %>%
+    unique()
+
+  res = res %>%
+    dplyr::filter(!long_ref %in% fail_studies)
+
   #####################################################################
   cat("add other columns to res\n")
   #####################################################################
