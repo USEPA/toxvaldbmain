@@ -235,7 +235,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                      by="source_hash") %>%
     group_by(source_hash) %>%
     # Combine unique categories that aren't NA
-    dplyr::mutate(qc_category_assigned = paste0(unique(c(qc_category_new,
+    dplyr::mutate(qc_category = paste0(unique(c(qc_category_new,
                                                          # Split previously assigned up
                                                          qc_category %>%
                                                            strsplit(., "; ") %>%
