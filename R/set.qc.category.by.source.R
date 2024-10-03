@@ -69,13 +69,11 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
   hashes <- jira_tickets$hashes
 
   # Get old qc_category values and filter to selected source
-  old_qc_category = runQuery(paste0("SELECT DISTINCT source, source_table, qc_category FROM toxval ",
+  old_qc_category = runQuery(paste0("SELECT DISTINCT source, source_table FROM toxval ",
                                     "WHERE source in ('",
                                     paste0(slist, collapse = "', '"),"')"),
                              toxval.db) %>%
-    dplyr::mutate(qc_category = qc_category %>%
-                    dplyr::na_if("-"),
-                  source_table = source_table %>%
+    dplyr::mutate(source_table = source_table %>%
                     gsub("direct load|direct_load|Direct Load", "Direct Load", .)) %>%
     dplyr::left_join(table_df %>%
                        dplyr::select(`Source Name`, `Table Name`, `Jira Ticket`, curation_type),
@@ -154,7 +152,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     }
 
     if(src %in% c("ECOTOX", "ToxRefDB")){
-      in_toxval$qc_category_new <- "Data source QC'd by data provider prior to ToxValDB import"
+      in_toxval$qc_category_new <- paste0("Data source QC'd by data provider prior to ", src," import")
     } else{
       in_toxval = in_toxval %>%
         dplyr::mutate(
@@ -214,7 +212,8 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     # Append records with qc_category
     res0 <- res0 %>%
       dplyr::bind_rows(in_toxval %>%
-                         dplyr::select(source, source_table, jira_ticket, source_hash, qc_category_new))
+                         dplyr::select(source, source_table, jira_ticket, source_hash, qc_category_new)) %>%
+      dplyr::distinct()
   }
 
   # Check counts by source
@@ -228,13 +227,22 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
   #                             toxval.db)
 
   # Prep columns for insertion
-  res <- old_qc_category %>%
+  res <- runQuery(paste0("SELECT source, source_hash, qc_category FROM toxval WHERE source_hash in ('",
+                         paste0(unique(res0$source_hash), collapse = "', '"), "')"),
+                  toxval.db) %>%
     dplyr::left_join(res0 %>%
                        dplyr::select(-source, -source_table),
-                     by=c("Jira Ticket"="jira_ticket")) %>%
+                     by="source_hash") %>%
     group_by(source_hash) %>%
     # Combine unique categories that aren't NA
-    dplyr::mutate(qc_category = qc_category_new) %>%
+    dplyr::mutate(qc_category = paste0(unique(c(qc_category_new,
+                                                         # Split previously assigned up
+                                                         qc_category %>%
+                                                           strsplit(., "; ") %>%
+                                                           unlist()
+                                                         )) %>%
+                                                  .[!. %in% c("-")],
+                                       collapse = "; ")) %>%
     dplyr::ungroup() %>%
     dplyr::select("source", "source_hash", "qc_category") %>%
     distinct()

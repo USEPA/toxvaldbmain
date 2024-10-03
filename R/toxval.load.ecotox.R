@@ -314,6 +314,19 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   # Remove intermediates
   rm(res1, res2, ECOTOX)
 
+  # Filter out identified "fail" studies by long_ref
+  fail_studies = readxl::read_xlsx(paste0(toxval.config()$datapath,"ecotox/ecotox_files/ecotox_studies_fail.xlsx")) %>%
+    dplyr::select(long_ref, `fail or revise`) %>%
+    tidyr::separate_rows(long_ref, sep = "\\|") %>%
+    dplyr::mutate(long_ref = stringr::str_squish(long_ref)) %>%
+    dplyr::filter(`fail or revise` %in% c("fail"),
+                  !long_ref %in% c("-")) %>%
+    dplyr::pull(long_ref) %>%
+    unique()
+
+  res = res %>%
+    dplyr::filter(!long_ref %in% fail_studies)
+
   #####################################################################
   cat("add other columns to res\n")
   #####################################################################
@@ -348,6 +361,85 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     browser()
   }
 
+  # Perform deduping (reporting time elapse - ~14-24 minutes)
+  system.time({
+    hashing_cols = c(toxval.config()$hashing_cols[!(toxval.config()$hashing_cols %in% c("critical_effect", "study_type"))],
+                     "species_id", "common_name", "latin_name", "ecotox_group", "external_source_id")
+    res = toxval.load.dedup(res,
+                            hashing_cols = c(hashing_cols, paste0(hashing_cols, "_original"))) %>%
+      # Update critical_effect delimiter to "|"
+      dplyr::mutate(critical_effect = critical_effect %>%
+                      gsub(" |::| ", "|", x=., fixed = TRUE),
+                    study_type = study_type %>%
+                      gsub(" |::| ", "|", x=., fixed = TRUE))
+  })
+
+  cat("set the source_hash\n")
+  # Vectorized approach to source_hash generation
+  non_hash_cols <- toxval.config()$non_hash_cols
+  res = res %>%
+    tidyr::unite(hash_col, tidyselect::all_of(sort(names(.)[!names(.) %in% non_hash_cols])), sep="-", remove = FALSE) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(source_hash = digest::digest(hash_col, serialize = FALSE)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-hash_col)
+
+  ##############################################################################
+  ### Apply QC fixes (matching by source_hash for now)
+  ##############################################################################
+  qc_fixes = readxl::read_xlsx(paste0(toxval.config()$datapath,"ecotox/ecotox_files/ECOTOX_QC_fixes_20240930.xlsx")) %>%
+    # Remove fields not QC'd
+    dplyr::select(-c("toxval_numeric_qualifier", "name", "common_name",
+                     "critical_effect", "generation", "lifestage", "sex",
+                     "exposure_method", "study_type")) %>%
+    dplyr::select(dplyr::any_of(c(names(res), qc_notes="notes"))) %>%
+    tidyr::separate_rows(source_hash, sep = ",") %>%
+    dplyr::mutate(source_hash = stringr::str_squish(source_hash)) %>%
+    tidyr::pivot_longer(cols = -c("source_hash"),
+                        names_to = "field_fix",
+                        values_to = "value_fix",
+                        values_transform = list(value_fix = as.character)
+                        )
+
+  res_fix = res %>%
+    dplyr::mutate(qc_notes = NA) %>%
+    dplyr::filter(source_hash %in% unique(qc_fixes$source_hash)) %>%
+    tidyr::pivot_longer(-source_hash,
+                        names_to = "field_orig",
+                        values_to = "value_orig",
+                        values_transform = list(value_orig = as.character)
+    ) %>%
+    # Join QC fixes
+    dplyr::left_join(qc_fixes,
+                     by = c("source_hash", "field_orig"="field_fix")) %>%
+    dplyr::rowwise() %>%
+    # Select final field value based on if QC'd field was changed
+    dplyr::mutate(qc_changed = identical(value_fix, value_orig),
+                  value_final = dplyr::case_when(
+                    qc_changed == FALSE & !is.na(value_fix) ~ value_fix,
+                    TRUE ~ value_orig
+                  )) %>%
+    dplyr::select(source_hash, field_orig, value_final) %>%
+    tidyr::pivot_wider(id_cols = c("source_hash"),
+                       names_from = "field_orig",
+                       values_from = "value_final") %>%
+    # Add QC tags and update data type as needed to rejoin
+    dplyr::mutate(qc_category = "Source overall passed QC, and this record was manually checked",
+                  qc_status = "pass",
+                  dplyr::across(dplyr::any_of(c("species_id", "year", "toxval_numeric",
+                                                "external_source_id", "study_duration_value")), ~as.numeric(.)))
+
+  res = res %>%
+    # Filter out old that changed
+    dplyr::filter(!source_hash %in% res_fix$source_hash,
+                  # Filter out records in same study reference that were not manually checked
+                  !external_source_id %in% res_fix$external_source_id) %>%
+    # Join updated records
+    dplyr::bind_rows(res_fix) %>%
+    # Drop old source_hash field to prep for rehashing of QC'd records
+    dplyr::select(-source_hash)
+
+  ### Perform deduping and hashing again after QC fixes applied
   # Perform deduping (reporting time elapse - ~14-24 minutes)
   system.time({
     hashing_cols = c(toxval.config()$hashing_cols[!(toxval.config()$hashing_cols %in% c("critical_effect", "study_type"))],
