@@ -60,7 +60,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   for(source in slist) {
 
     # Source specific criteria
-    if(source %in% c("USGS HBSL", "EPA OPP")){
+    if(source %in% c("USGS HBSL", "EPA OPP", "RSL")){
       criteria = c("dtxsid", "toxval_type")
     } else {
       criteria = c("dtxsid")
