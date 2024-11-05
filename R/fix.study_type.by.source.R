@@ -122,7 +122,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     for(source in missing_data %>% dplyr::pull(source) %>% unique()) {
       curr_missing = missing_data %>%
         dplyr::filter(source == !!source)
-      out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
+      out_file = paste0(toxval.config()$datapath, "dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
       if(nrow(curr_missing)){
@@ -200,29 +200,32 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           stop()
         }
 
-        batch_size <- 500
-        startPosition <- 1
-        endPosition <- nrow(temp0)
-        incrementPosition <- batch_size
+        # Only import if there is something to import
+        if(nrow(temp0)){
+          batch_size <- 500
+          startPosition <- 1
+          endPosition <- nrow(temp0)
+          incrementPosition <- batch_size
 
-        while(startPosition <= endPosition){
-          if(incrementPosition > endPosition) incrementPosition = endPosition
-          message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
-                  " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
+          while(startPosition <= endPosition){
+            if(incrementPosition > endPosition) incrementPosition = endPosition
+            message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+                    " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
 
-          updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                               "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type ",
-                               "WHERE a.source_hash in ('",
-                               paste0(temp0$source_hash[startPosition:incrementPosition], collapse="', '"), "') ",
-                               "AND a.qc_status NOT LIKE '%fail%' and a.human_eco = 'human health'")
+            updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
+                                 "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type ",
+                                 "WHERE a.source_hash in ('",
+                                 paste0(temp0$source_hash[startPosition:incrementPosition], collapse="', '"), "') ",
+                                 "AND a.qc_status NOT LIKE '%fail%' and a.human_eco = 'human health'")
 
-          runUpdate(table="toxval",
-                    updateQuery = updateQuery,
-                    updated_df = temp0 %>% dplyr::select(source_hash, study_type),
-                    db=toxval.db)
+            runUpdate(table="toxval",
+                      updateQuery = updateQuery,
+                      updated_df = temp0 %>% dplyr::select(source_hash, study_type),
+                      db=toxval.db)
 
-          startPosition <- startPosition + batch_size
-          incrementPosition <- startPosition + batch_size - 1
+            startPosition <- startPosition + batch_size
+            incrementPosition <- startPosition + batch_size - 1
+          }
         }
       }
 
@@ -276,7 +279,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       for(source in missing_data %>% dplyr::pull(source) %>% unique()) {
         curr_missing = missing_data %>%
           dplyr::filter(source == !!source)
-        out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
+
+        out_file = paste0(toxval.config()$datapath, "dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
           stringr::str_squish() %>%
           paste0(".xlsx")
         if(nrow(curr_missing)){
