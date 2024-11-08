@@ -6,7 +6,7 @@
 #' @param compare.toxval.host The host of teh comparison toxval database
 #' @return None. Exported files are generated in a summary folder.
 #-------------------------------------------------------------------------------------
-toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxval.db, compare.toxval.host){
+toxvaldb_release_schema_comparison <- function(in.toxval.db, in.toxval.host, compare.toxval.db, compare.toxval.host){
 
   # Helper function to check if any field names match sql keywords
   check_keywords <- function(database, words_file, outDir){
@@ -25,7 +25,7 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
       #tidyr::unnest(keyword) %>%
       #dplyr::filter(!is.na(keyword))
 
-    words_file <- gsub("Repo/dictionary/|\\.txt", "", words_file)
+    words_file <- gsub("Repo/dictionary/|\\.txt", "", basename(words_file))
     out_file <- paste0(database,"_",words_file,"_keyword_occurrences.xlsx")
 
     writexl::write_xlsx(occurrences, file.path(outDir, out_file))
@@ -51,7 +51,7 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
     }
 
     # Create subfolders to store outputs by toxval version
-    outDir <- file.path(toxval.config()$datapath, "toxvaldb_release_summaries", Sys.getenv("db_server"), toxval.db)
+    outDir <- file.path(toxval.config()$datapath, "toxvaldb_release_schema_comparison", Sys.getenv("db_server"), toxval.db)
     if(!dir.exists(outDir)) {
       dir.create(outDir, recursive = TRUE)
       dir.create(file.path(outDir, "DDL"))
@@ -131,9 +131,9 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
     return(x)
   }
 
-  old <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", compare.toxval.host, compare.toxval.db),
+  old <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_schema_comparison", compare.toxval.host, compare.toxval.db),
                                      "/", compare.toxval.db, "_release_summary_", Sys.Date(), ".xlsx"))
-  new <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_summaries", in.toxval.host, in.toxval.db),
+  new <- read_excel_allsheets(paste0(file.path(toxval.config()$datapath, "toxvaldb_release_schema_comparison", in.toxval.host, in.toxval.db),
                                      "/", in.toxval.db, "_release_summary_", Sys.Date(), ".xlsx"))
 
   comparison <- list(
@@ -179,7 +179,7 @@ toxvaldb_release_summary <- function(in.toxval.db, in.toxval.host, compare.toxva
   if(grepl("aws", in.toxval.host)) in.toxval.host = "aws"
 
   writexl::write_xlsx(comparison,
-                      paste0(toxval.config()$datapath, "/toxvaldb_release_summaries/",
+                      paste0(toxval.config()$datapath, "/toxvaldb_release_schema_comparison/",
                                     in.toxval.host, "_", in.toxval.db, "_", compare.toxval.host, "_", compare.toxval.db, "_release_comparison_", Sys.Date(), ".xlsx"))
   message("Done comparing...")
 }
