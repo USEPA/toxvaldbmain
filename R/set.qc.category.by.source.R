@@ -109,7 +109,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
       in_toxval$record_qc_status = "not determined"
     } else {
       in_toxval = in_toxval %>%
-        dplyr::left_join(runQuery(paste0("SELECT source_hash, qc_status as record_qc_status FROM ",
+        dplyr::left_join(runQuery(paste0("SELECT source_hash, qc_status as record_qc_status, qc_notes FROM ",
                                          source_df$source_table),
                                   source.db),
                          by="source_hash")
@@ -172,6 +172,8 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
           qc_category_new = dplyr::case_when(
             # If source_hash ever in a ticket attachment or has a status of pass or fail
             # Then it was manually checked
+            grepl("expert reviewed", qc_notes, ignore.case=TRUE) ~
+              paste0(qc_category_new, ", and this record was expert reviewed"),
             (source_hash %in% hash_list | grepl("pass", record_qc_status, ignore.case = TRUE) | grepl("fail", record_qc_status, ignore.case = TRUE)) &
               # Only apply if source marked as "passed QC"
               grepl("Source overall passed QC", qc_category_new) ~
@@ -236,13 +238,13 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     group_by(source_hash) %>%
     # Combine unique categories that aren't NA
     dplyr::mutate(qc_category = paste0(unique(c(qc_category_new,
-                                                         # Split previously assigned up
-                                                         qc_category %>%
-                                                           strsplit(., "; ") %>%
-                                                           unlist()
-                                                         )) %>%
-                                                  .[!. %in% c("-")],
-                                       collapse = "; ")) %>%
+                                                # Split previously assigned up
+                                                qc_category %>%
+                                                  strsplit(., "; ") %>%
+                                                  unlist()
+    )) %>%
+      .[!. %in% c("-")],
+    collapse = "; ")) %>%
     dplyr::ungroup() %>%
     dplyr::select("source", "source_hash", "qc_category") %>%
     distinct()
