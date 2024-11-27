@@ -62,7 +62,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       .[!grepl("export_temp|old files", .)] %>%
       lapply(., function(f){
         readxl::read_xlsx(f) %>%
-          dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)))
+          dplyr::mutate(dplyr::across(c("study_duration_value",
+                                        "study_duration_class"),
+                                      ~as.character(.)))
       }) %>%
       dplyr::bind_rows()
 
@@ -77,7 +79,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                    "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
                    "b.toxval_units, b.study_type_original, b.study_type, ",
                    "b.study_type as study_type_corrected, ",
+                   "b.study_duration_class_original, ",
                    "b.study_duration_value_original, b.study_duration_units_original, ",
+                   "b.study_duration_class, ",
                    "b.study_duration_value, b.study_duration_units, ",
                    "d.common_name, ",
                    "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
@@ -171,7 +175,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           cat("Pulling study_type maps for import...\n")
           mat = lapply(file_list, function(f){
             readxl::read_xlsx(f) %>%
-              dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)),
+              dplyr::mutate(dplyr::across(c("study_duration_value",
+                                            "study_duration_class"),
+                                          ~as.character(.)),
                             dict_filename = f)
           }) %>%
             dplyr::bind_rows() %>%
@@ -234,7 +240,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
                      "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
                      "b.toxval_units, b.study_type_original, b.study_type, ",
                      "b.study_type as study_type_corrected, ",
+                     "b.study_duration_class_original, ",
                      "b.study_duration_value_original, b.study_duration_units_original, ",
+                     "b.study_duration_class, ",
                      "b.study_duration_value, b.study_duration_units, ",
                      "d.common_name, ",
                      "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
