@@ -470,7 +470,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                     TRUE ~ value_orig
                   )) %>%
     dplyr::select(source_hash, field_orig, value_final, qc_notes, qc_status, qc_category) %>%
-    tidyr::pivot_wider(id_cols = c("source_hash"),
+    tidyr::pivot_wider(id_cols = c("source_hash", "qc_status", "qc_category"),
                        names_from = "field_orig",
                        values_from = "value_final") %>%
     # Update data type as needed to rejoin
