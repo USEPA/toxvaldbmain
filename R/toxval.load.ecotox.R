@@ -402,7 +402,8 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   #   )
 
   qc_fixes = lapply(list.files(paste0(toxval.config()$datapath,"ecotox/ecotox_files/qc_files"),
-                               full.names = TRUE),
+                               full.names = TRUE,
+                               pattern = "xlsx"),
                     function(f_name){
                       readxl::read_xlsx(f_name, col_types = "text") %>%
                         dplyr::mutate(qc_file_name = basename(f_name),
@@ -452,6 +453,14 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
       )
     )
 
+  # Check for duplicate/conflicting field changes across files
+  qc_fixes_dups = toxval.load.dedup(qc_fixes,
+                                    hashing_cols = c("source_hash", "field_fix"))
+
+  if(any(grepl("|::|", qc_fixes_dups$value_fix, fixed = TRUE))){
+    stop("Conflicting qc_fix changes applied to record field across QC files...")
+  }
+
   res_fix = res %>%
     dplyr::filter(source_hash %in% unique(qc_fixes$source_hash)) %>%
     tidyr::pivot_longer(-source_hash,
@@ -459,8 +468,10 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                         values_to = "value_orig",
                         values_transform = list(value_orig = as.character)
     ) %>%
-    # Join QC fixes
-    dplyr::left_join(qc_fixes,
+    # Join QC fixes - changed field values
+    dplyr::left_join(qc_fixes %>%
+                       dplyr::select(source_hash, field_fix, value_fix) %>%
+                       dplyr::distinct(),
                      by = c("source_hash", "field_orig"="field_fix")) %>%
     dplyr::rowwise() %>%
     # Select final field value based on if QC'd field was changed
@@ -469,14 +480,24 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                     qc_changed == FALSE & !value_fix %in% c(NA, "N/A") ~ value_fix,
                     TRUE ~ value_orig
                   )) %>%
-    dplyr::select(source_hash, field_orig, value_final, qc_notes, qc_status, qc_category) %>%
-    tidyr::pivot_wider(id_cols = c("source_hash", "qc_status", "qc_category"),
+    dplyr::ungroup() %>%
+    # Join QC fixes - status and category
+    dplyr::left_join(qc_fixes %>%
+                       dplyr::select(source_hash, qc_status, qc_category) %>%
+                       dplyr::distinct(),
+                     by = "source_hash") %>%
+    dplyr::select(source_hash, field_orig, value_final, qc_status, qc_category) %>%
+    tidyr::pivot_wider(id_cols = c("source_hash"),
                        names_from = "field_orig",
                        values_from = "value_final") %>%
     # Update data type as needed to rejoin
     dplyr::mutate(
       dplyr::across(dplyr::any_of(c("species_id", "year", "toxval_numeric",
                                     "external_source_id", "study_duration_value")), ~as.numeric(.)))
+
+  if(any(duplicated(res_fix$source_hash))){
+    stop("Duplicate res_fix source_hash values found...")
+  }
 
   res = res %>%
     # Filter out old that changed
@@ -501,6 +522,21 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                     study_type = study_type %>%
                       gsub(" |::| ", "|", x=., fixed = TRUE))
   })
+
+  # Check for fields that were collapsed
+  collapsed_res_fields = lapply(names(res), function(f){
+    if(sum(stringr::str_detect(res[[f]], '\\|::\\|'
+    ), na.rm = TRUE) > 0){
+      return(f)
+    }
+  }) %>%
+    purrr::compact() %>%
+    unlist()
+
+  # No field collapsing in hashing columns or identifier columns
+  if(any(collapsed_res_fields %in% c(hashing_cols, "chemical_id", "dtxsid"))){
+    stop("Recording collapsing occurred in hashing or unique identifier columns...")
+  }
 
   cat("set the source_hash\n")
   # Vectorized approach to source_hash generation
