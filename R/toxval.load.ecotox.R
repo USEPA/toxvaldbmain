@@ -403,9 +403,12 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
 
   qc_fixes = lapply(list.files(paste0(toxval.config()$datapath,"ecotox/ecotox_files/qc_files"),
                                full.names = TRUE,
-                               pattern = "xlsx"),
+                               pattern = "xlsx") %>%
+                      .[!grepl("~", .)],
                     function(f_name){
                       readxl::read_xlsx(f_name, col_types = "text") %>%
+                        # Remove fields known to not have been changed during QC
+                        dplyr::select(-dplyr::any_of(c("species", "species_original", "common_name"))) %>%
                         dplyr::mutate(qc_file_name = basename(f_name),
                                       # dplyr::across(dplyr::any_of(
                                       #   c("study_duration_value",
@@ -418,12 +421,17 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                         )
                     }) %>%
     dplyr::bind_rows() %>%
+    # reset numeric and units to be same as _original
+    dplyr::mutate(toxval_numeric = toxval_numeric_original,
+                  toxval_units = toxval_units_original) %>%
     # Combine different QC columns across files
     tidyr::unite(col = "qc_notes",
                  notes, cw_qc, cw_edit,
                  sep = "|",
                  na.rm = TRUE) %>%
-    dplyr::filter(!qc_notes == "need text") %>%
+    dplyr::filter(!qc_notes == "need text"# ,
+                  # !grepl("fail", qc_notes)
+                  ) %>%
     dplyr::select(dplyr::any_of(c(names(res), "qc_notes", "qc_file_name"))) %>%
     tidyr::separate_longer_delim(source_hash, delim = ",") %>%
     tidyr::separate_longer_delim(source_hash, delim = "|::|") %>%
@@ -447,6 +455,11 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
         grepl("pass|edit|changed", qc_notes) ~ "pass",
         TRUE ~ "fail"
       ),
+      # If qc_status = fail, do not update the record fields
+      value_fix = dplyr::case_when(
+        qc_status == "fail" ~ "N/A",
+        TRUE ~ value_fix
+      ),
       qc_category = dplyr::case_when(
         grepl("edit|change", qc_notes) ~ "Source overall passed QC, and this record was revised from ECOTOX source",
         TRUE ~ "Source overall passed QC, and this record was manually checked"
@@ -457,6 +470,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   qc_fixes_dups = toxval.load.dedup(qc_fixes,
                                     hashing_cols = c("source_hash", "field_fix"))
 
+  # Check if any collapsed values in fixes
   if(any(grepl("|::|", qc_fixes_dups$value_fix, fixed = TRUE))){
     stop("Conflicting qc_fix changes applied to record field across QC files...")
   }
@@ -487,7 +501,7 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
                        dplyr::distinct(),
                      by = "source_hash") %>%
     dplyr::select(source_hash, field_orig, value_final, qc_status, qc_category) %>%
-    tidyr::pivot_wider(id_cols = c("source_hash"),
+    tidyr::pivot_wider(id_cols = c("source_hash", "qc_status", "qc_category"),
                        names_from = "field_orig",
                        values_from = "value_final") %>%
     # Update data type as needed to rejoin
@@ -498,6 +512,29 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   if(any(duplicated(res_fix$source_hash))){
     stop("Duplicate res_fix source_hash values found...")
   }
+
+  if(anyNA(res_fix$toxval_numeric)){
+    stop("NA toxval_numeric found")
+  }
+
+  # Clean up QC'd critical_effect, remove "-" in piped effects
+  res_fix = res_fix %>%
+    dplyr::mutate(dplyr::across(dplyr::any_of(c("critical_effect",
+                                                "long_ref")),
+                                ~ gsub(" | -", "", ., fixed = TRUE) %>%
+                                  stringr::str_squish()))
+
+  # # Review QC'd fields
+  # tmp = res_fix %>%
+  #   dplyr::select(source_hash, dplyr::any_of(hashing_cols), species_original, qc_status, qc_category) %>%
+  #   dplyr::select(-ecotox_group, -species_id, -external_source_id, -common_name, -latin_name) %>%
+  #   dplyr::filter(!qc_status == "fail") %>%
+  #   dplyr::distinct()
+  #
+  # for(field in names(tmp)){
+  #   message(field)
+  #   print(unique(tmp[[field]]))
+  # }
 
   res = res %>%
     # Filter out old that changed

@@ -8,6 +8,12 @@
 set.initial.qc_status <- function(toxval.db, source.db, source, subsource=NULL){
   printCurrentFunction(toxval.db)
 
+  # Skip resetting ECOTOX since it's set during load for QC'd records
+  if(source %in% c("ECOTOX")){
+    message("Skipping setting initial QC status for ECOTOX...")
+    return()
+  }
+
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
 

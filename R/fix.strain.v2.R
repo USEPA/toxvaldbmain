@@ -78,6 +78,7 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
     if(nrow(dup_check)){
       message("Multiple strain mappings identified for matching species_id...how to proceed?")
       browser()
+      stop()
     }
 
     # Batch update strain

@@ -62,8 +62,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       .[!grepl("export_temp|old files", .)] %>%
       lapply(., function(f){
         readxl::read_xlsx(f) %>%
-          dplyr::mutate(dplyr::across(c("study_duration_value",
-                                        "study_duration_class"),
+          dplyr::mutate(dplyr::across(dplyr::any_of(c("study_duration_value",
+                                                      "study_duration_class")),
                                       ~as.character(.)))
       }) %>%
       dplyr::bind_rows()
@@ -175,8 +175,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           cat("Pulling study_type maps for import...\n")
           mat = lapply(file_list, function(f){
             readxl::read_xlsx(f) %>%
-              dplyr::mutate(dplyr::across(c("study_duration_value",
-                                            "study_duration_class"),
+              dplyr::mutate(dplyr::across(dplyr::any_of(c("study_duration_value",
+                                                          "study_duration_class")),
                                           ~as.character(.)),
                             dict_filename = f)
           }) %>%
