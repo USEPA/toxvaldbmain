@@ -105,8 +105,11 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     }
 
     # Add source table qc_status if not direct load, otherwise "undetermined" qc_status
+    # direct_load does not have qc_notes, so NA
     if(src_tbl == "direct load"){
-      in_toxval$record_qc_status = "not determined"
+      in_toxval = in_toxval %>%
+        dplyr::mutate(record_qc_status = "not determined",
+                      qc_notes = NA)
     } else {
       in_toxval = in_toxval %>%
         dplyr::left_join(runQuery(paste0("SELECT source_hash, qc_status as record_qc_status, qc_notes FROM ",
@@ -237,7 +240,9 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                      by="source_hash") %>%
     group_by(source_hash) %>%
     # Combine unique categories that aren't NA
-    dplyr::mutate(qc_category = paste0(unique(c(qc_category_new,
+    dplyr::mutate(qc_category = paste0(unique(c(qc_category_new %>%
+                                                  strsplit(., "; ") %>%
+                                                  unlist(),
                                                 # Split previously assigned up
                                                 qc_category %>%
                                                   strsplit(., "; ") %>%
@@ -246,7 +251,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
       .[!. %in% c("-")],
     collapse = "; ")) %>%
     dplyr::ungroup() %>%
-    dplyr::select("source", "source_hash", "qc_category") %>%
+    dplyr::select(source, source_hash, qc_category) %>%
     distinct()
 
   # Update qc_category in toxval
