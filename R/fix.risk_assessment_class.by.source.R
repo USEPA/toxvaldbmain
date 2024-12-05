@@ -31,7 +31,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
   }
 
   # Read in RAC dictionary
-  rac_dict = readxl::read_xlsx("Repo/dictionary/RAC_toxval_type_dict.xlsx") %>%
+  rac_dict = readxl::read_xlsx(toxval.config()$datapath, "Repo/dictionary/RAC_toxval_type_dict.xlsx") %>%
     dplyr::distinct() %>%
     dplyr::mutate(dplyr::across(dplyr::where(is.character), ~tidyr::replace_na(., "-")))
 
