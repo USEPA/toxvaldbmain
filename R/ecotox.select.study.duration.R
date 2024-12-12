@@ -2,7 +2,7 @@
 #'@description Function to select the appropriate study_duration value from conc1_* fields
 #'@param in_data Input ECOTOX dataframe
 #'@return Processed dataframe with new study_duration_values, units, and qualitifer fields
-ecotox.select.study.duration <- function(in_data){
+ecotox.select.study.duration <- function(in_data, dur_col = NULL){
   # Initial list to hold processed dataframes
   out_ls <- list()
   # Track original rows to ensure all remain at end
@@ -10,37 +10,38 @@ ecotox.select.study.duration <- function(in_data){
   in_data <- in_data %>%
     dplyr::mutate(tmp_id = 1:dplyr::n())
   ### First, select observed_duration_std (standardized study duration mean value) without issues
-  out_ls$observed_duration_std <- in_data %>%
-    dplyr::rename(study_duration_units = observed_duration_units_std) %>%
-    dplyr::mutate(observed_duration_std = gsub("~|<|<=|>|>=", "", observed_duration_std)) %>%
-    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(observed_duration_std)),
-                  study_duration_qualifier = observ_duration_mean_op) %>%
+  # https://stackoverflow.com/questions/74656462/using-string-as-variable-on-lhs-and-in-mutate-command
+  out_ls[[paste0(dur_col, "_std")]] <- in_data %>%
+    dplyr::rename(study_duration_units = paste0(dur_col, "_units_std")) %>%
+    dplyr::mutate("{paste0(dur_col, '_std')}" := gsub("~|<|<=|>|>=", "", !!as.name(paste0(dur_col, '_std')))) %>%
+    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(!!as.name(paste0(dur_col, '_std')))),
+                  study_duration_qualifier = !!as.name(paste0(dur_col, '_mean_op'))) %>%
     dplyr::filter(!is.na(study_duration_value))
   # Filter out records
   in_data <- in_data %>%
-    dplyr::filter(!tmp_id %in% out_ls$observed_duration_std$tmp_id)
+    dplyr::filter(!tmp_id %in% out_ls[[paste0(dur_col, "_std")]]$tmp_id)
 
-  ### Select observ_duration_mean without issues
-  out_ls$observ_duration_mean <- in_data %>%
-    dplyr::rename(study_duration_units = observ_duration_unit_desc) %>%
-    dplyr::mutate(observ_duration_mean = gsub("~|<|<=|>|>=", "", observ_duration_mean)) %>%
-    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(observ_duration_mean)),
-                  study_duration_qualifier = observ_duration_mean_op) %>%
+  ### Select observed_duration_mean without issues
+  out_ls[[paste0(dur_col, "_mean")]] <- in_data %>%
+    dplyr::rename(study_duration_units = paste0(dur_col, "_unit_desc")) %>%
+    dplyr::mutate("{paste0(dur_col, '_mean')}" := gsub("~|<|<=|>|>=", "", !!as.name(paste0(dur_col, '_mean')))) %>%
+    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(!!as.name(paste0(dur_col, '_mean')))),
+                  study_duration_qualifier = !!as.name(paste0(dur_col, '_mean_op'))) %>%
     dplyr::filter(!is.na(study_duration_value))
   # Filter out records
   in_data <- in_data %>%
-    dplyr::filter(!tmp_id %in% out_ls$observ_duration_mean$tmp_id)
+    dplyr::filter(!tmp_id %in% out_ls[[paste0(dur_col, "_mean")]]$tmp_id)
 
-  ### Select observ_duration_max
-  out_ls$observ_duration_max <- in_data %>%
-    dplyr::rename(study_duration_units = observ_duration_unit_desc) %>%
-    dplyr::mutate(observ_duration_max = gsub("\\/", "", observ_duration_max)) %>%
-    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(observ_duration_max)),
-                  study_duration_qualifier = observ_duration_max_op) %>%
+  ### Select observed_duration_max
+  out_ls[[paste0(dur_col, "_max")]] <- in_data %>%
+    dplyr::rename(study_duration_units = paste0(dur_col, "_unit_desc")) %>%
+    dplyr::mutate("{paste0(dur_col, '_max')}" := gsub("\\/", "", !!as.name(paste0(dur_col, '_max')))) %>%
+    dplyr::mutate(study_duration_value = suppressWarnings(as.numeric(!!as.name(paste0(dur_col, '_max')))),
+                  study_duration_qualifier = !!as.name(paste0(dur_col, '_max_op'))) %>%
     dplyr::filter(!is.na(study_duration_value))
   # Filter out records
   in_data <- in_data %>%
-    dplyr::filter(!tmp_id %in% out_ls$observ_duration_max$tmp_id)
+    dplyr::filter(!tmp_id %in% out_ls[[paste0(dur_col, "_max")]]$tmp_id)
 
   ### Lump remaining as NA
   out_ls$unhandled_na <- in_data %>%
@@ -49,9 +50,9 @@ ecotox.select.study.duration <- function(in_data){
                   study_duration_units = NA)
 
   # Check remaining fixes
-  # View(out_ls$unhandled_na %>% select(tidyr::starts_with("observ")) %>% distinct(), "unhandled_study_duration")
+  # View(out_ls$unhandled_na %>% select(tidyr::starts_with("observed")) %>% distinct(), "unhandled_study_duration")
   # in_data %>%
-  #   dplyr::select(tidyr::starts_with("observ")) %>%
+  #   dplyr::select(tidyr::starts_with("observed")) %>%
   #   distinct() %>%
   #   View()
 
@@ -159,7 +160,7 @@ ecotox.select.study.duration <- function(in_data){
 
     out_ls %>%
       # Select out all conc1_* fields processed
-      dplyr::select(-tidyr::starts_with("observ"), -tmp_id) %>%
+      dplyr::select(-tidyr::starts_with("observed_duration"), -tmp_id) %>%
       return()
   }
 }

@@ -62,7 +62,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       .[!grepl("export_temp|old files", .)] %>%
       lapply(., function(f){
         readxl::read_xlsx(f) %>%
-          dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)))
+          dplyr::mutate(dplyr::across(dplyr::any_of(c("study_duration_value",
+                                                      "study_duration_class")),
+                                      ~as.character(.)))
       }) %>%
       dplyr::bind_rows()
 
@@ -76,8 +78,11 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
                    "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
                    "b.toxval_units, b.study_type_original, b.study_type, ",
-                   "b.study_type as study_type_corrected, b.study_duration_value, ",
-                   "b.study_duration_units, ",
+                   "b.study_type as study_type_corrected, ",
+                   "b.study_duration_class_original, ",
+                   "b.study_duration_value_original, b.study_duration_units_original, ",
+                   "b.study_duration_class, ",
+                   "b.study_duration_value, b.study_duration_units, ",
                    "d.common_name, ",
                    "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
                    "b.critical_effect, ",
@@ -121,7 +126,7 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
     for(source in missing_data %>% dplyr::pull(source) %>% unique()) {
       curr_missing = missing_data %>%
         dplyr::filter(source == !!source)
-      out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
+      out_file = paste0(toxval.config()$datapath, "dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
         stringr::str_squish() %>%
         paste0(".xlsx")
       if(nrow(curr_missing)){
@@ -170,7 +175,9 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           cat("Pulling study_type maps for import...\n")
           mat = lapply(file_list, function(f){
             readxl::read_xlsx(f) %>%
-              dplyr::mutate(dplyr::across(c("study_duration_value"), ~as.character(.)),
+              dplyr::mutate(dplyr::across(dplyr::any_of(c("study_duration_value",
+                                                          "study_duration_class")),
+                                          ~as.character(.)),
                             dict_filename = f)
           }) %>%
             dplyr::bind_rows() %>%
@@ -199,29 +206,32 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
           stop()
         }
 
-        batch_size <- 500
-        startPosition <- 1
-        endPosition <- nrow(temp0)
-        incrementPosition <- batch_size
+        # Only import if there is something to import
+        if(nrow(temp0)){
+          batch_size <- 500
+          startPosition <- 1
+          endPosition <- nrow(temp0)
+          incrementPosition <- batch_size
 
-        while(startPosition <= endPosition){
-          if(incrementPosition > endPosition) incrementPosition = endPosition
-          message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
-                  " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
+          while(startPosition <= endPosition){
+            if(incrementPosition > endPosition) incrementPosition = endPosition
+            message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+                    " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
 
-          updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
-                               "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type ",
-                               "WHERE a.source_hash in ('",
-                               paste0(temp0$source_hash[startPosition:incrementPosition], collapse="', '"), "') ",
-                               "AND a.qc_status NOT LIKE '%fail%' and a.human_eco = 'human health'")
+            updateQuery = paste0("UPDATE toxval a INNER JOIN z_updated_df b ",
+                                 "ON (a.source_hash = b.source_hash) SET a.study_type = b.study_type ",
+                                 "WHERE a.source_hash in ('",
+                                 paste0(temp0$source_hash[startPosition:incrementPosition], collapse="', '"), "') ",
+                                 "AND a.qc_status NOT LIKE '%fail%' and a.human_eco = 'human health'")
 
-          runUpdate(table="toxval",
-                    updateQuery = updateQuery,
-                    updated_df = temp0 %>% dplyr::select(source_hash, study_type),
-                    db=toxval.db)
+            runUpdate(table="toxval",
+                      updateQuery = updateQuery,
+                      updated_df = temp0 %>% dplyr::select(source_hash, study_type),
+                      db=toxval.db)
 
-          startPosition <- startPosition + batch_size
-          incrementPosition <- startPosition + batch_size - 1
+            startPosition <- startPosition + batch_size
+            incrementPosition <- startPosition + batch_size - 1
+          }
         }
       }
 
@@ -229,8 +239,11 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       query = paste0("SELECT a.dtxsid, a.casrn, a.name, ",
                      "b.source, b.subsource, b.risk_assessment_class, b.toxval_type, b.toxval_subtype, ",
                      "b.toxval_units, b.study_type_original, b.study_type, ",
-                     "b.study_type as study_type_corrected, b.study_duration_value, ",
-                     "b.study_duration_units, ",
+                     "b.study_type as study_type_corrected, ",
+                     "b.study_duration_class_original, ",
+                     "b.study_duration_value_original, b.study_duration_units_original, ",
+                     "b.study_duration_class, ",
+                     "b.study_duration_value, b.study_duration_units, ",
                      "d.common_name, ",
                      "b.generation, b.lifestage, b.exposure_route, b.exposure_method, ",
                      "b.critical_effect, ",
@@ -274,7 +287,8 @@ fix.study_type.by.source = function(toxval.db, mode="export", source=NULL, subso
       for(source in missing_data %>% dplyr::pull(source) %>% unique()) {
         curr_missing = missing_data %>%
           dplyr::filter(source == !!source)
-        out_file = paste0("Repo/dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
+
+        out_file = paste0(toxval.config()$datapath, "dictionary/study_type_by_source/export_temp/toxval_new_study_type ", source, " ", subsource) %>%
           stringr::str_squish() %>%
           paste0(".xlsx")
         if(nrow(curr_missing)){

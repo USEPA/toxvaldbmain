@@ -31,7 +31,7 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
       source_docs = runQuery(paste0("SELECT CONCAT(toxval_id, clowder_doc_id) as toxval_id_clowder_id ",
                                     "FROM ", toxval.db, ".record_source ",
                                     "WHERE source = '", source, "'"), toxval.db)
-      res0 = runQuery(paste0("select t.toxval_id, d.clowder_id, t.source, d.document_type, d.url, d.document_name, ",
+      res0 = runQuery(paste0("select t.toxval_id, d.clowder_id, t.source, dr.relationship_type, d.url, d.document_name, ",
                              "d.title, d.author, d.year, d.doi, d.clowder_metadata ",
                              "FROM ", toxval.db, ".toxval t ",
                              "LEFT JOIN ", source.db, ".documents_records dr ON t.source_hash = dr.source_hash ",
@@ -51,12 +51,19 @@ set_extraction_doc_clowder_id <- function(toxval.db, source.db, source=NULL){
     dplyr::bind_rows() %>%
     dplyr::rename(clowder_doc_id = clowder_id,
                   clowder_doc_metadata = clowder_metadata,
-                  record_source_level = document_type) %>%
+                  record_source_level = relationship_type) %>%
     dplyr::filter(!is.na(record_source_level)) %>%
     dplyr::mutate(
       # Convert document IDs to URLs
       clowder_doc_id = stringr::str_c("https://clowder.edap-cluster.com/files/", clowder_doc_id)
     )
+
+  # Check for undefined record_source_level entries
+  if(any("undefined" %in% unique(res$record_source_level))){
+    message("Records with undefined document relationship_type found...")
+    browser()
+    stop("Records with undefined document relationship_type found...")
+  }
 
   # Split into 2 dataframes
   extraction = res %>%

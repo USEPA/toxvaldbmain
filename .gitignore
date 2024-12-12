@@ -56,6 +56,7 @@ rsconnect/
 
 # Ignore test data and dev setup
 Repo/
+R/release/release_notes_template_files/
 dev_setup.R
 # Ignore temp file for test running functions from console
 tmp_delete.R

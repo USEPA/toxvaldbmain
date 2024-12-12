@@ -144,7 +144,8 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   human_source_list = c("EPA AEGL", "EPA OW NPDWR", "EPA OW NRWQC-HHC", "FDA CEDI",
                         "Mass. Drinking Water Standards", "NIOSH", "OSHA Air contaminants",
                         "OW Drinking Water Standards", "Pennsylvania DEP ToxValues", "RSL", "USGS HBSL",
-                       "EPA OPP", "EPA OW NPDWR")
+                        "EPA OW NPDWR")
+
   if(source %in% human_source_list){
     query = paste0("UPDATE toxval SET species_id=", human_id, " ",
                    "WHERE source='", source, "'")
@@ -158,7 +159,9 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                     "MCL-based SSL, groundwater", "MCLG", "MMCL", "MRDL", "MRL", "ORSG", "PMTDI",
                     "PTWI", "risk-based SSL, groundwater", "screening level (industrial air)",
                     "screening level (industrial soil)", "screening level (MCL)", "screening level (residential air)",
-                    "screening level (residential soil)", "screening level (tap water)", "SMCL", "TDI")
+                    "screening level (residential soil)", "screening level (tap water)", "SMCL", "TDI",
+                    "PAD (RfD)")
+
   query = paste0("UPDATE toxval SET species_id=", human_id, " ",
                  "WHERE source='", source, "' ",
                  "AND (toxval_type IN ('", paste0(human_tt_list, collapse="', '"), "') ",

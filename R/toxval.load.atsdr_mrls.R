@@ -64,12 +64,6 @@ toxval.load.atsdr_mrls <- function(toxval.db, source.db, log=FALSE, remove_null_
       subsource_url = dplyr::case_when(
         subsource_url == source_url ~ "-",
         TRUE ~ subsource_url
-      ),
-
-      # Set key_finding
-      key_finding = dplyr::case_when(
-        document_type == "ATSDR MRLs Toxicological Profile" ~ "key",
-        TRUE ~ "no"
       )
     ) %>%
     # Map experimental species information to critical_effect for derived toxval_type entries

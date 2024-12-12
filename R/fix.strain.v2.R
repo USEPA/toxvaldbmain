@@ -11,7 +11,7 @@
 fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2024-04-08", reset=FALSE) {
   printCurrentFunction()
 
-  file = paste0(toxval.config()$datapath,"species/strain_dictionary_",date_string,".xlsx")
+  file = paste0(toxval.config()$datapath,"species/strain_dictionary.xlsx")
   dict = openxlsx::read.xlsx(file) %>%
     dplyr::select(-common_name) %>%
     dplyr::distinct()
@@ -78,6 +78,7 @@ fix.strain.v2 <- function(toxval.db, source=NULL, subsource=NULL, date_string="2
     if(nrow(dup_check)){
       message("Multiple strain mappings identified for matching species_id...how to proceed?")
       browser()
+      stop()
     }
 
     # Batch update strain

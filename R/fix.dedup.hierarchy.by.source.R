@@ -14,7 +14,7 @@
 fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL,
                                           priority_list=NULL, subsource_priority_list=NULL,
                                           criteria=c("dtxsid"), report.only=FALSE) {
-  printCurrentFunction(paste(toxval.db,":", source))
+  printCurrentFunction(paste(toxval.db,":", toString(source)))
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
@@ -60,7 +60,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   for(source in slist) {
 
     # Source specific criteria
-    if(source %in% c("USGS HBSL", "EPA OPP")){
+    if(source %in% c("USGS HBSL", "EPA OPP", "RSL")){
       criteria = c("dtxsid", "toxval_type")
     } else {
       criteria = c("dtxsid")

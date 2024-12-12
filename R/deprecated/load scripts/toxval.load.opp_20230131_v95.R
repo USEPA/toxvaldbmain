@@ -1,13 +1,14 @@
 #--------------------------------------------------------------------------------------
-#' Load HAWC PFAS 430 from toxval_source to toxval
-#' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The version of toxval_source from which the tables are loaded.
+#
+#' Load EPA OPP data to toxval from toxval_source
+#' @param toxval.db The database version to use
+#' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "HAWC PFAS 430"
-  source_table = "source_hawc_pfas_430"
+toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "EPA OPP"
+  source_table = "source_opp"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -52,16 +53,8 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   #####################################################################
 
   res = res %>%
-    dplyr::mutate(
-      # Handle ranged study_duration values - maintain original range, set database values to NA
-      study_duration_value_original = study_duration_value,
-      study_duration_value = as.numeric(study_duration_value),
-      study_duration_units = study_duration_units %>%
-        gsub(", ?", "-", .),
-
-      # Add subsource_url field
-      subsource_url = record_url
-    )
+    dplyr::mutate(subsource = "HHBP",
+                  year = 2021)
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -72,7 +65,7 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","hhbp_rfd_id","cancer_id",
                               # Do not remove fields that would become "_original" fields
                               unique(gsub("_original", "", cols)))]
   nlist = nlist[!nlist %in% cols]
@@ -82,7 +75,7 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
 
   # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!nlist %in% c("casrn","name", "relationship_id",
+  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","hhbp_rfd_id","cancer_id",
                               # Do not remove fields that would become "_original" fields
                               unique(gsub("_original", "", cols)))]
   nlist = nlist[!nlist %in% cols]
@@ -124,33 +117,128 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   print(dim(res))
 
   #####################################################################
-  cat("Set the toxval_relationship for separated dose group unit conversion records\n")
+  cat("Set the toxval_relationship for separated toxval_numeric range records\n")
   #####################################################################
+  relationship_initial = res %>%
+    dplyr::filter(grepl("range", toxval_subtype),
+                  !range_relationship_id %in% c("-", NA)) %>%
+    dplyr::mutate(
+      toxval_relationship = dplyr::case_when(
+        grepl("lower", toxval_subtype) ~ "Lower Range",
+        grepl("upper", toxval_subtype) ~ "Upper Range"
+      )
+    )
+  # Add check for filtered values
+  if(nrow(relationship_initial)) {
+    relationship = relationship_initial %>%
+      tidyr::separate_rows(
+        range_relationship_id,
+        sep = " \\|::\\| "
+      ) %>%
+      dplyr::select(toxval_id, range_relationship_id, toxval_relationship) %>%
+      tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_relationship, values_from = toxval_id) %>%
+      dplyr::rename(toxval_id_1 = `Lower Range`,
+                    toxval_id_2 = `Upper Range`) %>%
+      dplyr::mutate(relationship = "toxval_numeric range") %>%
+      dplyr::select(-range_relationship_id) %>%
+      dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
 
-  # Build tibble containing relationship linkages (potential for many entries in single group)
-  relationship_tibble = res %>%
-    # Get relevant data and group by relationship_id
-    dplyr::filter(relationship_id != "-") %>%
-    dplyr::select(toxval_id, relationship_id) %>%
-    dplyr::group_by(relationship_id) %>%
+    # Insert range relationships into toxval_relationship table
+    if(nrow(relationship)){
+      runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+    }
+  }
 
-    # Add linkages between every entry in group
-    # Reference: https://stackoverflow.com/questions/67515989/report-all-possible-combinations-of-a-string-separated-vector
-    dplyr::reframe(toxval_id = if(n() > 1)
-      utils::combn(toxval_id, 2, paste0, collapse = ', ') else toxval_id) %>%
-    tidyr::separate(col="toxval_id", into=c("toxval_id_1", "toxval_id_2"), sep = ", ") %>%
-
-    # Prepare tibble for ToxVal
-    dplyr::mutate(relationship = "dose group unit conversion") %>%
-    dplyr::mutate(dplyr::across(c("toxval_id_1", "toxval_id_2"), ~as.numeric(.))) %>%
-    dplyr::select(-relationship_id)
-
-  # Send linkage data to ToxVal
-  runInsertTable(relationship_tibble, "toxval_relationship", toxval.db)
-
-  # Remove relationship_id
+  # Remove range_relationship_id and toxval_relationship fields
   res = res %>%
-    dplyr::select(-relationship_id)
+    dplyr::select(-range_relationship_id)
+
+  #####################################################################
+  cat("Set the toxval_relationship for HHBP-RfD pairs\n")
+  #####################################################################
+  # Iterate through non-cancer study_types
+  for(study_type in unique(res$study_type)) {
+    if(study_type == "cancer") next
+
+    relationship_initial = res %>%
+      dplyr::filter(study_type == !!study_type,
+                    grepl("HHBP|RfD", toxval_type),
+                    !hhbp_rfd_id %in% c("-", NA)) %>%
+      dplyr::mutate(
+        toxval_relationship = dplyr::case_when(
+          grepl("HHBP", toxval_type) ~ "HHBP",
+          TRUE ~ "RfD"
+        )
+      )
+
+    # Add check for filtered values
+    if(nrow(relationship_initial)) {
+      relationship = relationship_initial %>%
+        tidyr::separate_rows(
+          hhbp_rfd_id,
+          sep = " \\|::\\| "
+        ) %>%
+        dplyr::select(toxval_id, hhbp_rfd_id, toxval_relationship) %>%
+        tidyr::pivot_wider(id_cols = "hhbp_rfd_id", names_from=toxval_relationship, values_from = toxval_id) %>%
+        dplyr::rename(toxval_id_1 = HHBP,
+                      toxval_id_2 = RfD) %>%
+        dplyr::mutate(relationship = stringr::str_c(!!study_type, " HHBP to RfD")) %>%
+        dplyr::select(-hhbp_rfd_id) %>%
+        dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
+
+      # Insert range relationships into toxval_relationship table
+      if(nrow(relationship)){
+        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+      }
+    }
+  }
+
+  # Remove range_relationship_id and toxval_relationship fields
+  res = res %>%
+    dplyr::select(-hhbp_rfd_id)
+
+  #####################################################################
+  cat("Set the toxval_relationship for cancer column pairs\n")
+  #####################################################################
+  # Handle lower/upper relationships separately
+  for(rel in c("lower", "upper")) {
+    relationship_initial = res %>%
+      dplyr::filter(study_type == "cancer",
+                    !cancer_id %in% c("-", NA),
+                    (grepl(!!rel, toxval_subtype) | toxval_type == "cancer slope factor")) %>%
+      dplyr::mutate(
+        toxval_relationship = dplyr::case_when(
+          grepl("HHBP", toxval_type) ~ "HHBP",
+          TRUE ~ "cancer slope factor"
+        )
+      )
+
+    # Add check for filtered values
+    if(nrow(relationship_initial)) {
+      relationship = relationship_initial %>%
+        tidyr::separate_rows(
+          cancer_id,
+          sep = " \\|::\\| "
+        ) %>%
+        dplyr::select(toxval_id, cancer_id, toxval_relationship) %>%
+        tidyr::pivot_wider(id_cols = "cancer_id", names_from=toxval_relationship, values_from = toxval_id) %>%
+        dplyr::rename(toxval_id_1 = `cancer slope factor`,
+                      toxval_id_2 = HHBP) %>%
+        dplyr::mutate(relationship = "cancer column pair") %>%
+        dplyr::select(-cancer_id) %>%
+        dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
+
+      # Insert range relationships into toxval_relationship table
+      if(nrow(relationship)){
+        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+      }
+    }
+
+  }
+
+  # Remove range_relationship_id and toxval_relationship fields
+  res = res %>%
+    dplyr::select(-cancer_id)
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -168,9 +256,9 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "-"
-  refs$record_source_note = "-"
-  refs$record_source_level = "-"
+  refs$record_source_type = "website"
+  refs$record_source_note = "to be cleaned up"
+  refs$record_source_level = "primary (risk assessment values)"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
@@ -180,7 +268,6 @@ toxval.load.hawc_pfas_430 <- function(toxval.db, source.db, log=FALSE, remove_nu
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  # res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
