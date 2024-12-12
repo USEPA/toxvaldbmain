@@ -32,12 +32,12 @@ source.db = toxval.config()$source.db
 toxval_version = "v9.6"
 
 # Load Comparison stats
-v_compare = paste0("../../", toxval.config()$datapath, "release_files/version_comparison/",
+v_compare = paste0(toxval.config()$datapath, "release_files/version_comparison/",
               toxval_version, ".RData")
 
 # Check if comparison stats exist, if not create them
 if(!file.exists(v_compare)){
-  toxvaldb_release_comparison_stats(repoDir = "../../Repo/")
+  toxvaldb_release_comparison_stats(repoDir = toxval.config()$datapath)
 }
 
 load(v_compare)
@@ -95,6 +95,7 @@ With a few exceptions, the complete workflow is carried out using code in an R p
 :::
 
 # Version Comparison
+
 ::: {.panel-tabset .nav-pills}
 ```{r}
 #| label: "version-comparison-stats"

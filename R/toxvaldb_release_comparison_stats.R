@@ -44,7 +44,12 @@ toxvaldb_release_comparison_stats <- function(repoDir){
       # Overall record count
       n_records = runQuery("SELECT count(*) as n_records FROM toxval", toxval.db),
       # Source count
-      n_source = runQuery("SELECT count(distinct source) as n_source FROM toxval", toxval.db),
+      n_source = ifelse(db %in% c("v9.5"),
+                        # v9.5 had source overwritten with supersource label, which combined
+                        # source values and made the source count seem lower. Use source_table for improved reporting
+                        runQuery("SELECT count(distinct source, source_table) as n_source FROM toxval", toxval.db),
+                        runQuery("SELECT count(distinct source) as n_source FROM toxval", toxval.db)) %>%
+        unlist(),
       # DTXSID count
       n_dtxsid = runQuery("SELECT count(distinct dtxsid) as n_dtxsid FROM toxval", toxval.db),
       # Count of records with human-relevant species
