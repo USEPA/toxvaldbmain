@@ -42,26 +42,35 @@ toxvaldb_release_comparison_stats <- function(repoDir){
 
     data.frame(
       # Overall record count
-      n_records = runQuery("SELECT count(*) as n_records FROM toxval", toxval.db),
+      `Record Count` = runQuery("SELECT count(*) as n_records FROM toxval", toxval.db) %>%
+        dplyr::pull(n_records),
       # Source count
-      n_source = ifelse(db %in% c("v9.5"),
+      `Source Count` = ifelse(db %in% c("v9.5"),
                         # v9.5 had source overwritten with supersource label, which combined
                         # source values and made the source count seem lower. Use source_table for improved reporting
-                        runQuery("SELECT count(distinct source, source_table) as n_source FROM toxval", toxval.db),
-                        runQuery("SELECT count(distinct source) as n_source FROM toxval", toxval.db)) %>%
-        unlist(),
+                        runQuery("SELECT distinct source, source_table FROM toxval", toxval.db) %>%
+                          dplyr::mutate(source_table = dplyr::case_when(
+                            source == "ECHA IUCLID" ~ "ECHA IUCLID",
+                            TRUE ~ source_table
+                          )) %>%
+                          dplyr::distinct() %>%
+                          nrow(),
+                        runQuery("SELECT count(distinct source) as n_source FROM toxval", toxval.db) %>%
+                          dplyr::pull(n_source)),
       # DTXSID count
-      n_dtxsid = runQuery("SELECT count(distinct dtxsid) as n_dtxsid FROM toxval", toxval.db),
+      `DTXSID Count` = runQuery("SELECT count(distinct dtxsid) as n_dtxsid FROM toxval", toxval.db) %>%
+        dplyr::pull(n_dtxsid),
       # Count of records with human-relevant species
       # common_name %in% c("Rat", "Mouse", "Dog", "Rabbit", "Human")
-      n_human_species_rel = runQuery(paste0("SELECT count(*) as n_human_species_rel FROM toxval a ",
+      `Human-Relevant Species Count` = runQuery(paste0("SELECT count(*) as n_human_species_rel FROM toxval a ",
                                             "LEFT JOIN ",
                                             # v9 had a separate species_ecotox table
                                             ifelse(db == "v9", "species_ecotox ", "species "),
                                             "b ON a.species_id = b.species_id ",
                                             "WHERE ", human_species_rel),
                                      toxval.db
-      )
+      ) %>%
+        dplyr::pull(n_human_species_rel)
     ) %>%
       tidyr::pivot_longer(dplyr::everything(),
                           names_to = "stat",

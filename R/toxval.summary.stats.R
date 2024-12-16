@@ -8,7 +8,7 @@
 #'
 #--------------------------------------------------------------------------------------
 toxval.summary.stats <- function(toxval.db, export=FALSE) {
-  printCurrentFunction(toxval.db)
+  # printCurrentFunction(toxval.db)
 
   # Get chemical DTXSID (represented by chemical_id) and record count
   res = runQuery(paste0("SELECT source, count(distinct chemical_id) as chemicals, count(*) as `total records` ",

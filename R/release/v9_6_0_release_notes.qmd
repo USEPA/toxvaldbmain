@@ -1,0 +1,403 @@
+---
+title: "ToxValDB v9.6.0 Release Notes"
+author: Taylor Wall
+description: >
+  The following are notes to accompany a release for ToxValDB.
+resource_files:
+- images/tovaldb_workflow.jpg
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-summary: "Show Code"
+    code-overflow: scroll
+    code-line-numbers: true
+    code-copy: true
+    page-layout: full
+editor: visual
+---
+
+```{r}
+#| echo: FALSE
+#| message: FALSE
+#| warning: FALSE
+#| resuts: FALSE
+
+knitr::opts_chunk$set(collapse = T, comment = "#>")
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+devtools::load_all()
+toxval.db = toxval.config()$toxval.db
+source.db = toxval.config()$source.db
+toxval_version = "v9.6"
+
+# Load Comparison stats
+v_compare = paste0(toxval.config()$datapath, "release_files/version_comparison/",
+              toxval_version, ".RData")
+
+# Check if comparison stats exist, if not create them
+if(!file.exists(v_compare)){
+  toxvaldb_release_comparison_stats(repoDir = toxval.config()$datapath)
+}
+
+load(v_compare)
+
+toxvaldb_release_comparison = toxvaldb_release_comparison %>%
+  # Fix formatting of stat names
+  dplyr::mutate(stat = stat %>% gsub("\\.", " ", .))
+
+qc_status_summ = toxval.summary.stats(toxval.db)
+
+# library(DT)
+# https://stackoverflow.com/questions/37755037/how-to-add-code-folding-to-output-chunks-in-rmarkdown-html-documents
+# https://stackoverflow.com/questions/56550878/in-r-markdown-how-to-output-sortable-table-while-r-chunk-is-set-to-results-a
+# https://bookdown.org/yihui/rmarkdown/html-document.html
+# https://rmd4sci.njtierney.com/figures-tables-captions-.html
+```
+
+```{r}
+#| echo: FALSE
+
+# ToxValDB Stats
+n_records = runQuery("SELECT count(*) as n FROM toxval", toxval.db)
+n_chemicals = runQuery("SELECT count(distinct dtxsid) as n FROM toxval", toxval.db)
+n_sources = runQuery("SELECT count(distinct source) as n FROM toxval", toxval.db)
+field_dictionary_list = readxl::excel_sheets(paste0(toxval.config()$datapath, "release_files/field_dictionary.xlsx"))
+field_dictionary = lapply(field_dictionary_list, 
+                          function(s){ readxl::read_xlsx(paste0(toxval.config()$datapath, 
+                                                                "release_files/field_dictionary.xlsx"), 
+                                                         sheet=s)
+                            }) %T>% {
+                              names(.) <- field_dictionary_list
+                            }
+```
+
+# Overview
+
+The Toxicity Values Database (ToxValDB) contains summary data on in vivo toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals from over `r format(plyr::round_any(n_sources$n, 10), big.mark=",")` sources.
+
+In addition to this release note, the following summary files are available:
+
+-   Data file column dictionary\_`r toxval_version %>% gsub("\\.", "", .)`.xlsx
+-   source_count 2024-12-09.xlsx
+-   source_info 2024-08-28.xlsx
+
+# Workflow
+
+The overall workflow is illustrated in @fig-toxvaldbworkflow2.
+
+Applicable data are identified from a number of sources (see Table 1) and loaded into the toxval_source MySQL database. Each source has different fields and uses different terminology, so a custom source-specific database table is developed for each source. A custom R script is written to pre-process and load each source, although these functions follow a standard template and use common, generic functions when possible.
+
+Records are reviewed in the "toxval_source" database by source. To facilitate this quality control (QC) process, the source documents are collected and uploaded to the CCTE Clowder cloud-based document repository and linked to corresponding records in toxval_source.
+
+The extent of QC for ToxValDB data is determined by source and is based on whether data were extracted manually from an unstructured data source or extracted computationally from a structured data source. Documentation of source-level QC prior to ToxValDB import is also considered. There are two tiers of QC, Level 0 and Level 1.
+
+Level 0 QC is a manual evaluation within a source to check for any systematic errors (e.g., duration field is populated with duration values). For any sources that fail Level 0 QC, the source import process is reviewed and revised until all fields containing information from the source are correctly displayed in ToxValDB.
+
+Level 1 QC evaluates extraction accuracy by comparing ToxValDB records to the original document(s). For computationally extracted sources, records are reviewed in export XSLX files. For manually extracted sources, records are reviewed using CCTE’s Data Accuracy Tool (DAT) application, which facilitates dataset review and audit workflows. If errors are identified during Level 1 QC, the record is corrected and adjustments are made to the full set of source records based on the error type (e.g., systematic, semantic). Level 1 QC examines a sample of the full source records, where the number of records reviewed is based on the data extraction method. For programmatically extracted sources, a random subsample of 100 records is reviewed from each source. For manually extracted sources, a minimum of 20% of records are manually and independently reviewed for accuracy under Level 1. Specific authoritative sources underwent Level 1 review for 100% of records, including EPA sources including IRIS, PPRTV, and HHTV, as well as records derived from Health Canada, and NTP PFAS. For data derived from EPA databases like ToxRefDB and ECOTOX, no additional Level 1 QC was required prior to inclusion within ToxValDB because QC is conducted for inclusion in the original databases.
+
+In addition to source Level 0 and Level 1 QC, a series of data profiling reports are generated on the complete database to flag records or fields for review that could be potentially erroneous. For example, a report of unique combinations of effect type, exposure route, and dose units is reviewed for consistency (e.g., a record with an oral exposure route and units in mg/m3 {common inhalation exposure unit} would be evaluated against the source document). Additional reports are generated to flag potential duplicate records as well as records with a large numeric spread or deviation within a chemical.
+
+After import into toxval_source and QC, the data for all sources are transferred to the main "toxval" database and mapped to a common set of database fields. Most fields have an "original" column (indicated by the stem "\_original"), to reflect the value exactly as is present in the source database (and the source files), and a "final" column, to reflect standardized values using ToxValDB vocabularies and unit conversions. Examples of changes in the original to final mappings are to correct misspellings, to convert between scientific and common species names, and variant terms for study types.
+
+An important part of both "toxval_source" and "toxval" databases is making sure that chemicals are correctly identified. The sources provides chemical identifiers, which may include name and/or a CAS Registry Number (CASRN). These values are collected and reviewed for matches in EPA’s Distributed Structure-Searchable Toxicity (DSSTox) database by an expert chemical curation team via the ChemReg internal-to-EPA application. This effort results in a curated DSSTox substance ID (DTXSID), which can be used as the primary chemical identifier in ToxValDB.
+
+With a few exceptions, the complete workflow is carried out using code in an R package. Originally derived from the toxvaldb92 R package, the package is now split into two to reflect the separate "import" and "load" processes. The names have been changed to "[toxvaldbstage](https://github.com/USEPA/toxvaldbstage)" (import) and "[toxvaldbmain](https://github.com/USEPA/toxvaldbmain)" (load), respectively. Both are accessible on the USEPA GitHub.
+
+::: {#fig-toxvaldbworkflow2 fig-alt="Overall dataflow for the construction of ToxValDB." fig-align="center"}
+![Overall dataflow for the construction of ToxValDB.](images/toxvaldb_workflow.jpg)
+:::
+
+# Version Comparison
+
+::: {.panel-tabset .nav-pills}
+```{r}
+#| label: "version-comparison-stats"
+#| echo: false
+#| results: 'asis'
+
+# stacked area chart
+version_comparison = ggplot2::ggplot(toxvaldb_release_comparison %>%
+                                        dplyr::arrange(version, stat),
+                ggplot2::aes(x=as.numeric(version), y=count, fill=stat)) +
+  ggplot2::geom_area(position = 'identity') +
+  # ggplot2::facet_wrap(~stat, scales = "free") +
+  ggplot2::scale_x_discrete(limits = levels(toxvaldb_release_comparison$version)) +
+  # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust=0.9, vjust=1.0)) +
+  ggplot2::labs(y = "Count",
+                x = "ToxValDB Version",
+                title = "ToxValDB Version Comparison")
+
+vc_stat_list = sort(unique(toxvaldb_release_comparison$stat))
+
+# Create list of plots
+vc_plots = lapply(vc_stat_list, function(stat){
+  ggplot2::ggplot(toxvaldb_release_comparison %>%
+                    dplyr::filter(stat == !!stat) %>%
+                    dplyr::arrange(version, stat),
+                  ggplot2::aes(x=as.numeric(version), y=count, fill=stat, label = prettyNum(count, big.mark = ","))) +
+    ggplot2::geom_area(fill="#69b3a2", position = 'identity', alpha=0.4) +
+    ggplot2::geom_line(color="#69b3a2", size=2) +
+    ggplot2::geom_point(color="#69b3a2", size=3) +
+    ggplot2::geom_text(check_overlap = TRUE) + 
+    # ggplot2::facet_wrap(~stat, scales = "free") +
+    ggplot2::scale_x_discrete(limits = levels(toxvaldb_release_comparison$version)) +
+    # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust=0.9, vjust=1.0)) +
+    ggplot2::labs(y = "Count",
+                  x = "ToxValDB Version",
+                  title = paste0("ToxValDB Version Comparison - ", stat)) + 
+    ggplot2::theme(legend.position="none")
+})
+
+for(i in seq_len(length(vc_stat_list))){
+  cat('## ', vc_stat_list[i], '\n\n')
+  print(vc_plots[[i]])
+  cat('\n\n')
+}
+```
+
+<!-- End of tabset -->
+:::
+
+# Data Source Highlights
+
+## New Sources
+
+-   No new sources added for this version.
+
+## Updated Sources
+
+-   Expert QC'd sources
+    -   ATSDR MRLs, ATSDR PFAS 2021, ECHA IUCLID, ECOTOX, EPA HHTV, HAWC Project, HEAST, HESS, HPVIS, Health Canada, IRIS, NTP PFAS, PPRTV (CPHEA), WHO JECFA Tox Studies
+-   ATSDR MRLs
+    -   Updated key_finding values, set as "yes" for document_type = "ATSDR MRLs Toxicological Profile"
+-   ECOTOX
+    -   Improved study duration reporting by using the reported "exposure duration" instead of "observed duration". Per the [ECOTOX term definitions](https://cfpub.epa.gov/ecotox/help.cfm?sub=wi-definitions "ECOTOX term definitions link"):
+
+        > The Exposure Duration is the time of actual exposure to the chemical. In cases where the observation time is the only duration reported, it is assumed that the Exposure Duration is equivalent to the longest observation time (field: Observed Duration).
+
+    -   QC'd records that resulted in a change in record values were flagged with a special QC Category tag of "and this record was revised from ECOTOX source"
+-   HAWC PFAS 430
+    -   Missing subsource_url populated
+
+## Renamed Sources
+
+-   No renamed sources for this version.
+
+## Archived Sources
+
+-   No archived sources for this version.
+
+# Features
+
+## Schema Changes
+
+-   "critical_effect" field renamed to "toxicological_effect" in toxval table
+
+## Processing Changes
+
+-   Added back missing ECHA IUCLID records missing from v95 due to chemical mismapping
+
+-   QC Category added "Expert Reviewed" category tag for records that completed expert QC review
+
+-   Dictionary updates
+
+    -   Strain dictionary
+
+        -   To maintain specificity, strain now more closely matches strain_original
+
+    -   Study Duration Class
+
+        -   To be more consistent with EPA human health risk assessment guidelines, short-term
+            is now defined as \>1-30 days and subchronic as 31-90 days (previously 30
+            days was considered as subchronic)
+
+-   Improved document cataloging links and associations
+
+    -   README added to zip folders to describe files and how to use them for record review
+
+-   Updated deduplication hierarchy during postprocessing
+
+    -   EPA OPP \> USGS HBSL (by dtxsid and toxval_type)
+
+    -   ChemIDplus \> TEST (dtxsid)
+
+    -   HEAST \> RSL (dtxsid and toxval_type)
+
+        -   Improved deduplication with toxval_type consideration. In v9.5, excessive RSL records were set to "fail: duplicate" than were appropriate with dtxsid consideration alone.
+
+# Known Issues
+
+-   Missing Regional Screening Level (RSL) data: a subset of chemicals with RSL values are missing from the CompTox Chemicals Dashboard (CCD) Executive Summary RSL Table and from the Hazard subtab
+
+-   Records from HAWC Project are erroneously grouped in the source “EPA HAWC”. HAWC Project includes data from projects outside of EPA and is not an EPA-based product.
+
+-   A subset of records is absent from the included ECHA IUCLID subsources: Immunogenicity, Carcinogenicity, Neurotoxicty, Developmental Toxicity Teratogenicity, Toxicity Reproduction, Repeated Dose Toxicity Oral
+
+# Future Development
+
+-   Data Source Curation
+    -   EPA OPP
+        -   Manual curation of oral chronic RfD POD data from EPA OPP risk assessment documents complete. Following QC, records will be added in a future release.
+    -   Additional state sources (e.g., MDH, New Jersey, Illinois) in progress.
+-   Process
+    -   Disambiguate lifestage and generation fields
+    -   Standardize the subsource field
+
+# Term Definitions and Acronyms
+
+```{r}
+#| label: "field-dictionary-tables"
+#| echo: false
+#| output: "asis"
+
+# Special printing approach to render plots in a loop
+# https://mickael.canouil.fr/posts/2023-03-05-quarto-auto-table-crossref/
+for(dict in names(field_dictionary)){
+  dict_tbl = DT::datatable(field_dictionary[[dict]] %>% select(-dplyr::any_of(c("order"))), list(scrollx = TRUE))
+  
+  cat(sep = "\n", knitr::knit_child(quiet = TRUE, text = c(
+    paste0("## ", dict),
+    "```{r}",
+    "#| echo: false",
+    sprintf("#| tbl-cap: %s", dict),
+    sprintf("#| label: tbl-%s", dict %>% gsub(" ", "-", .) %>% tolower()),
+    "dict_tbl",
+    "```"
+  )))
+}
+
+```
+
+# QC Status Counts
+
+## QC Pass Status Counts
+
+```{r}
+#| label: "tbl-qc-status-summ-pass"
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC pass status included in ToxValDB ", toxval_version)'
+#| echo: false
+
+qc_pass = qc_status_summ %>%
+  dplyr::select(-dplyr::starts_with("fail"))
+
+# Create breaks and rgb color values
+brks_qc <- quantile(qc_pass %>% select(`total records`), 
+                    probs = seq(.05, .95, .1), na.rm = TRUE)
+clrs_qc <- round(seq(255, 40, length.out = length(brks_qc) + 1), 0) %>%
+  {paste0("rgb(", ., ", 255, ", ., ")")}
+
+brks_chem <- quantile(qc_pass %>% select(chemicals), probs = seq(.05, .95, .1), na.rm = TRUE)
+clrs_chem <- round(seq(255, 40, length.out = length(brks_chem) + 1), 0) %>%
+  {paste0("rgb(", ., ", 255, ", ., ")")}
+
+brks_perc <- quantile(qc_pass %>% select(`pass percent`), probs = seq(.05, .95, .1), na.rm = TRUE)
+clrs_perc <- round(seq(255, 40, length.out = length(brks_perc) + 1), 0) %>%
+  {paste0("rgb(", ., ", 255, ", ., ")")}
+
+
+# https://stackoverflow.com/questions/65327289/how-to-represent-a-datatable-in-r-as-a-heatmap
+# https://stackoverflow.com/questions/61721852/how-to-color-column-cells-according-to-the-column-values-in-dtdatatable-in-r
+
+DT::datatable(qc_pass, 
+              list(
+                  scrollX = TRUE #,
+                  # autoWidth = TRUE
+                  ),
+              rownames = FALSE) %>% 
+  DT::formatStyle(names(qc_pass)[!names(qc_pass) %in% c("source", "chemicals", "pass percent")], 
+                  backgroundColor = DT::styleInterval(brks_qc, clrs_qc)) %>%
+  DT::formatStyle(names(qc_pass)[names(qc_pass) %in% c("chemicals")], 
+                  backgroundColor = DT::styleInterval(brks_chem, clrs_chem)) %>%
+  DT::formatStyle(names(qc_pass)[names(qc_pass) %in% c("pass percent")], 
+                  backgroundColor = DT::styleInterval(brks_perc, clrs_perc))
+
+```
+
+## QC Fail Status Counts
+
+```{r}
+#| label: "tbl-qc-status-summ-fail"
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version)'
+#| echo: false
+
+qc_fail = qc_status_summ %>%
+  dplyr::select(-pass, -`not determined`, -`pass percent`, -chemicals)
+
+qc_outliers = qc_fail %>% 
+  dplyr::select(dplyr::contains("fail")) %>%
+  unlist() %>%
+  unique() %>%
+  data.frame(counts = .) %>%
+  rstatix::identify_outliers() %>%
+  dplyr::pull(counts)
+
+# Create breaks and rgb color values
+brks_qc <- quantile(qc_pass %>% select(`total records`), 
+                    probs = seq(.05, .95, .1), na.rm = TRUE)
+clrs_qc <- round(seq(255, 40, length.out = length(brks_qc) + 1), 0) %>%
+  {paste0("rgb(", ., ", 255, ", ., ")")}
+
+# brks_fail <- quantile(qc_fail %>% 
+#                           dplyr::select(dplyr::contains("fail")),
+#                       probs = seq(.05, .95, .1), na.rm = TRUE)
+# clrs_fail <- round(seq(255, 40, length.out = length(brks_fail) + 1), 0) %>%
+#   {paste0("rgb(", ., ", 255, ", ., ")")}
+
+###########################################################################################
+brks_qc <- quantile(qc_fail$`total records`, 
+                      probs = seq(.05, .95, .01), na.rm = TRUE)
+
+max_val_qc <- max(qc_fail$`total records`, na.rm=TRUE)
+
+clrs_rmp_qc <- colorRamp(c("lightgreen","darkgreen"))(c(0, brks_qc/max_val_qc))
+
+clrs_df_qc <- clrs_rmp_qc %>% 
+  data.frame() %>%
+  setNames(nm=c("r","g","b")) %>% 
+  dplyr::mutate(dplyr::across(dplyr::everything(), ~as.character(round(.,digits=0)))) %>%
+  dplyr::mutate(mycolor=paste0("rgb(",
+                               paste(r,g,b,sep = ","),
+                               ")")) %>%
+  dplyr::pull(mycolor)
+
+brks_fail <- quantile(qc_fail %>% 
+                          dplyr::select(dplyr::contains("fail")) %>%
+                          unlist() %>%
+                          unique() %>%
+                          # Ignore outliers
+                          .[!. %in% qc_outliers], 
+                      probs = seq(.05, .95, .01), na.rm = TRUE)
+
+max_val_fail <- max(qc_fail %>% 
+                      dplyr::select(dplyr::contains("fail")) %>%
+                      unlist() %>%
+                      unique() %>%
+                      # Ignore outliers
+                      .[!. %in% qc_outliers], 
+                    na.rm=TRUE)
+
+clrs_rmp_fail <- colorRamp(c("lightgreen","#FF474C"))(c(0, brks_fail/max_val_fail))
+
+clrs_df_fail <- clrs_rmp_fail %>% 
+  data.frame() %>%
+  setNames(nm=c("r","g","b")) %>% 
+  dplyr::mutate(dplyr::across(dplyr::everything(), ~as.character(round(.,digits=0)))) %>%
+  dplyr::mutate(mycolor=paste0("rgb(",
+                               paste(r,g,b,sep = ","),
+                               ")")) %>%
+  dplyr::pull(mycolor)
+
+DT::datatable(qc_fail,               
+              list(
+                  scrollX = TRUE # ,
+                  # autoWidth = TRUE
+                  ),
+              rownames = FALSE) %>% 
+  DT::formatStyle("total records", 
+                  backgroundColor = DT::styleInterval(brks_qc, clrs_df_qc)) %>%  
+  DT::formatStyle(names(qc_fail)[grepl("fail", names(qc_fail))], 
+                  backgroundColor = DT::styleInterval(brks_fail, clrs_df_fail))
+```
