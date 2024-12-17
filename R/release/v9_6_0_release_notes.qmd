@@ -17,6 +17,7 @@ format:
     code-line-numbers: true
     code-copy: true
     page-layout: full
+css: styles.css
 editor: visual
 ---
 
@@ -49,6 +50,37 @@ toxvaldb_release_comparison = toxvaldb_release_comparison %>%
   dplyr::mutate(stat = stat %>% gsub("\\.", " ", .))
 
 qc_status_summ = toxval.summary.stats(toxval.db)
+
+qc_fail_caption_addition = paste0('<br/>',
+'i. QC fail status tags listed as programmatically applied during load to ToxValDB toxval table, except for the “fail” status which is from a manually reviewed record.',
+'<br/>',
+'ii. Note, an individual record can have multiple fail tags (e.g., fail; toxval_numeric < 0 would be tag "t" and tag "c")',
+'<br/>',
+'iii. Pass percent calculated as (pass + not determined / total records) x 100, where "not determined" assumed to be a "pass"',
+'<br/>',
+'iv. Failure column tags: ',
+'<br/>',
+'a - fail:toxval_units out of scope for ToxValDB', '<br/>',
+'b - fail:toxval_type out of scope for ToxValDB', '<br/>',
+'c - fail:toxval_numeric<0', '<br/>',
+'d - fail:Subsource in IRIS, PPRTV Screening Level, PPRTV', '<br/>',
+'e - fail:study_type out of scope', '<br/>',
+'f - fail:species out of scope', '<br/>',
+'g - fail:Out of scope, no toxval_type supercategory assignment', '<br/>',
+'h - fail:Not an experimental record', '<br/>',
+'i - fail:Eco data out of scope for ToxValDB', '<br/>',
+'j - fail:Duplicate of PFAS 150 SEM v2 chemical entry', '<br/>',
+'k - fail:Duplicate of IRIS chemical entry', '<br/>',
+'l - fail:Duplicate of HEAST chemical entry', '<br/>',
+'m - fail:Duplicate of EPA OW NPDWR chemical entry', '<br/>',
+'n - fail:Duplicate of EPA OPP chemical entry', '<br/>',
+'o - fail:Duplicate of ChemIDplus chemical entry', '<br/>',
+'p - fail:Do not have the relative chemical identifier in the record for toxval_type', '<br/>',
+'q - fail:curated to same DTXSID, failed as duplicate', '<br/>',
+'r - fail:critical_effect categorization', '<br/>',
+'s - fail:Ambiguous toxval_units', '<br/>',
+'t - fail - Record failed original QC review from source table in toxval_source. No additional failure tags were added during load.', '<br/>'
+)
 
 # library(DT)
 # https://stackoverflow.com/questions/37755037/how-to-add-code-folding-to-output-chunks-in-rmarkdown-html-documents
@@ -320,8 +352,9 @@ DT::datatable(qc_pass,
 
 ```{r}
 #| label: "tbl-qc-status-summ-fail"
-#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version)'
-#| echo: false
+#| echo: FALSE
+#| tbl-cap-location: "bottom"
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version, qc_fail_caption_addition)'
 
 qc_fail = qc_status_summ %>%
   dplyr::select(-pass, -`not determined`, -`pass percent`, -chemicals)
