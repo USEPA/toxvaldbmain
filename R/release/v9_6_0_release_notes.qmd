@@ -7,17 +7,18 @@ resource_files:
 - images/tovaldb_workflow.jpg
 format: 
   html:
-    toc: true
+    toc: TRUE
     toc-depth: 3
     toc-location: left
-    number-sections: true
-    code-fold: true
+    number-sections: TRUE
+    code-fold: TRUE
     code-summary: "Show Code"
     code-overflow: scroll
-    code-line-numbers: true
-    code-copy: true
+    code-line-numbers: TRUE
+    code-copy: TRUE
     page-layout: full
 css: styles.css
+html-table-processing: none # https://quarto.org/docs/prerelease/1.4/ast.html#finer-control-over-table-processing
 editor: visual
 ---
 
@@ -32,6 +33,8 @@ options(tibble.print_min = 4L, tibble.print_max = 4L)
 devtools::load_all()
 toxval.db = toxval.config()$toxval.db
 source.db = toxval.config()$source.db
+
+# TODO Set desired database version
 toxval_version = "v9.6"
 
 # Load Comparison stats
@@ -49,38 +52,8 @@ toxvaldb_release_comparison = toxvaldb_release_comparison %>%
   # Fix formatting of stat names
   dplyr::mutate(stat = stat %>% gsub("\\.", " ", .))
 
+# Load summary stats
 qc_status_summ = toxval.summary.stats(toxval.db)
-
-qc_fail_caption_addition = paste0('<br/>',
-'i. QC fail status tags listed as programmatically applied during load to ToxValDB toxval table, except for the “fail” status which is from a manually reviewed record.',
-'<br/>',
-'ii. Note, an individual record can have multiple fail tags (e.g., fail; toxval_numeric < 0 would be tag "t" and tag "c")',
-'<br/>',
-'iii. Pass percent calculated as (pass + not determined / total records) x 100, where "not determined" assumed to be a "pass"',
-'<br/>',
-'iv. Failure column tags: ',
-'<br/>',
-'a - fail:toxval_units out of scope for ToxValDB', '<br/>',
-'b - fail:toxval_type out of scope for ToxValDB', '<br/>',
-'c - fail:toxval_numeric<0', '<br/>',
-'d - fail:Subsource in IRIS, PPRTV Screening Level, PPRTV', '<br/>',
-'e - fail:study_type out of scope', '<br/>',
-'f - fail:species out of scope', '<br/>',
-'g - fail:Out of scope, no toxval_type supercategory assignment', '<br/>',
-'h - fail:Not an experimental record', '<br/>',
-'i - fail:Eco data out of scope for ToxValDB', '<br/>',
-'j - fail:Duplicate of PFAS 150 SEM v2 chemical entry', '<br/>',
-'k - fail:Duplicate of IRIS chemical entry', '<br/>',
-'l - fail:Duplicate of HEAST chemical entry', '<br/>',
-'m - fail:Duplicate of EPA OW NPDWR chemical entry', '<br/>',
-'n - fail:Duplicate of EPA OPP chemical entry', '<br/>',
-'o - fail:Duplicate of ChemIDplus chemical entry', '<br/>',
-'p - fail:Do not have the relative chemical identifier in the record for toxval_type', '<br/>',
-'q - fail:curated to same DTXSID, failed as duplicate', '<br/>',
-'r - fail:critical_effect categorization', '<br/>',
-'s - fail:Ambiguous toxval_units', '<br/>',
-'t - fail - Record failed original QC review from source table in toxval_source. No additional failure tags were added during load.', '<br/>'
-)
 
 # library(DT)
 # https://stackoverflow.com/questions/37755037/how-to-add-code-folding-to-output-chunks-in-rmarkdown-html-documents
@@ -90,12 +63,15 @@ qc_fail_caption_addition = paste0('<br/>',
 ```
 
 ```{r}
+#| label: "overview-stats"
 #| echo: FALSE
 
 # ToxValDB Stats
 n_records = runQuery("SELECT count(*) as n FROM toxval", toxval.db)
 n_chemicals = runQuery("SELECT count(distinct dtxsid) as n FROM toxval", toxval.db)
 n_sources = runQuery("SELECT count(distinct source) as n FROM toxval", toxval.db)
+
+# Load dictionary terms and acronyms
 field_dictionary_list = readxl::excel_sheets(paste0(toxval.config()$datapath, "release_files/field_dictionary.xlsx"))
 field_dictionary = lapply(field_dictionary_list, 
                           function(s){ readxl::read_xlsx(paste0(toxval.config()$datapath, 
@@ -113,8 +89,8 @@ The Toxicity Values Database (ToxValDB) contains summary data on in vivo toxicol
 In addition to this release note, the following summary files are available:
 
 -   Data file column dictionary\_`r toxval_version %>% gsub("\\.", "", .)`.xlsx
--   source_count 2024-12-09.xlsx
--   source_info 2024-08-28.xlsx
+-   source_count 2024-12-16.xlsx
+-   source_info 2024-10-31.xlsx
 
 # Workflow
 
@@ -144,23 +120,27 @@ With a few exceptions, the complete workflow is carried out using code in an R p
 
 # Version Comparison
 
+The following tabs of tables summarize count differences between ToxValDB versions. 
+
 ::: {.panel-tabset .nav-pills}
+
 ```{r}
 #| label: "version-comparison-stats"
-#| echo: false
+#| echo: FALSE
+#| warning: FALSE
 #| results: 'asis'
 
-# stacked area chart
-version_comparison = ggplot2::ggplot(toxvaldb_release_comparison %>%
-                                        dplyr::arrange(version, stat),
-                ggplot2::aes(x=as.numeric(version), y=count, fill=stat)) +
-  ggplot2::geom_area(position = 'identity') +
-  # ggplot2::facet_wrap(~stat, scales = "free") +
-  ggplot2::scale_x_discrete(limits = levels(toxvaldb_release_comparison$version)) +
-  # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust=0.9, vjust=1.0)) +
-  ggplot2::labs(y = "Count",
-                x = "ToxValDB Version",
-                title = "ToxValDB Version Comparison")
+# # stacked area chart
+# version_comparison = ggplot2::ggplot(toxvaldb_release_comparison %>%
+#                                         dplyr::arrange(version, stat),
+#                 ggplot2::aes(x=as.numeric(version), y=count, fill=stat)) +
+#   ggplot2::geom_area(position = 'identity') +
+#   # ggplot2::facet_wrap(~stat, scales = "free") +
+#   ggplot2::scale_x_discrete(limits = levels(toxvaldb_release_comparison$version)) +
+#   # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust=0.9, vjust=1.0)) +
+#   ggplot2::labs(y = "Count",
+#                 x = "ToxValDB Version",
+#                 title = "ToxValDB Version Comparison")
 
 vc_stat_list = sort(unique(toxvaldb_release_comparison$stat))
 
@@ -171,8 +151,8 @@ vc_plots = lapply(vc_stat_list, function(stat){
                     dplyr::arrange(version, stat),
                   ggplot2::aes(x=as.numeric(version), y=count, fill=stat, label = prettyNum(count, big.mark = ","))) +
     ggplot2::geom_area(fill="#69b3a2", position = 'identity', alpha=0.4) +
-    ggplot2::geom_line(color="#69b3a2", size=2) +
-    ggplot2::geom_point(color="#69b3a2", size=3) +
+    ggplot2::geom_line(color="#69b3a2", lwd = 2) +
+    ggplot2::geom_point(color="#69b3a2", size = 3) +
     ggplot2::geom_text(check_overlap = TRUE) + 
     # ggplot2::facet_wrap(~stat, scales = "free") +
     ggplot2::scale_x_discrete(limits = levels(toxvaldb_release_comparison$version)) +
@@ -183,6 +163,7 @@ vc_plots = lapply(vc_stat_list, function(stat){
     ggplot2::theme(legend.position="none")
 })
 
+# Programmatically generate the tabset of tables with headers
 for(i in seq_len(length(vc_stat_list))){
   cat('## ', vc_stat_list[i], '\n\n')
   print(vc_plots[[i]])
@@ -191,6 +172,7 @@ for(i in seq_len(length(vc_stat_list))){
 ```
 
 <!-- End of tabset -->
+
 :::
 
 # Data Source Highlights
@@ -204,15 +186,15 @@ for(i in seq_len(length(vc_stat_list))){
 -   Expert QC'd sources
     -   ATSDR MRLs, ATSDR PFAS 2021, ECHA IUCLID, ECOTOX, EPA HHTV, HAWC Project, HEAST, HESS, HPVIS, Health Canada, IRIS, NTP PFAS, PPRTV (CPHEA), WHO JECFA Tox Studies
 -   ATSDR MRLs
-    -   Updated key_finding values, set as "yes" for document_type = "ATSDR MRLs Toxicological Profile"
+    -   Updated key_finding values, set as "yes" for document_type = "ATSDR MRLs Toxicological Profile".
 -   ECOTOX
     -   Improved study duration reporting by using the reported "exposure duration" instead of "observed duration". Per the [ECOTOX term definitions](https://cfpub.epa.gov/ecotox/help.cfm?sub=wi-definitions "ECOTOX term definitions link"):
 
         > The Exposure Duration is the time of actual exposure to the chemical. In cases where the observation time is the only duration reported, it is assumed that the Exposure Duration is equivalent to the longest observation time (field: Observed Duration).
 
-    -   QC'd records that resulted in a change in record values were flagged with a special QC Category tag of "and this record was revised from ECOTOX source"
+    -   QC'd records that resulted in a change in record values were flagged with a special QC Category tag of "and this record was revised from ECOTOX source".
 -   HAWC PFAS 430
-    -   Missing subsource_url populated
+    -   Missing subsource_url populated.
 
 ## Renamed Sources
 
@@ -226,31 +208,33 @@ for(i in seq_len(length(vc_stat_list))){
 
 ## Schema Changes
 
--   "critical_effect" field renamed to "toxicological_effect" in toxval table
+-   "critical_effect" field renamed to "toxicological_effect" in toxval table.
 
 ## Processing Changes
 
--   Added back missing ECHA IUCLID records missing from v95 due to chemical mismapping
+-   Added back missing ECHA IUCLID records missing from v9.5 due to chemical mismapping.
 
--   QC Category added "Expert Reviewed" category tag for records that completed expert QC review
+-   QC Category added "Expert Reviewed" category tag for records that completed expert QC review.
 
 -   Dictionary updates
 
+    -   Source Info
+
+        -   Updated HAWC Project "supersource" to "HAWC Project" to disaggregate it from the EPA HAWC supersource, which it is distinct from.
+
     -   Strain dictionary
 
-        -   To maintain specificity, strain now more closely matches strain_original
+        -   To maintain specificity, strain now more closely matches strain_original.
 
     -   Study Duration Class
 
-        -   To be more consistent with EPA human health risk assessment guidelines, short-term
-            is now defined as \>1-30 days and subchronic as 31-90 days (previously 30
-            days was considered as subchronic)
+        -   To be more consistent with EPA human health risk assessment guidelines, short-term is now defined as \>1-30 days and subchronic as 31-90 days (previously 30 days was considered as subchronic).
 
--   Improved document cataloging links and associations
+-   Improved document cataloging links and associations.
 
-    -   README added to zip folders to describe files and how to use them for record review
+    -   README added to zip folders to describe files and how to use them for record review.
 
--   Updated deduplication hierarchy during postprocessing
+-   Updated deduplication hierarchy during postprocessing ("\>" means "takes priority over"). Records from a lower priority source that match the selected field(s) from a higher priority source are flagged as duplicates (e.g., records with the same dtxsid and toxval_type in USGS HBSL as EPA OPP are flagged as duplicates since they are represented in the priority source).
 
     -   EPA OPP \> USGS HBSL (by dtxsid and toxval_type)
 
@@ -262,11 +246,9 @@ for(i in seq_len(length(vc_stat_list))){
 
 # Known Issues
 
--   Missing Regional Screening Level (RSL) data: a subset of chemicals with RSL values are missing from the CompTox Chemicals Dashboard (CCD) Executive Summary RSL Table and from the Hazard subtab
+-   Missing Regional Screening Level (RSL) data: a subset of chemicals with RSL values are missing from the CompTox Chemicals Dashboard (CCD) Executive Summary RSL Table and from the Hazard subtab.
 
--   Records from HAWC Project are erroneously grouped in the source “EPA HAWC”. HAWC Project includes data from projects outside of EPA and is not an EPA-based product.
-
--   A subset of records is absent from the included ECHA IUCLID subsources: Immunogenicity, Carcinogenicity, Neurotoxicty, Developmental Toxicity Teratogenicity, Toxicity Reproduction, Repeated Dose Toxicity Oral
+-   A subset of records is absent from the included ECHA IUCLID subsources: Immunogenicity, Carcinogenicity, Neurotoxicty, Developmental Toxicity Teratogenicity, Toxicity Reproduction, Repeated Dose Toxicity Oral.
 
 # Future Development
 
@@ -275,25 +257,36 @@ for(i in seq_len(length(vc_stat_list))){
         -   Manual curation of oral chronic RfD POD data from EPA OPP risk assessment documents complete. Following QC, records will be added in a future release.
     -   Additional state sources (e.g., MDH, New Jersey, Illinois) in progress.
 -   Process
-    -   Disambiguate lifestage and generation fields
-    -   Standardize the subsource field
+    -   Disambiguate lifestage and generation fields.
+    -   Standardize the subsource field.
 
 # Term Definitions and Acronyms
 
 ```{r}
 #| label: "field-dictionary-tables"
-#| echo: false
+#| echo: FALSE
 #| output: "asis"
 
 # Special printing approach to render plots in a loop
 # https://mickael.canouil.fr/posts/2023-03-05-quarto-auto-table-crossref/
 for(dict in names(field_dictionary)){
-  dict_tbl = DT::datatable(field_dictionary[[dict]] %>% select(-dplyr::any_of(c("order"))), list(scrollx = TRUE))
+  df_dict = field_dictionary[[dict]] %>% 
+                             select(-dplyr::any_of(c("order")))
+  
+  dict_tbl = DT::datatable(df_dict, 
+                           options = list(
+                             scrollX = TRUE,
+                             columnDefs = list(list(className = 'dt-left',
+                                                    targets = 0:(length(df_dict))
+                                                    )
+                                               )
+                             )
+                           )
   
   cat(sep = "\n", knitr::knit_child(quiet = TRUE, text = c(
     paste0("## ", dict),
     "```{r}",
-    "#| echo: false",
+    "#| echo: FALSE",
     sprintf("#| tbl-cap: %s", dict),
     sprintf("#| label: tbl-%s", dict %>% gsub(" ", "-", .) %>% tolower()),
     "dict_tbl",
@@ -305,87 +298,68 @@ for(dict in names(field_dictionary)){
 
 # QC Status Counts
 
+Summary of the sources and counts with the QC status values in v9.6.0.
+
+Colors indicate:
+
+-   QC Pass
+
+    -   All low to high (white to green)
+
+    -   Column groups (different gradient scales):
+
+        -   chemicals
+
+        -   total records, pass, not determined
+
+        -   pass percent
+
+-   QC Fail
+
+    -   Column groups (different gradient scales):
+
+        -   total records
+
+            -   Low to High (white to green)
+
+        -   a-t fail columns (see caption)
+
+            -   Low to High (light green to light red)
+
 ## QC Pass Status Counts
 
 ```{r}
 #| label: "tbl-qc-status-summ-pass"
 #| tbl-cap: !expr 'paste0("Sources and Counts with the QC pass status included in ToxValDB ", toxval_version)'
-#| echo: false
+#| echo: FALSE
 
 qc_pass = qc_status_summ %>%
   dplyr::select(-dplyr::starts_with("fail"))
-
+################################################################################
 # Create breaks and rgb color values
-brks_qc <- quantile(qc_pass %>% select(`total records`), 
-                    probs = seq(.05, .95, .1), na.rm = TRUE)
-clrs_qc <- round(seq(255, 40, length.out = length(brks_qc) + 1), 0) %>%
-  {paste0("rgb(", ., ", 255, ", ., ")")}
+# brks_qc <- quantile(qc_pass %>% select(`total records`), 
+#                     probs = seq(.05, .95, .1), na.rm = TRUE)
+# clrs_qc <- round(seq(255, 40, length.out = length(brks_qc) + 1), 0) %>%
+#   {paste0("rgb(", ., ", 255, ", ., ")")}
 
-brks_chem <- quantile(qc_pass %>% select(chemicals), probs = seq(.05, .95, .1), na.rm = TRUE)
-clrs_chem <- round(seq(255, 40, length.out = length(brks_chem) + 1), 0) %>%
-  {paste0("rgb(", ., ", 255, ", ., ")")}
-
-brks_perc <- quantile(qc_pass %>% select(`pass percent`), probs = seq(.05, .95, .1), na.rm = TRUE)
-clrs_perc <- round(seq(255, 40, length.out = length(brks_perc) + 1), 0) %>%
-  {paste0("rgb(", ., ", 255, ", ., ")")}
-
-
-# https://stackoverflow.com/questions/65327289/how-to-represent-a-datatable-in-r-as-a-heatmap
-# https://stackoverflow.com/questions/61721852/how-to-color-column-cells-according-to-the-column-values-in-dtdatatable-in-r
-
-DT::datatable(qc_pass, 
-              list(
-                  scrollX = TRUE #,
-                  # autoWidth = TRUE
-                  ),
-              rownames = FALSE) %>% 
-  DT::formatStyle(names(qc_pass)[!names(qc_pass) %in% c("source", "chemicals", "pass percent")], 
-                  backgroundColor = DT::styleInterval(brks_qc, clrs_qc)) %>%
-  DT::formatStyle(names(qc_pass)[names(qc_pass) %in% c("chemicals")], 
-                  backgroundColor = DT::styleInterval(brks_chem, clrs_chem)) %>%
-  DT::formatStyle(names(qc_pass)[names(qc_pass) %in% c("pass percent")], 
-                  backgroundColor = DT::styleInterval(brks_perc, clrs_perc))
-
-```
-
-## QC Fail Status Counts
-
-```{r}
-#| label: "tbl-qc-status-summ-fail"
-#| echo: FALSE
-#| tbl-cap-location: "bottom"
-#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version, qc_fail_caption_addition)'
-
-qc_fail = qc_status_summ %>%
-  dplyr::select(-pass, -`not determined`, -`pass percent`, -chemicals)
-
-qc_outliers = qc_fail %>% 
-  dplyr::select(dplyr::contains("fail")) %>%
+qc_qc_outliers = qc_pass %>% 
+  dplyr::select(`total records`) %>%
   unlist() %>%
   unique() %>%
   data.frame(counts = .) %>%
   rstatix::identify_outliers() %>%
   dplyr::pull(counts)
 
-# Create breaks and rgb color values
-brks_qc <- quantile(qc_pass %>% select(`total records`), 
-                    probs = seq(.05, .95, .1), na.rm = TRUE)
-clrs_qc <- round(seq(255, 40, length.out = length(brks_qc) + 1), 0) %>%
-  {paste0("rgb(", ., ", 255, ", ., ")")}
+brks_qc <- quantile(qc_pass$`total records` %>%
+                      .[!. %in% qc_qc_outliers], 
+                    probs = seq(.05, .95, .01), 
+                    na.rm = TRUE)
 
-# brks_fail <- quantile(qc_fail %>% 
-#                           dplyr::select(dplyr::contains("fail")),
-#                       probs = seq(.05, .95, .1), na.rm = TRUE)
-# clrs_fail <- round(seq(255, 40, length.out = length(brks_fail) + 1), 0) %>%
-#   {paste0("rgb(", ., ", 255, ", ., ")")}
+max_val_qc <- max(qc_pass$`total records` %>%
+                      .[!. %in% qc_qc_outliers], 
+                  na.rm=TRUE)
 
-###########################################################################################
-brks_qc <- quantile(qc_fail$`total records`, 
-                      probs = seq(.05, .95, .01), na.rm = TRUE)
-
-max_val_qc <- max(qc_fail$`total records`, na.rm=TRUE)
-
-clrs_rmp_qc <- colorRamp(c("lightgreen","darkgreen"))(c(0, brks_qc/max_val_qc))
+clrs_rmp_qc <- colorRamp(c("white", "green"))(c(0, brks_qc/max_val_qc))
 
 clrs_df_qc <- clrs_rmp_qc %>% 
   data.frame() %>%
@@ -396,12 +370,136 @@ clrs_df_qc <- clrs_rmp_qc %>%
                                ")")) %>%
   dplyr::pull(mycolor)
 
+################################################################################
+# brks_chem <- quantile(qc_pass %>% select(chemicals), probs = seq(.05, .95, .1), na.rm = TRUE)
+# clrs_chem <- round(seq(255, 40, length.out = length(brks_chem) + 1), 0) %>%
+#   {paste0("rgb(", ., ", 255, ", ., ")")}
+
+qc_chem_outliers = qc_pass %>% 
+  dplyr::select(chemicals) %>%
+  unlist() %>%
+  unique() %>%
+  data.frame(counts = .) %>%
+  rstatix::identify_outliers() %>%
+  dplyr::pull(counts)
+
+brks_chem <- quantile(qc_pass$chemicals %>%
+                        .[!. %in% qc_chem_outliers], 
+                      probs = seq(.05, .95, .01), 
+                      na.rm = TRUE)
+
+max_val_chem <- max(qc_pass$chemicals %>%
+                        .[!. %in% qc_chem_outliers], 
+                    na.rm=TRUE)
+
+clrs_rmp_chem <- colorRamp(c("white", "green"))(c(0, brks_chem/max_val_chem))
+
+clrs_df_chem <- clrs_rmp_chem %>% 
+  data.frame() %>%
+  setNames(nm=c("r","g","b")) %>% 
+  dplyr::mutate(dplyr::across(dplyr::everything(), ~as.character(round(.,digits=0)))) %>%
+  dplyr::mutate(mycolor=paste0("rgb(",
+                               paste(r,g,b,sep = ","),
+                               ")")) %>%
+  dplyr::pull(mycolor)
+
+################################################################################
+# brks_perc <- quantile(qc_pass %>% select(`pass percent`), probs = seq(.05, .95, .1), na.rm = TRUE)
+# clrs_perc <- round(seq(255, 40, length.out = length(brks_perc) + 1), 0) %>%
+#   {paste0("rgb(", ., ", 255, ", ., ")")}
+
+qc_perc_outliers = qc_pass %>% 
+  dplyr::select(`pass percent`) %>%
+  unlist() %>%
+  unique() %>%
+  data.frame(counts = .) %>%
+  rstatix::identify_outliers() %>%
+  dplyr::pull(counts)
+
+brks_perc <- quantile(qc_pass$`pass percent` %>%
+                        .[!. %in% qc_perc_outliers], 
+                      probs = seq(.05, .95, .01), 
+                      na.rm = TRUE)
+
+max_val_perc <- max(qc_pass$`pass percent` %>%
+                        .[!. %in% qc_perc_outliers], 
+                    na.rm=TRUE)
+
+clrs_rmp_perc <- colorRamp(c("white", "green"))(c(0, brks_perc/max_val_perc))
+
+clrs_df_perc <- clrs_rmp_perc %>% 
+  data.frame() %>%
+  setNames(nm=c("r","g","b")) %>% 
+  dplyr::mutate(dplyr::across(dplyr::everything(), ~as.character(round(.,digits=0)))) %>%
+  dplyr::mutate(mycolor=paste0("rgb(",
+                               paste(r,g,b,sep = ","),
+                               ")")) %>%
+  dplyr::pull(mycolor)
+
+################################################################################
+# https://stackoverflow.com/questions/65327289/how-to-represent-a-datatable-in-r-as-a-heatmap
+# https://stackoverflow.com/questions/61721852/how-to-color-column-cells-according-to-the-column-values-in-dtdatatable-in-r
+
+DT::datatable(qc_pass, 
+              options = list(scrollX = TRUE,
+                             columnDefs = list(list(className = 'dt-center',
+                                                    targets = 0:(length(names(qc_pass))-1)
+                                                    )
+                                               )
+                             ),
+              class = list(stripe = FALSE),
+              rownames = FALSE) %>% 
+  DT::formatStyle(names(qc_pass)[names(qc_pass) %in% c("total records", "pass", "not determined")], 
+                  backgroundColor = DT::styleInterval(brks_qc, clrs_df_qc)) %>%
+  DT::formatStyle(names(qc_pass)[names(qc_pass) %in% c("chemicals")], 
+                  backgroundColor = DT::styleInterval(brks_chem, clrs_df_chem)) %>%
+  DT::formatStyle(names(qc_pass)[names(qc_pass) %in% c("pass percent")], 
+                  backgroundColor = DT::styleInterval(brks_perc, clrs_df_perc))
+
+```
+
+## QC Fail Status Counts
+
+```{r}
+#| label: "tbl-qc-status-summ-fail"
+#| echo: FALSE
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version)'
+
+qc_fail = qc_status_summ %>%
+  dplyr::select(-pass, -`not determined`, -`pass percent`, -chemicals)
+
+qc_fail_outliers = qc_fail %>% 
+  dplyr::select(dplyr::contains("fail")) %>%
+  unlist() %>%
+  unique() %>%
+  data.frame(counts = .) %>%
+  rstatix::identify_outliers() %>%
+  dplyr::pull(counts)
+################################################################################
+## Create breaks and rgb color values
+################################################################################
+brks_qc <- quantile(qc_fail$`total records`, 
+                      probs = seq(.05, .95, .01), na.rm = TRUE)
+
+max_val_qc <- max(qc_fail$`total records`, na.rm=TRUE)
+
+clrs_rmp_qc <- colorRamp(c("white","green"))(c(0, brks_qc/max_val_qc))
+
+clrs_df_qc <- clrs_rmp_qc %>% 
+  data.frame() %>%
+  setNames(nm=c("r","g","b")) %>% 
+  dplyr::mutate(dplyr::across(dplyr::everything(), ~as.character(round(.,digits=0)))) %>%
+  dplyr::mutate(mycolor=paste0("rgb(",
+                               paste(r,g,b,sep = ","),
+                               ")")) %>%
+  dplyr::pull(mycolor)
+################################################################################
 brks_fail <- quantile(qc_fail %>% 
                           dplyr::select(dplyr::contains("fail")) %>%
                           unlist() %>%
                           unique() %>%
                           # Ignore outliers
-                          .[!. %in% qc_outliers], 
+                          .[!. %in% qc_fail_outliers], 
                       probs = seq(.05, .95, .01), na.rm = TRUE)
 
 max_val_fail <- max(qc_fail %>% 
@@ -409,7 +507,7 @@ max_val_fail <- max(qc_fail %>%
                       unlist() %>%
                       unique() %>%
                       # Ignore outliers
-                      .[!. %in% qc_outliers], 
+                      .[!. %in% qc_fail_outliers], 
                     na.rm=TRUE)
 
 clrs_rmp_fail <- colorRamp(c("lightgreen","#FF474C"))(c(0, brks_fail/max_val_fail))
@@ -422,15 +520,63 @@ clrs_df_fail <- clrs_rmp_fail %>%
                                paste(r,g,b,sep = ","),
                                ")")) %>%
   dplyr::pull(mycolor)
+################################################################################
+# Rename fail columns and set as caption dynamically
+qc_fail = qc_fail %>%
+  tidyr::pivot_longer(cols = -c(source, `total records`))
+  
+# Get caption list
+fail_captions = qc_fail %>%
+  dplyr::select(name) %>%
+  unique() %>%
+  dplyr::mutate(name_sym = rep_len(letters, nrow(.)))
+
+# Map caption list back
+qc_fail = qc_fail %>%
+  dplyr::left_join(fail_captions, by = "name") %>%
+  dplyr::select(-name) %>%
+  tidyr::pivot_wider(id_cols = c(source, `total records`),
+                     names_from = "name_sym")
 
 DT::datatable(qc_fail,               
-              list(
-                  scrollX = TRUE # ,
-                  # autoWidth = TRUE
-                  ),
+              options = list(scrollX = TRUE,
+                             columnDefs = list(list(className = 'dt-center',
+                                                    targets = 0:(length(names(qc_pass))-1)
+                                                    )
+                                               )
+                             ),
+              class = list(stripe = FALSE),
               rownames = FALSE) %>% 
   DT::formatStyle("total records", 
                   backgroundColor = DT::styleInterval(brks_qc, clrs_df_qc)) %>%  
-  DT::formatStyle(names(qc_fail)[grepl("fail", names(qc_fail))], 
+  DT::formatStyle(names(qc_fail)[names(qc_fail) %in% letters], 
                   backgroundColor = DT::styleInterval(brks_fail, clrs_df_fail))
 ```
+
+i.  QC fail status tags listed as programmatically applied during load to ToxValDB toxval table, except for the "fail" status which is from a manually reviewed record.
+ii. Note, an individual record can have multiple fail tags (e.g., fail; toxval_numeric \< 0 would be tag "t" and tag "c")
+iii. Pass percent calculated as (pass + not determined / total records) x 100, where "not determined" is assumed to be a "pass"
+iv. Failure column tags:
+
+```{r}
+#| label: "qc-fail-caption"
+#| echo: FALSE
+#| results: 'asis'
+
+fail_captions_out = fail_captions %>%
+  # Add Roman numeral index
+  dplyr::mutate(index = 1:dplyr::n(),
+                index = tolower(as.roman(index)) %>%
+                  paste0("\t", ., ".")) %>%
+  tidyr::unite(col = "fail_caption", name_sym, name, sep = " - ") %>%
+  tidyr::unite(col = "fail_caption", index, fail_caption, sep = " ") %>%
+  dplyr::pull(fail_caption) %>%
+  paste0(., collapse = "\n")
+
+# for(item in fail_captions_out){
+#   print(item)
+#   cat('\n\n')
+# }
+```
+
+`r fail_captions_out`
