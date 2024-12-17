@@ -56,7 +56,9 @@ rsconnect/
 
 # Ignore test data and dev setup
 Repo/
+Repo_old/
 R/release/release_notes_template_files/
+R/release/.quarto/
 dev_setup.R
 # Ignore temp file for test running functions from console
 tmp_delete.R

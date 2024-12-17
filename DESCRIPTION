@@ -1,16 +1,15 @@
 Package: toxvaldbmain
 Type: Package
-Title: Builds the ToxValDB V9.5 Database
-Version: 9.5
+Title: Builds the ToxValDB v9.6.0 Database
+Version: 9.6.0
 Author: Taylor Wall
 Maintainer: Taylor Wall <wall.taylor@epa.gov>
-Description: ToxValDB is a database containing quantitative records form in vivo toxicology studies from 
+Description: ToxValDB is a database containing quantitative records from in vivo toxicology studies from 
   many sources. The database has 2 main parts - toxval_source containing 
   source data in separate tables, and the main toxval schema which combines data from multiple sources 
-  into a single format. This project moves data from toxval_source to toxval.
+  into a single format. This package moves data from toxval_source to toxval.
   Data is read from files or other databases into toxval_source and then pulled 
-  into toxval where terms are converted to standard values. The ToxValDB SOPs describe in more 
-  detail how to run the code. This version is setup to build ToxValDB v9.5
+  into toxval where terms are converted to standard values. This version is setup to build ToxValDB v9.6.0.
 Imports: 
     DBI,
     RMySQL,
