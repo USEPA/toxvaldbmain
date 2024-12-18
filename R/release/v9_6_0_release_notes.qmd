@@ -84,7 +84,7 @@ field_dictionary = lapply(field_dictionary_list,
 
 # Overview
 
-The Toxicity Values Database (ToxValDB) contains summary data on in vivo toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals from over `r format(plyr::round_any(n_sources$n, 10), big.mark=",")` sources.
+The Toxicity Values Database (ToxValDB) contains summary data on in vivo toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version`.0 contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals from over `r format(plyr::round_any(n_sources$n, 10), big.mark=",")` sources.
 
 In addition to this release note, the following summary files are available:
 
@@ -96,7 +96,7 @@ In addition to this release note, the following summary files are available:
 
 The overall workflow is illustrated in @fig-toxvaldbworkflow2.
 
-Applicable data are identified from a number of sources (see Table 1) and loaded into the toxval_source MySQL database. Each source has different fields and uses different terminology, so a custom source-specific database table is developed for each source. A custom R script is written to pre-process and load each source, although these functions follow a standard template and use common, generic functions when possible.
+Applicable data are identified from a number of sources (see @tbl-qc-status-summ-pass) and loaded into the toxval_source MySQL database. Each source has different fields and uses different terminology, so a custom source-specific database table is developed for each source. A custom R script is written to pre-process and load each source, although these functions follow a standard template and use common, generic functions when possible.
 
 Records are reviewed in the "toxval_source" database by source. To facilitate this quality control (QC) process, the source documents are collected and uploaded to the CCTE Clowder cloud-based document repository and linked to corresponding records in toxval_source.
 
@@ -104,7 +104,9 @@ The extent of QC for ToxValDB data is determined by source and is based on wheth
 
 Level 0 QC is a manual evaluation within a source to check for any systematic errors (e.g., duration field is populated with duration values). For any sources that fail Level 0 QC, the source import process is reviewed and revised until all fields containing information from the source are correctly displayed in ToxValDB.
 
-Level 1 QC evaluates extraction accuracy by comparing ToxValDB records to the original document(s). For computationally extracted sources, records are reviewed in export XSLX files. For manually extracted sources, records are reviewed using CCTE’s Data Accuracy Tool (DAT) application, which facilitates dataset review and audit workflows. If errors are identified during Level 1 QC, the record is corrected and adjustments are made to the full set of source records based on the error type (e.g., systematic, semantic). Level 1 QC examines a sample of the full source records, where the number of records reviewed is based on the data extraction method. For programmatically extracted sources, a random subsample of 100 records is reviewed from each source. For manually extracted sources, a minimum of 20% of records are manually and independently reviewed for accuracy under Level 1. Specific authoritative sources underwent Level 1 review for 100% of records, including EPA sources including IRIS, PPRTV, and HHTV, as well as records derived from Health Canada, and NTP PFAS. For data derived from EPA databases like ToxRefDB and ECOTOX, no additional Level 1 QC was required prior to inclusion within ToxValDB because QC is conducted for inclusion in the original databases.
+Level 1 QC entails an evaluation of extraction accuracy by comparing ToxValDB records to the source where data are extracted. The goal is to ensure records in ToxValDB are accurate representations of the source data. When errors are identified during Level 1 QC, the record is corrected and adjustments made to the full set of source records based on the error type (e.g., systematic, semantic). Level 1 QC of the data importation typically involves a subsample of the full source, where the number of records reviewed is based on the data extraction method. For programmatically extracted sources, a random subsample of 100 records is reviewed in an export file from each source. The assumption in reviewing a subset of records is that systematic errors introduced by the programmatic extraction and processing would be identified in Level 0 QC, and that a subsample is representative of the whole. When errors are identified, the extraction and import code is revised, and the data are re-imported and refreshed. Level 1 QC continues until all 100 subsampled records pass review without error.
+
+For manually extracted sources within ToxValDB, a minimum of 20% of records are manually and independently reviewed for accuracy under Level 1 QC. For selected records, QC is performed to evaluate the accuracy of ToxValDB records with the original document(s). The source record from ToxVal Source DB is displayed alongside the extraction document, and a reviewer confirms that the values in the record match those in the document. When errors are identified during Level 1 QC, the record is corrected in ToxVal Source DB. An audit trail of QC actions is incorporated into the ToxVal Source DB and processed into the ToxVal Main DB. Finally, for data derived from ToxRefDB, QC is conducted prior to inclusion in the original databases and no additional Level 1 QC is required.
 
 In addition to source Level 0 and Level 1 QC, a series of data profiling reports are generated on the complete database to flag records or fields for review that could be potentially erroneous. For example, a report of unique combinations of effect type, exposure route, and dose units is reviewed for consistency (e.g., a record with an oral exposure route and units in mg/m3 {common inhalation exposure unit} would be evaluated against the source document). Additional reports are generated to flag potential duplicate records as well as records with a large numeric spread or deviation within a chemical.
 
@@ -120,10 +122,9 @@ With a few exceptions, the complete workflow is carried out using code in an R p
 
 # Version Comparison
 
-The following tabs of tables summarize count differences between ToxValDB versions. 
+The following tabs of tables summarize count differences between ToxValDB versions.
 
 ::: {.panel-tabset .nav-pills}
-
 ```{r}
 #| label: "version-comparison-stats"
 #| echo: FALSE
@@ -172,8 +173,12 @@ for(i in seq_len(length(vc_stat_list))){
 ```
 
 <!-- End of tabset -->
-
 :::
+
+Notable version differences:
+
+-   v9.4 to v9.5
+    -   The scope of ToxValDB was reduced to not include ecologically focused records. Also, a number of sources were retired or updated and a major deduplication effort was undertaken. This contributed to the drop in unique chemicals (DTXSID), human relevant species (defined as having a harmonized common name of "rat", "mouse", "dog", "rabbit", or "human"), and overall records available in ToxValDB.
 
 # Data Source Highlights
 
@@ -213,11 +218,8 @@ for(i in seq_len(length(vc_stat_list))){
 ## Processing Changes
 
 -   Added back missing ECHA IUCLID records missing from v9.5 due to chemical mismapping.
-
 -   QC Category added "Expert Reviewed" category tag for records that completed expert QC review.
-
 -   Dictionary updates
-
     -   Source Info
 
         -   Updated HAWC Project "supersource" to "HAWC Project" to disaggregate it from the EPA HAWC supersource, which it is distinct from.
@@ -229,13 +231,9 @@ for(i in seq_len(length(vc_stat_list))){
     -   Study Duration Class
 
         -   To be more consistent with EPA human health risk assessment guidelines, short-term is now defined as \>1-30 days and subchronic as 31-90 days (previously 30 days was considered as subchronic).
-
 -   Improved document cataloging links and associations.
-
     -   README added to zip folders to describe files and how to use them for record review.
-
 -   Updated deduplication hierarchy during postprocessing ("\>" means "takes priority over"). Records from a lower priority source that match the selected field(s) from a higher priority source are flagged as duplicates (e.g., records with the same dtxsid and toxval_type in USGS HBSL as EPA OPP are flagged as duplicates since they are represented in the priority source).
-
     -   EPA OPP \> USGS HBSL (by dtxsid and toxval_type)
 
     -   ChemIDplus \> TEST (dtxsid)
@@ -247,7 +245,6 @@ for(i in seq_len(length(vc_stat_list))){
 # Known Issues
 
 -   Missing Regional Screening Level (RSL) data: a subset of chemicals with RSL values are missing from the CompTox Chemicals Dashboard (CCD) Executive Summary RSL Table and from the Hazard subtab.
-
 -   A subset of records is absent from the included ECHA IUCLID subsources: Immunogenicity, Carcinogenicity, Neurotoxicty, Developmental Toxicity Teratogenicity, Toxicity Reproduction, Repeated Dose Toxicity Oral.
 
 # Future Development
@@ -298,12 +295,11 @@ for(dict in names(field_dictionary)){
 
 # QC Status Counts
 
-Summary of the sources and counts with the QC status values in v9.6.0.
+Summary of the sources and counts with QC status values in v9.6.0.
 
 Colors indicate:
 
 -   QC Pass
-
     -   All low to high (white to green)
 
     -   Column groups (different gradient scales):
@@ -313,9 +309,7 @@ Colors indicate:
         -   total records, pass, not determined
 
         -   pass percent
-
 -   QC Fail
-
     -   Column groups (different gradient scales):
 
         -   total records
@@ -330,7 +324,7 @@ Colors indicate:
 
 ```{r}
 #| label: "tbl-qc-status-summ-pass"
-#| tbl-cap: !expr 'paste0("Sources and Counts with the QC pass status included in ToxValDB ", toxval_version)'
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC pass status included in ToxValDB ", toxval_version, ".0")'
 #| echo: FALSE
 
 qc_pass = qc_status_summ %>%
@@ -458,12 +452,14 @@ DT::datatable(qc_pass,
 
 ```
 
+i.  Pass percent calculated as (pass + not determined / total records) x 100, where "not determined" is assumed to be a "pass"
+
 ## QC Fail Status Counts
 
 ```{r}
 #| label: "tbl-qc-status-summ-fail"
 #| echo: FALSE
-#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version)'
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version, ".0")'
 
 qc_fail = qc_status_summ %>%
   dplyr::select(-pass, -`not determined`, -`pass percent`, -chemicals)
@@ -555,8 +551,7 @@ DT::datatable(qc_fail,
 
 i.  QC fail status tags listed as programmatically applied during load to ToxValDB toxval table, except for the "fail" status which is from a manually reviewed record.
 ii. Note, an individual record can have multiple fail tags (e.g., fail; toxval_numeric \< 0 would be tag "t" and tag "c")
-iii. Pass percent calculated as (pass + not determined / total records) x 100, where "not determined" is assumed to be a "pass"
-iv. Failure column tags:
+iii. Failure column tags:
 
 ```{r}
 #| label: "qc-fail-caption"
@@ -567,7 +562,7 @@ fail_captions_out = fail_captions %>%
   # Add Roman numeral index
   dplyr::mutate(index = 1:dplyr::n(),
                 index = tolower(as.roman(index)) %>%
-                  paste0("\t", ., ".")) %>%
+                  paste0("\t\t", ., ".")) %>%
   tidyr::unite(col = "fail_caption", name_sym, name, sep = " - ") %>%
   tidyr::unite(col = "fail_caption", index, fail_caption, sep = " ") %>%
   dplyr::pull(fail_caption) %>%

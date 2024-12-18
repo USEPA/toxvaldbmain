@@ -2,12 +2,6 @@ caption, .table-caption {
   text-align: left;
 }
 
-/* works for figure caption alignment as intended */
-figcaption {
-  margin: auto;
-  text-align: right;
-}
-
 figure.quarto-float-tbl figcaption.quarto-float-caption-top {
   text-align: left;
 }
