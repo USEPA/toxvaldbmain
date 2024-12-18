@@ -6,7 +6,7 @@
 #' @param version_date The date of the source_info dictionary to be used
 #' @export
 #--------------------------------------------------------------------------------------
-set.supersource.export.names <- function(toxval.db, source=NULL, version_date="2024-08-28"){
+set.supersource.export.names <- function(toxval.db, source=NULL, version_date="2024-10-31"){
   printCurrentFunction()
   # Read source_info dictionary
   file = paste0(toxval.config()$datapath,"dictionary/source_info ", version_date, ".xlsx")
