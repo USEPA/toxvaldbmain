@@ -138,7 +138,7 @@ fix.risk_assessment_class.by.source <- function(toxval.db, source=NULL, subsourc
 
     for(source in missing_rac %>% dplyr::pull(source) %>% unique()) {
       # Generate filename
-      out_file = paste0("dictionary/missing/missing_rac/missing_RAC_", source,
+      out_file = paste0(toxval.config()$datapath, "dictionary/missing/missing_rac/missing_RAC_", source,
                         " ", subsource,".xlsx") %>%
         gsub(" \\.xlsx", ".xlsx", .)
       # Filter to current source

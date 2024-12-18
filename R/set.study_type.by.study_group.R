@@ -16,13 +16,13 @@ set.study_type.by.study_group <- function(toxval.db,
 
   # Initialize values for slist and output_file to match all sources
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  output_file = paste0("Repo/QC Reports/set.study_type.by.study_group_suggestions_ALL SOURCES_",
+  output_file = paste0(toxval.config()$datapath, "QC Reports/set.study_type.by.study_group_suggestions_ALL SOURCES_",
                        Sys.Date(), ".xlsx")
 
   # Alter slist and output_file if source is specified
   if(!is.null(source)) {
     slist = source
-    output_file = paste0("Repo/QC Reports/set.study_type.by.study_group_suggestions_",
+    output_file = paste0(toxval.config()$datapath, "QC Reports/set.study_type.by.study_group_suggestions_",
                          source, "_", Sys.Date(), ".xlsx")
   }
 
@@ -30,7 +30,7 @@ set.study_type.by.study_group <- function(toxval.db,
   query_addition = ""
   if(!is.null(subsource)) {
     query_addition = paste0(" and subsource='", subsource, "'")
-    output_file = paste0("Repo/QC Reports/set.study_type.by.study_group_suggestions",
+    output_file = paste0(toxval.config()$datapath, "QC Reports/set.study_type.by.study_group_suggestions",
                          source, "_", subsource, "_", Sys.Date(), ".xlsx")
   }
 

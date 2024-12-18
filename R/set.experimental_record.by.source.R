@@ -94,7 +94,7 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
 
   # Update WHO JECFA Tox Studies experimental_record using hash file
   if(source == "WHO JECFA Tox Studies"){
-    file = "Repo/who_jecfa_tox_studies/who_jecfa_tox_studies_files/WHO JECFA tox_not experimental.xlsx"
+    file = paste0(toxval.config()$datapath, "who_jecfa_tox_studies/who_jecfa_tox_studies_files/WHO JECFA tox_not experimental.xlsx")
     hashes = readxl::read_xlsx(file) %>%
       tidyr::separate_rows(source_hash, sep=",") %>%
       dplyr::pull(source_hash) %>%

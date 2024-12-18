@@ -9,24 +9,28 @@
 check.toxval_type.route.units <- function(toxval.db,
                                           source=NULL,
                                           subsource=NULL,
-                                          load.dict="Repo/dictionary/toxval_type.route.units.dictionary.xlsx") {
+                                          load.dict=NULL) {
   printCurrentFunction(paste(toxval.db,":", source))
+
+  if(is.null(load.dict)){
+    load.dict = paste0(toxval.config()$datapath, "dictionary/toxval_type.route.units.dictionary.xlsx")
+  }
 
   # Initialize values for slist and output_file to match all sources
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-  output_file = paste0("Repo/QC Reports/toxval_type.route.units_to_check_ALL SOURCES_", Sys.Date(), ".xlsx")
+  output_file = paste0(toxval.config()$datapath, "QC Reports/toxval_type.route.units_to_check_ALL SOURCES_", Sys.Date(), ".xlsx")
 
   # Alter slist and output_file if source is specified
   if(!is.null(source)) {
     slist = source
-    output_file = paste0("Repo/QC Reports/toxval_type.route.units_to_check_", source, "_", Sys.Date(), ".xlsx")
+    output_file = paste0(toxval.config()$datapath, "QC Reports/toxval_type.route.units_to_check_", source, "_", Sys.Date(), ".xlsx")
   }
 
   # Handle addition of subsource for queries and output_file
   query_addition = ""
   if(!is.null(subsource)) {
     query_addition = paste0(" and subsource='", subsource, "'")
-    output_file = paste0("Repo/QC Reports/toxval_type.route.units_to_check_",
+    output_file = paste0(toxval.config()$datapath, "QC Reports/toxval_type.route.units_to_check_",
                          source, "_", subsource, "_", Sys.Date(), ".xlsx")
   }
 

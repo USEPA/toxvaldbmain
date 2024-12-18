@@ -174,7 +174,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   runQuery(query, toxval.db)
 
   # QC fail entries with out of scope species
-  out_of_scope = readxl::read_xlsx("Repo/species/out_of_scope_species_ToxValDB.xlsx") %>%
+  out_of_scope = readxl::read_xlsx(paste0(toxval.config()$datapath, "species/out_of_scope_species_ToxValDB.xlsx")) %>%
     dplyr::pull(common_name) %>%
     unique() %>%
     paste0(collapse="', '")
