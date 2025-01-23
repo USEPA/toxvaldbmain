@@ -3,6 +3,7 @@
 #' an input database version based on an input field_dictionary.xlsx file.
 #' @param version_db Version of the database to pull data for the materialized view.
 #' @param toxval.db Version of the database to store the new view.
+#' @param include.qc.status Boolean whether to include teh qc_status field, or filter out "fail" records. Default is FALSE.
 #' @return None. SQL statements are executed to generate a database table.
 #' @details DETAILS
 #' @examples
@@ -22,9 +23,9 @@
 #' @importFrom tidyr unite
 #' @importFrom dplyr rename mutate case_when select left_join filter bind_rows
 #' @importFrom RMySQL dbConnect MySQL dbWriteTable dbDisconnect
-generate_materialized_view <- function(version_db, toxval.db){
+generate_materialized_view <- function(version_db, toxval.db, include.qc.status = FALSE){
 
-  message("Generating Materialized View -- ", Sys.time())
+  message("Generating ToxValDB Materialized View -- ", Sys.time())
 
   # Required default columns for materialized view
   mv_default_cols = data.frame(
@@ -52,6 +53,12 @@ generate_materialized_view <- function(version_db, toxval.db){
     dplyr::rename(field_comment = `Short Description`,
                   field_name = `Field Name`) %>%
     dplyr::mutate(field_name = tolower(field_name))
+
+  # If not including qc_status, filter "fail" out and remove columns
+  if(!include.qc.status){
+    field_def = field_def %>%
+      dplyr::filter(!field_name %in% c("qc_status"))
+  }
 
   if(anyNA(field_def$field_comment)){
     stop("All field definitions in release_files/field_dictionary.xlsx must have a 'field_comment' value.")
@@ -84,14 +91,7 @@ generate_materialized_view <- function(version_db, toxval.db){
   ##############################################################################
 
   # Set name of materialized view based on database version
-  mv_name = paste0("mv_",
-                   version_db %>%
-                     gsub("res_", "", .) %>%
-                     gsub("toxval_", "toxvaldb_", .) %>%
-                     stringr::str_split(., "(?=[0-9])") %>%
-                     unlist() %>%
-                     paste0(., collapse = "_")) %>%
-    gsub("__", "_", .)
+  mv_name = "mv_toxvaldb"
 
   message("Dropping old table if exists -- ", Sys.time())
   # Drop old table
@@ -160,8 +160,7 @@ generate_materialized_view <- function(version_db, toxval.db){
                     "LEFT JOIN ", version_db, ".source_chemical a on a.chemical_id=b.chemical_id ",
                     "LEFT JOIN ", version_db, ".species d on b.species_id=d.species_id ",
                     "LEFT JOIN ", version_db, ".toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                    "LEFT JOIN ", version_db, ".record_source f on b.toxval_id=f.toxval_id ",
-                    "WHERE b.qc_status NOT LIKE 'fail%'"
+                    "LEFT JOIN ", version_db, ".record_source f on b.toxval_id=f.toxval_id"
   ) %>%
     gsub("source_chemical..", "a.", ., fixed = TRUE) %>%
     gsub("toxval..", "b.", ., fixed = TRUE) %>%
@@ -169,12 +168,20 @@ generate_materialized_view <- function(version_db, toxval.db){
     gsub("toxval_type_dictionary..", "e.", ., fixed = TRUE) %>%
     gsub("record_source..", "f.", ., fixed = TRUE)
 
+  # If not including qc_status, filter "fail" out
+  if(!include.qc.status){
+    mv_query = paste0(mv_query,
+                      " WHERE b.qc_status NOT LIKE 'fail%'")
+  }
+
   message("Inserting data into table -- ", Sys.time())
   # Insert data into table
   runQuery(paste0("INSERT INTO ", mv_name, " ",
                   "(", paste0(field_def$field_name, collapse = ", "), ") ",
                   mv_query),
            toxval.db)
+
+  # TODO Add additional materialized views as needed
 
   message("Done -- ", Sys.time())
 }
