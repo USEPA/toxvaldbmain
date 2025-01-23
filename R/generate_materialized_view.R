@@ -53,6 +53,10 @@ generate_materialized_view <- function(version_db, toxval.db){
                   field_name = `Field Name`) %>%
     dplyr::mutate(field_name = tolower(field_name))
 
+  if(anyNA(field_def$field_comment)){
+    stop("All field definitions in release_files/field_dictionary.xlsx must have a 'field_comment' value.")
+  }
+
   # Pull tables, columns, and datatype definitions from the database
   db_col_list = runQuery(paste0("SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, NUMERIC_PRECISION ",
                                 "FROM INFORMATION_SCHEMA.COLUMNS ",
@@ -81,7 +85,13 @@ generate_materialized_view <- function(version_db, toxval.db){
 
   # Set name of materialized view based on database version
   mv_name = paste0("mv_",
-                   gsub("res_", "", version_db))
+                   version_db %>%
+                     gsub("res_", "", .) %>%
+                     gsub("toxval_", "toxvaldb_", .) %>%
+                     stringr::str_split(., "(?=[0-9])") %>%
+                     unlist() %>%
+                     paste0(., collapse = "_")) %>%
+    gsub("__", "_", .)
 
   message("Dropping old table if exists -- ", Sys.time())
   # Drop old table
