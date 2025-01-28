@@ -124,7 +124,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   doit = TRUE
   if(is.element(source,c("ToxRefDB","ECOTOX"))) doit = FALSE
-  if(doit) fix.critical_effect.icf.by.source(toxval.db, source)
+  if(doit) fix.critical_effect.icf.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix species by source\n")
