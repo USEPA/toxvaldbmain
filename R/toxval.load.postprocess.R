@@ -148,6 +148,8 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   fix.all.param.by.source(toxval.db,source,subsource,fill.toxval_fix=TRUE)
 
+  fix.exposure_route.not_specified.by.source(toxval.db, source, subsource)
+
   #####################################################################
   cat("special case for NULL study_duration_value and units\n")
   #####################################################################
