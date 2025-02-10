@@ -28,17 +28,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   # Create two priority lists for both directions
   if(is.null(priority_list)) {
     # Set default priority_list value if parameter is NULL
-    priority_list_low_high = c(
-      "PPRTV (NCEA)" = "PPRTV (CPHEA)",
-      "HEAST" = "IRIS",
-      "HAWC PFAS 150" = "PFAS 150 SEM v2",
-      "California DPH" = "Cal OEHHA",
-      "EnviroTox_v2" = "ECOTOX",
-      "OW Drinking Water Standards" = "EPA OW NPDWR",
-      "USGS HBSL" = "EPA OPP",
-      "TEST" = "ChemIDplus",
-      "RSL" = "HEAST"
-    )
+    priority_list_low_high = toxval.config()$dedup_hierarchy
   } else {
     # Use input priority_list if available
     priority_list_low_high = priority_list
@@ -49,7 +39,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   # Create subsource priority list
   if(is.null(subsource_priority_list)) {
     subsource_priority_list = list(
-      "RSL" = c("IRIS", "PPRTV Screening Level", "PPRTV")
+      # "RSL" = c("IRIS", "PPRTV Screening Level", "PPRTV")
     )
   }
 
@@ -60,7 +50,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
   for(source in slist) {
 
     # Source specific criteria
-    if(source %in% c("USGS HBSL", "EPA OPP", "RSL")){
+    if(source %in% c("EPA OPP")){
       criteria = c("dtxsid", "toxval_type")
     } else {
       criteria = c("dtxsid")
