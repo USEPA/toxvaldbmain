@@ -127,11 +127,17 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
                      # Filter out records without curated chemical information
                      "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
     }
+
     res = runQuery(query,source.db,TRUE,FALSE)
     if(!nrow(res)) {
       cat(oht,"NO ENTRIES! Try querying without removing null dtxsid.\n\n")
       next
     }
+
+    # Filter out quality = "3 (not reliable)" records
+    res = res %>%
+      dplyr::filter(!quality %in% c("3 (not reliable)"))
+
     res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
                                                                 c("chemical_id", "document_name", "source_hash", "qc_status")]]
     res$source = source
