@@ -42,12 +42,20 @@ toxval.config <- function() {
                     "parent_hash","create_time","modify_time","created_by", "qc_flags", "qc_notes", "qc_category", "version",
                     "raw_input_file", "source_version_date")
 
+  dedup_hierarchy = c(
+    "HEAST" = "IRIS",
+    "HAWC PFAS 150" = "PFAS 150 SEM v2",
+    "OW Drinking Water Standards" = "EPA OW NPDWR",
+    "TEST" = "ChemIDplus"
+  )
+
   # Return configuration variables
   return(
     append(retval,
            list(
              hashing_cols=hashing_cols,
-             non_hash_cols=non_hash_cols
+             non_hash_cols=non_hash_cols,
+             dedup_hierarchy=dedup_hierarchy
            )
     )
   )
