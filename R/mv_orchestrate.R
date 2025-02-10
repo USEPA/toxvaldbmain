@@ -22,7 +22,7 @@
 #' @importFrom tidyr unite
 #' @importFrom dplyr rename mutate case_when select left_join filter bind_rows
 #' @importFrom RMySQL dbConnect MySQL dbWriteTable dbDisconnect
-mv_orchestrate <- function(toxval.db, include.qc.status = FALSE, ...){
+mv_orchestrate <- function(toxval.db, include.qc.status = FALSE){
 
   # Pull materialized view dictionary
   mv_dict = readxl::read_xlsx(paste0(toxval.config()$datapath, "release_files/mv_dict.xlsx")) %>%
@@ -32,17 +32,17 @@ mv_orchestrate <- function(toxval.db, include.qc.status = FALSE, ...){
   # Loop through materialized views to generate
   for(mv_i in seq_len(nrow(mv_dict))){
 
-    mv_fields = names(mv_dict)[startsWith(names(mv_dict), "mv_")]
+    # mv_fields = names(mv_dict)[startsWith(names(mv_dict), "mv_")]
 
     # Set variables from dictionary fields
-    Map(function(x, y) assign(x, y, envir=.GlobalEnv),
-        mv_fields,
-        mv_dict[mv_i, names(mv_dict)[startsWith(names(mv_dict), "mv_")]])
+    # Map(function(x, y) assign(x, y, envir=.GlobalEnv),
+    #     mv_fields,
+    #     mv_dict[mv_i, names(mv_dict)[startsWith(names(mv_dict), "mv_")]])
 
-    # mv_name = mv_dict$mv_name[mv_i]
-    # mv_table = mv_dict$mv_table[mv_i]
-    # mv_db = mv_dict$mv_db[mv_i]
-    # mv_version_label = mv_dict$mv_version[mv_i]
+    mv_name = mv_dict$mv_name[mv_i]
+    mv_table = mv_dict$mv_table[mv_i]
+    mv_db = mv_dict$mv_db[mv_i]
+    mv_version_label = mv_dict$mv_version_label[mv_i]
 
     message("Generating ", mv_name, " Materialized View -- ", Sys.time())
 
@@ -214,7 +214,7 @@ mv_orchestrate <- function(toxval.db, include.qc.status = FALSE, ...){
                         tmp
                       },
                       # Default case
-                      paste0("SELECT * FROM ", mv_table)
+                      paste0("SELECT ", paste0(field_def$field_name, collapse = ", "), " FROM ", mv_table)
     )
 
     message("...Inserting data into table -- ", Sys.time())
