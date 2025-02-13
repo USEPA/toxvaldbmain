@@ -13,12 +13,20 @@
 set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                                       confluence_url = "https://confluence.epa.gov/x/VuCkFg",
                                       confluence_access_token, jira_access_token,
-                                      jira_rdata = "qc_category/toxval_jira_tickets_qc_20240628.RData"){
+                                      jira_rdata = "qc_category"){
   if(is.null(confluence_access_token) || is.na(confluence_access_token)) stop("Must provide confluence_access_token")
   if(is.null(jira_access_token) || is.na(jira_access_token)) stop("Must provide jira_access_token")
 
   if(!is.null(jira_rdata) && !is.na(jira_rdata)){
-    jira_rdata = paste0(toxval.config()$datapath, jira_rdata)
+    # Default is a folder name
+    if(jira_rdata == "qc_category"){
+      jira_rdata = list.files(paste0(toxval.config()$datapath, jira_rdata),
+                              full.names = TRUE,
+                              pattern = ".RData$")
+    } else {
+      # Set as full path to config datapath
+      jira_rdata = paste0(toxval.config()$datapath, jira_rdata)
+    }
   }
 
   printCurrentFunction(toxval.db)
@@ -38,7 +46,7 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     browser()
   }
 
-  # # Derive the table and rows
+  # Derive the table and rows
   table <- rvest::html_nodes(confluence_page, "table") %>%
     .[[2]]
 
@@ -54,7 +62,41 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     dplyr::filter(!`QC Status` %in% c(NA, "Ice Box", "Icebox"),
                   `Source Name` %in% slist)
 
-  if(file.exists(jira_rdata)){
+  # Check if jira_rdata is a vector
+  if(length(jira_rdata) > 1){
+    # Load all RData files
+    RData_list <- lapply(jira_rdata, function(f_name) {
+      message("Loading RData ", which(f_name == jira_rdata), " of ", length(jira_rdata))
+      load(file = f_name)
+      get(ls()[ls() == "jira_tickets"])
+    }) %T>% {
+      names(.) <- jira_rdata
+    }
+
+    # Combine list of dataframes into single across the RData files
+    jira_tickets = lapply(names(RData_list[[1]]), function(l_name){
+      tmp = purrr::modify_depth(RData_list, 1, l_name) %>%
+        dplyr::bind_rows()
+
+      # # Collapse rows by ticket name
+      # if(l_name == "in_data"){
+      #   tmp = tmp %>%
+      #     dplyr::group_by(Summary) %>%
+      #     dplyr::mutate(dplyr::across(dplyr::everything(),
+      #                                 ~paste0(unique(.[!. %in% c(NA, "", "-")]), collapse=", ") %>%
+      #                                   dplyr::na_if("NA") %>%
+      #                                   dplyr::na_if("") %>%
+      #                                   dplyr::na_if("-")
+      #     )) %>%
+      #     dplyr::ungroup() %>%
+      #     dplyr::distinct()
+      # }
+      return(tmp)
+    }) %T>% {
+      names(.) <- names(RData_list[[1]])
+    }
+  } else if(file.exists(jira_rdata)){
+    # Check if jira_rdata is a file path
     load(jira_rdata)
   } else {
     # Retrieve Jira ticket data
