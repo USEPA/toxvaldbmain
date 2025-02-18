@@ -214,7 +214,9 @@ mv_orchestrate <- function(toxval.db, include.qc.status = FALSE){
                         tmp
                       },
                       # Default case
-                      paste0("SELECT ", paste0(field_def$field_name, collapse = ", "), " FROM ", mv_table)
+                      paste0("SELECT ",
+                             paste0(field_def$db_table, ".", field_def$db_field_name, " as ", field_def$field_name, collapse = ", "),
+                             " FROM ", mv_table)
     )
 
     message("...Inserting data into table -- ", Sys.time())
