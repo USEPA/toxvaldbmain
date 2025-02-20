@@ -30,7 +30,7 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
     }
     # Query unique study fields
     query = paste0("select a.toxval_id, a.source, a.subsource, a.dtxsid,c.common_name, a.toxval_units,  ",
-                   "a.study_type, a.exposure_route,a.exposure_method,a.exposure_form, ",
+                   "a.study_type, a.exposure_route,a.exposure_method,a.exposure_form, study_duration_class, ",
                    "a.study_duration_value, a.study_duration_units, a.sex, a.lifestage, a.generation, a.year,",
                    "a.strain, b.year as record_year, b.long_ref, b.title ",
                    "from toxval a ",
