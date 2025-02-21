@@ -31,15 +31,15 @@ toxval.load.echa_iuclid <- function(toxval.db, source.db, log=FALSE, remove_null
 
   # Create translation dictionary to go from table name to human-readable name
   name_translator = c(
-    # "source_iuclid_acutetoxicitydermal"="Acute Toxicity Dermal",
-    # "source_iuclid_acutetoxicityinhalation"="Acute Toxicity Inhalation",
-    # "source_iuclid_acutetoxicityoral"="Acute Toxicity Oral",
-    # "source_iuclid_acutetoxicityotherroutes"="Acute Toxicity Other Routes",
+    "source_iuclid_acutetoxicitydermal"="Acute Toxicity Dermal",
+    "source_iuclid_acutetoxicityinhalation"="Acute Toxicity Inhalation",
+    "source_iuclid_acutetoxicityoral"="Acute Toxicity Oral",
+    "source_iuclid_acutetoxicityotherroutes"="Acute Toxicity Other Routes",
     "source_iuclid_carcinogenicity"="Carcinogenicity",
-    # "source_iuclid_repeateddosetoxicitydermal"="Repeated Dose Toxicity Dermal",
-    # "source_iuclid_repeateddosetoxicityinhalation"="Repeated Dose Toxicity Inhalation",
+    "source_iuclid_repeateddosetoxicitydermal"="Repeated Dose Toxicity Dermal",
+    "source_iuclid_repeateddosetoxicityinhalation"="Repeated Dose Toxicity Inhalation",
     "source_iuclid_repeateddosetoxicityoral"="Repeated Dose Toxicity Oral",
-    # "source_iuclid_repeateddosetoxicityother"="Repeated Dose Toxicity Other",
+    "source_iuclid_repeateddosetoxicityother"="Repeated Dose Toxicity Other",
     # "source_iuclid_toxicitytoaquaticalgae"="Toxicity to Aquatic Algae",
     # "source_iuclid_toxicitytoaquaticplant"="Toxicity to Aquatic Plants",
     # "source_iuclid_toxicitytobirds"="Toxicity to Birds",
