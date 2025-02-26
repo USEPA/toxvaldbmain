@@ -801,7 +801,12 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   ##############################################################################
   ### Start of standard toxval.load logic
   ##############################################################################
-
+  # Set default qc_status
+  res = res %>%
+    dplyr::mutate(qc_status = dplyr::case_when(
+      qc_status %in% c(NA, "-") ~ "not determined",
+      TRUE ~ qc_status
+    ))
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
