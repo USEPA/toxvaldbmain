@@ -461,8 +461,8 @@ toxval.load.ecotox <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
         TRUE ~ value_fix
       ),
       qc_category = dplyr::case_when(
-        grepl("edit|change", qc_notes) ~ "Source overall passed QC, and this record was manually checked and revised from ECOTOX source",
-        TRUE ~ "Source overall passed QC, and this record was manually checked"
+        grepl("edit|change", qc_notes) ~ "Source overall passed QC, and this record was expert reviewed and revised from ECOTOX source",
+        TRUE ~ "Source overall passed QC, and this record was expert reviewed"
       )
     )
 
