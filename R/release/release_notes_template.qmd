@@ -1,5 +1,5 @@
 ---
-title: "ToxValDB v9.6.0 Release Notes"
+title: "ToxValDB v9.6.1 Release Notes"
 author: Taylor Wall
 description: >
   The following are notes to accompany a release for ToxValDB.
@@ -35,7 +35,7 @@ toxval.db = toxval.config()$toxval.db
 source.db = toxval.config()$source.db
 
 # TODO Set desired database version
-toxval_version = "v9.6"
+toxval_version = "v9.6.1"
 
 # Load Comparison stats
 v_compare = paste0(toxval.config()$datapath, "release_files/version_comparison/",
@@ -47,10 +47,6 @@ if(!file.exists(v_compare)){
 }
 
 load(v_compare)
-
-toxvaldb_release_comparison = toxvaldb_release_comparison %>%
-  # Fix formatting of stat names
-  dplyr::mutate(stat = stat %>% gsub("\\.", " ", .))
 
 # Load summary stats
 qc_status_summ = toxval.summary.stats(toxval.db)
@@ -84,7 +80,7 @@ field_dictionary = lapply(field_dictionary_list,
 
 # Overview
 
-The Toxicity Values Database (ToxValDB) contains summary data on in vivo toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version`.0 contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals from over `r format(plyr::round_any(n_sources$n, 10), big.mark=",")` sources.
+The Toxicity Values Database (ToxValDB) contains summary data on in vivo toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals from over `r format(plyr::round_any(n_sources$n, 10), big.mark=",")` sources.
 
 In addition to this release note, the following summary files are available:
 
@@ -130,18 +126,8 @@ The following tabs of tables summarize count differences between ToxValDB versio
 #| echo: FALSE
 #| warning: FALSE
 #| results: 'asis'
-
-# # stacked area chart
-# version_comparison = ggplot2::ggplot(toxvaldb_release_comparison %>%
-#                                         dplyr::arrange(version, stat),
-#                 ggplot2::aes(x=as.numeric(version), y=count, fill=stat)) +
-#   ggplot2::geom_area(position = 'identity') +
-#   # ggplot2::facet_wrap(~stat, scales = "free") +
-#   ggplot2::scale_x_discrete(limits = levels(toxvaldb_release_comparison$version)) +
-#   # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust=0.9, vjust=1.0)) +
-#   ggplot2::labs(y = "Count",
-#                 x = "ToxValDB Version",
-#                 title = "ToxValDB Version Comparison")
+#| fig-width: 12
+#| fig-height: 7
 
 vc_stat_list = sort(unique(toxvaldb_release_comparison$stat))
 
@@ -150,7 +136,7 @@ vc_plots = lapply(vc_stat_list, function(stat){
   ggplot2::ggplot(toxvaldb_release_comparison %>%
                     dplyr::filter(stat == !!stat) %>%
                     dplyr::arrange(version, stat),
-                  ggplot2::aes(x=as.numeric(version), y=count, fill=stat, label = prettyNum(count, big.mark = ","))) +
+                  ggplot2::aes(x=as.numeric(version), y=count, fill=stat, label = prettyNum(count, big.mark = ",")))+
     ggplot2::geom_area(fill="#69b3a2", position = 'identity', alpha=0.4) +
     ggplot2::geom_line(color="#69b3a2", lwd = 2) +
     ggplot2::geom_point(color="#69b3a2", size = 3) +
@@ -177,8 +163,7 @@ for(i in seq_len(length(vc_stat_list))){
 
 Notable version differences:
 
--   v9.4 to v9.5
-    -   The scope of ToxValDB was reduced to not include ecologically focused records. Also, a number of sources were retired or updated and a major deduplication effort was undertaken. This contributed to the drop in unique chemicals (DTXSID), human relevant species (defined as having a harmonized common name of "rat", "mouse", "dog", "rabbit", or "human"), and overall records available in ToxValDB.
+- TBD
 
 # Data Source Highlights
 
@@ -190,16 +175,6 @@ Notable version differences:
 
 -   Expert QC'd sources
     -   ATSDR MRLs, ATSDR PFAS 2021, ECHA IUCLID, ECOTOX, EPA HHTV, HAWC Project, HEAST, HESS, HPVIS, Health Canada, IRIS, NTP PFAS, PPRTV (CPHEA), WHO JECFA Tox Studies
--   ATSDR MRLs
-    -   Updated key_finding values, set as "yes" for document_type = "ATSDR MRLs Toxicological Profile".
--   ECOTOX
-    -   Improved study duration reporting by using the reported "exposure duration" instead of "observed duration". Per the [ECOTOX term definitions](https://cfpub.epa.gov/ecotox/help.cfm?sub=wi-definitions "ECOTOX term definitions link"):
-
-        > The Exposure Duration is the time of actual exposure to the chemical. In cases where the observation time is the only duration reported, it is assumed that the Exposure Duration is equivalent to the longest observation time (field: Observed Duration).
-
-    -   QC'd records that resulted in a change in record values were flagged with a special QC Category tag of "and this record was revised from ECOTOX source".
--   HAWC PFAS 430
-    -   Missing subsource_url populated.
 
 ## Renamed Sources
 
@@ -209,38 +184,78 @@ Notable version differences:
 
 -   No archived sources for this version.
 
+## Source Version Dates
+```{r}
+#| label: "tbl-source-version-dates"
+#| echo: FALSE
+#| tbl-cap: !expr 'paste0("Version Dates of Sources included in ToxValDB ", toxval_version)'
+
+tbl_list = runQuery("SELECT distinct supersource, source, subsource, source_table FROM toxval",
+                    toxval.db) %>%
+  # Remove subsource except for certain sources
+  dplyr::mutate(subsource = dplyr::case_when(
+    source %in% c("ECHA IUCLID") ~ subsource,
+    TRUE ~ NA
+  )) %>%
+  dplyr::distinct()
+
+src_version_date = lapply(seq_len(nrow(tbl_list)), function(i){
+  t_name = tbl_list$source_table[i]
+  if(t_name == "direct load"){
+    t_version = switch(tbl_list$source[i],
+                       "ToxRefDB" = "2024-04-11",
+                       "ChemIDplus" = "2022-10-19",
+                       "Uterotrophic Hershberger DB" = "2018-10-01",
+                       "ECOTOX" = "2024-09-19",
+                       NA
+      
+    )
+  } else {
+    t_version = runQuery(paste0("SELECT distinct source_version_date FROM ", t_name),
+                         source.db) %>%
+      dplyr::pull(source_version_date)
+  }
+  
+  return(
+    data.frame(source = tbl_list$source[i],
+               source_table = t_name,
+              source_version_date = t_version)
+    )
+}) %>%
+  dplyr::bind_rows()
+
+src_version_date = tbl_list %>%
+  dplyr::left_join(src_version_date,
+                   by = c("source", "source_table")) %>%
+  dplyr::select(-source_table) %>%
+  dplyr::arrange(supersource, source) %>%
+  dplyr::rename(`Supersource` = supersource,
+                `Source` = source,
+                `Subsource` = subsource,
+                `Version Date` = source_version_date)
+
+DT::datatable(src_version_date, 
+              options = list(
+                scrollX = TRUE,
+                columnDefs = list(list(className = 'dt-left',
+                                       targets = 0:(length(src_version_date))
+                                       )
+                                  ),
+                rownames = FALSE
+                )
+              )
+
+```
+
 # Features
 
 ## Schema Changes
 
--   "critical_effect" field renamed to "toxicological_effect" in toxval table.
+- TBD
 
 ## Processing Changes
 
--   Added back missing ECHA IUCLID records missing from v9.5 due to chemical mismapping.
--   QC Category added "Expert Reviewed" category tag for records that completed expert QC review.
--   Dictionary updates
-    -   Source Info
-
-        -   Updated HAWC Project "supersource" to "HAWC Project" to disaggregate it from the EPA HAWC supersource, which it is distinct from.
-
-    -   Strain dictionary
-
-        -   To maintain specificity, strain now more closely matches strain_original.
-
-    -   Study Duration Class
-
-        -   To be more consistent with EPA human health risk assessment guidelines, short-term is now defined as \>1-30 days and subchronic as 31-90 days (previously 30 days was considered as subchronic).
--   Improved document cataloging links and associations.
-    -   README added to zip folders to describe files and how to use them for record review.
--   Updated deduplication hierarchy during postprocessing ("\>" means "takes priority over"). Records from a lower priority source that match the selected field(s) from a higher priority source are flagged as duplicates (e.g., records with the same dtxsid and toxval_type in USGS HBSL as EPA OPP are flagged as duplicates since they are represented in the priority source).
-    -   EPA OPP \> USGS HBSL (by dtxsid and toxval_type)
-
-    -   ChemIDplus \> TEST (dtxsid)
-
-    -   HEAST \> RSL (dtxsid and toxval_type)
-
-        -   Improved deduplication with toxval_type consideration. In v9.5, excessive RSL records were set to "fail: duplicate" than were appropriate with dtxsid consideration alone.
+-   TBD
 
 # Known Issues
 
@@ -276,9 +291,21 @@ for(dict in names(field_dictionary)){
                              columnDefs = list(list(className = 'dt-left',
                                                     targets = 0:(length(df_dict))
                                                     )
-                                               )
+                                               ),
+                             rownames = FALSE
                              )
                            )
+  
+  dict = switch(dict,
+                "toxvaldb" = "ToxValDB",
+                "cancer_summary" = "Cancer Summary",
+                "genetox_details" = "Genetox Details",
+                "genetox_summary" = "Genetox Summary",
+                "skin_eye" = "Skin Eye",
+                "r_record_source" = "Record Source",
+                "species" = "Species",
+                dict
+                )
   
   cat(sep = "\n", knitr::knit_child(quiet = TRUE, text = c(
     paste0("## ", dict),
@@ -295,7 +322,7 @@ for(dict in names(field_dictionary)){
 
 # QC Status Counts
 
-Summary of the sources and counts with QC status values in v9.6.0.
+Summary of the sources and counts with QC status values in `r toxval_version`.
 
 Colors indicate:
 
@@ -324,7 +351,7 @@ Colors indicate:
 
 ```{r}
 #| label: "tbl-qc-status-summ-pass"
-#| tbl-cap: !expr 'paste0("Sources and Counts with the QC pass status included in ToxValDB ", toxval_version, ".0")'
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC pass status included in ToxValDB ", toxval_version)'
 #| echo: FALSE
 
 qc_pass = qc_status_summ %>%
@@ -459,7 +486,7 @@ i.  Pass percent calculated as (pass + not determined / total records) x 100, wh
 ```{r}
 #| label: "tbl-qc-status-summ-fail"
 #| echo: FALSE
-#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version, ".0")'
+#| tbl-cap: !expr 'paste0("Sources and Counts with the QC fail status included in ToxValDB ", toxval_version)'
 
 qc_fail = qc_status_summ %>%
   dplyr::select(-pass, -`not determined`, -`pass percent`, -chemicals)
@@ -575,3 +602,36 @@ fail_captions_out = fail_captions %>%
 ```
 
 `r fail_captions_out`
+
+# Data Landscape Figures
+
+```{r}
+#| echo: FALSE
+#| message: FALSE
+#| warning: FALSE
+#| resuts: FALSE
+# Pull figure data
+dl_fig_list = get_data_landscape_figures(toxval.db)
+```
+
+::: {.panel-tabset .nav-pills}
+```{r}
+#| label: "effect-type-record-chem-counts"
+#| echo: FALSE
+#| warning: FALSE
+#| results: 'asis'
+#| fig-width: 12
+#| fig-height: 7
+
+# Programmatically generate the tabset of tables with headers
+for(i in seq_len(length(dl_fig_list$plots))){
+  cat('## ', names(dl_fig_list$plots)[i], '\n\n')
+  print(dl_fig_list$plots[[i]])
+  cat('\n\n')
+  cat(dl_fig_list$captions[[i]])
+  cat('\n\n')
+}
+```
+
+<!-- End of tabset -->
+:::
