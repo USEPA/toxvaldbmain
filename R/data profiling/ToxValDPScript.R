@@ -20,21 +20,13 @@ library(validate)
 library(RMySQL)
 
 #devtools::load_all()
-
-mysqlconnection = dbConnect(RMySQL::MySQL(),
-                            dbname='res_toxval_v95',
-                            host='ccte-mysql-res.epa.gov',
-                            port=3306,
-                            user='mgroover',
-                            password='Mgroover_09142023')
-
-df <- dbGetQuery(mysqlconnection, statement= paste("select *
-                                      from toxval"))
+df = runQuery("select * from toxval",
+              toxval.config()$toxval.db)
 
 # MG: pull from source_chemical so we can compare certain fields when
 # checking for duplicates
-df2 <- dbGetQuery(mysqlconnection, statement= paste("select *
-                                                    from source_chemical"))
+df2 = runQuery("select * from source_chemical where chemical_id in (select distinct chemical_id from toxval)",
+              toxval.config()$toxval.db)
 
 # MG: Left outer join. Many flagged duplicates were determined non-dups
 # because they had different casrn's, so we can compare these values
