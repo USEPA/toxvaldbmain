@@ -73,7 +73,8 @@ fix.study_group <- function(toxval.db, source=NULL, subsource=NULL, report.only=
     if(nrow(temp_sg)){
       temp_sg = temp_sg %>%
         # Assign study group
-        dplyr::mutate(study_group = 1:n() %>%
+        dplyr::mutate(study_group = toxval_id %>%
+                        gsub(", ", "_", .) %>%
                         paste0(source, "_dup_", subsource, "_", .)) %>%
         dplyr::ungroup() %>%
         dplyr::select(-source_hash) %>%
