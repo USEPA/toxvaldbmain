@@ -12,10 +12,10 @@ fix.species.duplicates <- function(toxval.db, source=NULL, subsource=NULL) {
 
   if(!is.null(source)) {
     slist = source
-    output_file = paste0("Repo/species/duplicate_species_id", source, ".xlsx")
+    output_file = paste0(toxval.config()$datapath, "species/duplicate_species_id_", source, ".xlsx")
   } else {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
-    output_file = "Repo/species/duplicate_species_id_ALL SOURCES.xlsx"
+    output_file = paste0(toxval.config()$datapath, "species/duplicate_species_id_ALL SOURCES.xlsx")
   }
 
   slist = slist %>%

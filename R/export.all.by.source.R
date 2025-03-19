@@ -13,6 +13,20 @@
 export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include.qc.status = TRUE) {
   printCurrentFunction(toxval.db)
 
+  # Check if "critical_effect" is a field name
+  tbl_f_list = runQuery(paste0(
+    "SELECT DISTINCT TABLE_NAME, COLUMN_NAME FROM information_schema.columns ",
+    "WHERE table_schema = '", toxval.db, "' AND ",
+    "TABLE_NAME = 'toxval'"
+  ),
+  toxval.db)
+
+  # Boolean switch whether to use "critical_effect" or "toxicolgical_effect"
+  use_critical_effect_name = FALSE
+  if("critical_effect_original" %in% tbl_f_list$COLUMN_NAME){
+    use_critical_effect_name = TRUE
+  }
+
   dir = paste0(toxval.config()$datapath,"export/export_by_source_",toxval.db,"_",Sys.Date())
   if(!dir.exists(dir)) dir.create(dir)
 
@@ -21,8 +35,14 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include
   if(is.null(source)) {
     nlist = c("source","notes","dtxsid","casrn","name","risk_assessment_class","human_eco","toxval_type",
               "b.toxval_numeric","toxval_units","study_type","common_name","strain","sex",
-              "generation","exposure_route","exposure_method","toxicological_effect"
+              "generation","exposure_route","exposure_method"
     )
+    if(use_critical_effect_name){
+      nlist = c(nlist, "critical_effect")
+    } else {
+      nlist = c(nlist, "toxicological_effect")
+    }
+
     qc = as.data.frame(matrix(nrow=length(slist),ncol=length(nlist)))
     names(qc) = nlist
     qc$source = slist
@@ -68,7 +88,10 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include
                    "b.exposure_method as EXPOSURE_METHOD, ",
                    "b.exposure_form as EXPOSURE_FORM, ",
                    "b.media as MEDIA, ",
-                   "b.toxicological_effect as TOXICOLOGICAL_EFFECT, ",
+                   ifelse(use_critical_effect_name,
+                          "b.critical_effect as CRITICAL_EFFECT, ",
+                          "b.toxicological_effect as TOXICOLOGICAL_EFFECT, "
+                   ),
                    "b.experimental_record as EXPERIMENTAL_RECORD, ",
                    "b.study_group as STUDY_GROUP, ",
                    "f.long_ref as LONG_REF, ",
@@ -103,7 +126,10 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include
                    "b.exposure_method_original as EXPOSURE_METHOD_ORIGINAL, ",
                    "b.exposure_form_original as EXPOSURE_FORM_ORIGINAL, ",
                    "b.media_original as MEDIA_ORIGINAL, ",
-                   "b.toxicological_effect_original as TOXICOLOGICAL_EFFECT_ORIGINAL, ",
+                   ifelse(use_critical_effect_name,
+                          "b.critical_effect_original as CRITICAL_EFFECT_ORIGINAL, ",
+                          "b.toxicological_effect_original as TOXICOLOGICAL_EFFECT_ORIGINAL, "
+                   ),
                    "b.year_original as ORIGINAL_YEAR ",
                    "FROM ",
                    "toxval b ",

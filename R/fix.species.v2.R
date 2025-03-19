@@ -207,7 +207,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   not_specified = runQuery(query, toxval.db)
 
   if(nrow(not_specified)) {
-    out_file = paste0("Repo/dictionary/missing/missing_", source, "_", subsource, "_species.xlsx") %>%
+    out_file = paste0(toxval.config()$datapath, "dictionary/missing/missing_", source, "_", subsource, "_species.xlsx") %>%
       gsub("__", "_", .)
     cat(nrow(not_specified), " entries have 'Not Specified' species\n")
     writexl::write_xlsx(not_specified, out_file)
