@@ -1,0 +1,7 @@
+caption, .table-caption {
+  text-align: left;
+}
+
+figure.quarto-float-tbl figcaption.quarto-float-caption-top {
+  text-align: left;
+}

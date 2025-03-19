@@ -1,14 +1,13 @@
 #--------------------------------------------------------------------------------------
-#' Load Copper Manufacturers daa from toxval_source to toxval
-#'
-#' @param toxval.db The version of toxval into which the tables are loaded.
-#' @param source.db The source database to use.
+#
+#' Load Copper Manufacturers data to toxval from toxval_source
+#' @param toxval.db The database version to use
+#' @param source.db The source database
 #' @param log If TRUE, send output to a log file
-#' @export
+#' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.copper <- function(toxval.db,source.db, log=F){
-  printCurrentFunction(toxval.db)
-  source <- "Copper Manufacturers"
+toxval.load.copper <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "Copper Manufacturers"
   source_table = "source_copper"
   verbose = log
   #####################################################################
@@ -16,7 +15,7 @@ toxval.load.copper <- function(toxval.db,source.db, log=F){
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -25,6 +24,7 @@ toxval.load.copper <- function(toxval.db,source.db, log=F){
   cat("clean source_info by source\n")
   #####################################################################
   import.source.info.by.source(toxval.db, source)
+
   #####################################################################
   cat("clean by source\n")
   #####################################################################
@@ -33,25 +33,35 @@ toxval.load.copper <- function(toxval.db,source.db, log=F){
   #####################################################################
   cat("load data to res\n")
   #####################################################################
-  query = paste0("select * from ",source_table)
-  res = runQuery(query,source.db,T,F)
-  res = res[ , !(names(res) %in% c("source_id","clowder_id","parent_hash","create_time","modify_time","created_by"))]
-  res = res[ , !(names(res) %in% c("qc_flags","qc_notes","version"))]
+  # Whether to remove records with NULL DTXSID values
+  if(!remove_null_dtxsid){
+    query = paste0("select * from ",source_table)
+  } else {
+    query = paste0("select * from ",source_table, " ",
+                   # Filter out records without curated chemical information
+                   "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
+  }
+  res = runQuery(query,source.db,TRUE,FALSE)
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
-  print(dim(res))
+  print(paste0("Dimensions of source data: ", toString(dim(res))))
 
-  res[which(!is.na(res[,"toxval_subtype1"])),"toxval_subtype"] <- res[which(!is.na(res[,"toxval_subtype1"])),"toxval_subtype1"]
-  res <- res[ , !(names(res) %in% c("toxval_id","toxval_subtype1","year1"))]
-  res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric_qualifier"] <- res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric"]
-  res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric_qualifier"] <- gsub("(^[^[:alnum:]])(.*)","\\1",res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric_qualifier"])
-  res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric"] <- gsub("(^[^[:alnum:]])(.*)","\\2",res[grep("^[^[:alnum:]]",res$toxval_numeric), "toxval_numeric"])
-  res[grep("\\-",res$toxval_numeric), "toxval_numeric"] <- gsub("(.*)(\\s*\\-\\s*)(.*)","\\1",res[grep("\\-",res$toxval_numeric), "toxval_numeric"])
+  #####################################################################
+  cat("Add code to deal with specific issues for this source\n")
+  #####################################################################
 
-  res[grep("^[a-zA-Z]+",res$study_duration_value), "study_duration_value"] <- gsub("(^[a-zA-Z]+\\s*[a-zA-Z]+\\s*)(.*)","\\2",res[grep("^[a-zA-Z]+",res$study_duration_value), "study_duration_value"])
-  res[grep("\\-",res$study_duration_value), "study_duration_value"] <- gsub("(.*)(\\s*\\-\\s*)(.*)","\\3",res[grep("\\-",res$study_duration_value), "study_duration_value"])
-  res[which(res$volume == "-"),"volume"] <- ""
-
+  # Set redundant subsource_url values to "-"
+  res = res %>%
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    ) %>%
+    # Map experimental species information to critical_effect for derived toxval_type entries
+    fix.associated.pod.critical_effect(., c("chemical_id", "year", "long_ref"))
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -62,43 +72,88 @@ toxval.load.copper <- function(toxval.db,source.db, log=F){
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!is.element(nlist,c("casrn","name","parent_chemical_id"))]
-  nlist = nlist[!is.element(nlist,cols)]
+  # "range_relationship_id","toxval_relationship"
+  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","toxval_relationship",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
+  # Remove columns that are not used in toxval
+  res = res %>% dplyr::select(!dplyr::any_of(nlist))
+
+  # Check if any non-toxval column still remaining in nlist
+  nlist = names(res)
+  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","toxval_relationship",
+                              # Do not remove fields that would become "_original" fields
+                              unique(gsub("_original", "", cols)))]
+  nlist = nlist[!nlist %in% cols]
+
   if(length(nlist)>0) {
     cat("columns to be dealt with\n")
     print(nlist)
     browser()
   }
   print(dim(res))
-  res$toxval_numeric_qualifier = "="
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
 
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = unique(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
   res$toxval_numeric = as.numeric(res$toxval_numeric)
-  print(dim(res))
+  print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
-  res = data.frame(lapply(res, function(x) if(class(x)=="character") trimws(x) else(x)), stringsAsFactors=F, check.names=F)
-  res = unique(res)
-  res = res[,!is.element(names(res),c("casrn","name"))]
-  print(dim(res))
+  # Remove excess whitespace
+  res = res %>%
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
+  res = res[, !names(res) %in% c("casrn","name")]
+  print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
   cat("add toxval_id to res\n")
   #####################################################################
   count = runQuery("select count(*) from toxval",toxval.db)[1,1]
-  if(count==0) tid0 = 1
-  else tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  if(count==0) {
+    tid0 = 1
+  } else {
+    tid0 = runQuery("select max(toxval_id) from toxval",toxval.db)[1,1] + 1
+  }
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
+
+  #####################################################################
+  cat("Set the toxval_relationship for separated toxval_numeric range records\n")
+  #####################################################################
+  relationship_initial = res %>%
+    dplyr::filter(grepl("Range", toxval_relationship),
+                  !range_relationship_id %in% c("-", NA))
+
+  # Add check for filtered values
+  if(nrow(relationship_initial)) {
+    relationship = relationship_initial %>%
+      tidyr::separate_rows(
+        range_relationship_id,
+        sep = " \\|::\\| "
+      ) %>%
+      dplyr::select(toxval_id, range_relationship_id, toxval_relationship) %>%
+      tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_relationship, values_from = toxval_id) %>%
+      dplyr::rename(toxval_id_1 = `Lower Range`,
+                    toxval_id_2 = `Upper Range`) %>%
+      dplyr::mutate(relationship = "toxval_numeric range") %>%
+      dplyr::select(-range_relationship_id)
+
+    # Insert range relationships into toxval_relationship table
+    if(nrow(relationship)){
+      runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
+    }
+  }
+
+  # Remove range_relationship_id and toxval_relationship fields
+  res = res %>%
+    dplyr::select(-range_relationship_id, -toxval_relationship)
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -119,38 +174,37 @@ toxval.load.copper <- function(toxval.db,source.db, log=F){
   refs$record_source_type = "website"
   refs$record_source_note = "to be cleaned up"
   refs$record_source_level = "primary (risk assessment values)"
-  print(dim(res))
+  print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = unique(res)
-  refs = unique(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "-"
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
+  print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
-  print(dim(res))
+  print(paste0("Dimensions of references pushed to record_source: ", toString(dim(refs))))
 
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source)
+  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
-    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    logr::log_close()
+    output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_message) = "message"
-    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
+    output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = FALSE, header = FALSE)
     names(output_log) = "log"
     new_log = log_message(output_log, output_message[,1])
     writeLines(new_log, paste0(toxval.config()$datapath,"output_log/",source,"_",Sys.Date(),".txt"))
@@ -158,4 +212,13 @@ toxval.load.copper <- function(toxval.db,source.db, log=F){
   #####################################################################
   cat("finish\n")
   #####################################################################
+  return(0)
+
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 }

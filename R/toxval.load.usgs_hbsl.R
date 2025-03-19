@@ -15,7 +15,7 @@ toxval.load.usgs_hbsl <- function(toxval.db, source.db,log=F){
   #####################################################################
   if(log) {
     con1 = file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 = log_open(con1)
+    con1 = logr::log_open(con1)
     con = file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -43,8 +43,19 @@ toxval.load.usgs_hbsl <- function(toxval.db, source.db,log=F){
   #####################################################################
   cat("Add the code from the original version from Aswani\n")
   #####################################################################
-  cremove = c("","","","")
+  cremove = c("source_version_date", "chemical_name", "cas_registry_number",
+              "usgs_parameter_code", "chemical_class", "benchmark_remarks",
+              "study_duration_qualifier")
   res = res[ , !(names(res) %in% cremove)]
+
+  # Set redundant subsource_url values to "-"
+  res = res %>%
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -75,7 +86,7 @@ toxval.load.usgs_hbsl <- function(toxval.db, source.db,log=F){
   res = unique(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
+  if(is.element("species_original",names(res))) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(dim(res))
   res=fix.non_ascii.v2(res,source)
@@ -122,8 +133,6 @@ toxval.load.usgs_hbsl <- function(toxval.db, source.db,log=F){
   refs = unique(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://water.usgs.gov/water-resources/hbsl/"
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
@@ -141,7 +150,7 @@ toxval.load.usgs_hbsl <- function(toxval.db, source.db,log=F){
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)

@@ -3,7 +3,6 @@
 #' Build a data frame of the PODs and exports as xlsx
 #'
 #' @param toxval.db Database version
-#' @param human_eco Either 'human health' or 'eco'
 #' @param file.name If not NA, this is a file containing chemicals, and only those chemicals will be exported
 #'
 #'
@@ -11,13 +10,13 @@
 #'  ../export/toxval_pod_summary_[human_eco]_Sys.Date().xlsx
 #'
 #-----------------------------------------------------------------------------------
-export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
+export.for.oppt <- function(toxval.db, file.name="TSCA PICS") {
   printCurrentFunction(toxval.db)
   dir = paste0(toxval.config()$datapath,"export_subset/")
   if(!is.na(file.name)) {
     file = paste0(dir,file.name,".xlsx")
     print(file)
-    chems = read.xlsx(file)
+    chems = openxlsx::read.xlsx(file)
     dlist = unique(chems$dtxsid)
   }
 
@@ -39,10 +38,6 @@ export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
                     b.toxval_numeric_original,
                     b.toxval_units,
                     b.toxval_units_original,
-                    b.toxval_numeric_standard,
-                    b.toxval_units_standard,
-                    b.toxval_numeric_human,
-                    b.toxval_units_human,
                     b.study_type,
                     b.study_type_original,
                     b.study_type as study_type_corrected,
@@ -165,7 +160,7 @@ export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
       temp = mat[,nlist]
       mat$hashkey = NA
       mat$study_group = NA
-      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest(paste0(temp[i,],collapse=""), serialize = FALSE)
+      for(i in 1:nrow(mat)) mat[i,"hashkey"] = digest::digest(paste0(temp[i,],collapse=""), serialize = FALSE)
       hlist = unique(mat$hashkey)
       for(i in 1:length(hlist)) {
         sg = paste0(src,"_",i)
@@ -179,7 +174,7 @@ export.for.oppt <- function(toxval.db="res_toxval_v94",file.name="TSCA PICS") {
   file <- paste0(dir,"/toxval_all_with_references_",toxval.db,"_",Sys.Date(),".xlsx")
   if(!is.na(file.name))
     file <- paste0(dir,"/toxval_all_with_references_",file.name,"_",toxval.db,"_",Sys.Date(),".xlsx")
-  sty <- createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
-  write.xlsx(res,file,firstRow=T,headerStyle=sty)
+  sty <- openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+  openxlsx::write.xlsx(res,file,firstRow=T,headerStyle=sty)
 
 }

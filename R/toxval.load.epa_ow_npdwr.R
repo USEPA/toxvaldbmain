@@ -42,9 +42,8 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
                    "WHERE chemical_id IN (SELECT chemical_id FROM source_chemical WHERE dtxsid is NOT NULL)")
   }
   res = runQuery(query,source.db,TRUE,FALSE)
-  res = res[,!names(res) %in%
-              toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
-                                              c("chemical_id")]]
+  res = res[,!names(res) %in% toxval.config()$non_hash_cols[!toxval.config()$non_hash_cols %in%
+                                                              c("chemical_id", "document_name", "source_hash", "qc_status")]]
   res$source = source
   res$details_text = paste(source,"Details")
   print(paste0("Dimensions of source data: ", toString(dim(res))))
@@ -52,8 +51,18 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  cremove = c("sources_of_contaminant_in_drinking_water", "subsource_type")
+  cremove = c("sources_of_contaminant_in_drinking_water", "subsource_type", "study_duration_qualifier", "url")
   res = res[ , !(names(res) %in% cremove)]
+
+  # Set redundant subsource_url values to "-"
+  res = res %>%
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -79,7 +88,7 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
   if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
@@ -88,8 +97,8 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
@@ -130,12 +139,10 @@ toxval.load.epa_ow_npdwr <- function(toxval.db,source.db, log=FALSE, remove_null
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

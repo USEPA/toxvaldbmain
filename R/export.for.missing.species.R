@@ -67,7 +67,7 @@ export.for.missing.species <- function(toxval.db, source=NULL) {
     cat(src,nrow(mat),"\n")
     if(nrow(mat)>0) {
       file = paste0(dir,"toxval_missing_species_",toxval.db,"_",src,".xlsx")
-      sty = createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
+      sty = openxlsx::createStyle(halign="center",valign="center",textRotation=90,textDecoration = "bold")
       openxlsx::write.xlsx(mat,file,firstRow=T,headerStyle=sty)
     }
   }

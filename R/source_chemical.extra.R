@@ -14,14 +14,51 @@ source_chemical.extra <- function(toxval.db,
                                    chem.check.halt=FALSE,
                                    casrn.col="casrn",
                                    name.col="name",
-                                   verbose=F) {
+                                   verbose=FALSE) {
   printCurrentFunction(paste0(toxval.db,"\n",source))
   if(!exists("DSSTOX")) load.dsstox()
 
   #####################################################################
   cat("Do the chemical checking\n")
   #####################################################################
-  res$chemical_index = paste(res[,casrn.col],res[,name.col])
+  res = res %>%
+    tidyr::unite(col="chemical_index", tidyselect::all_of(casrn.col), tidyselect::all_of(name.col), sep=" ", remove=FALSE)
+    # dplyr::mutate(dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace zero width space unicode
+    #                             ~gsub("\u200b|\u00a0", "", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace prime symbol/apostrophe unicode
+    #                             ~gsub("\u2019|\u00b4", "'", .)),
+    #                 dplyr::across(all_of(c(casrn.col, name.col)),
+    #                               # Replace soft hyphen
+    #                               ~gsub("\u00ad", "-", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace Registered symbol
+    #                             ~gsub("\u00ae", "R", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace micro greek symbol
+    #                             ~gsub("\u00b5", "u", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace small a with circumflex (â)
+    #                             ~gsub("\u00e2", "a", .)),
+    #               dplyr::across(all_of(c(casrn.col, name.col)),
+    #                             # Replace dagger (†) unicode (typically a footnote symbol)
+    #                             ~gsub("\u2020", "+", .)))
+
+  # non-ascii encoding fixes (just like from toxval import "source_prep_and_load.R"
+  # Apply to all character cols
+  for(col_n in names(res)[sapply(res, is.character)]){
+    res = res %>%
+      dplyr::mutate(!!col_n := !!rlang::sym(col_n) %>%
+                      enc2native() %>%
+                      iconv(from="latin1",to="UTF-8") %>%
+                      iconv(from="LATIN1",to="UTF-8") %>%
+                      iconv(from="LATIN2",to="UTF-8") %>%
+                      iconv(from="latin-9",to="UTF-8") %>%
+                      enc2utf8())
+  }
+
+  # gsub("\u2019", "'", .) %>%
   result = chem.check.v2(res,verbose=verbose,source)
   if(chem.check.halt) if(!result$name.OK || !result$casrn.OK || !result$checksum.OK) browser()
 
@@ -30,14 +67,14 @@ source_chemical.extra <- function(toxval.db,
   #####################################################################
   chems = cbind(res[,c(casrn.col,name.col)],result$res0[,c(casrn.col,name.col)])
   names(chems) = c("raw_casrn","raw_name","cleaned_casrn","cleaned_name")
-  chems = unique(chems)
+  chems = dplyr::distinct(chems)
   chems$source = source
 
   prefix = runQuery(paste0("select chemprefix from chemical_source_index where source='",source,"'"),source.db)[1,1]
   ilist = seq(from=1,to=nrow(chems))
   chems$chemical_id = "-"
   for(i in 1:nrow(chems)) {
-    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name","cleaned_casrn","cleaned_name")],collapse=""),algo="xxhash64", serialize = FALSE))
+    chems[i,"chemical_id"] = paste0(prefix,"_",digest::digest(paste0(chems[i,c("raw_casrn","raw_name")],collapse=""),algo="xxhash64", serialize = FALSE))
   }
   # check for duplicates
   x = chems$chemical_id

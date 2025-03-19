@@ -15,7 +15,7 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
     cat("start output log, log files for each source can be accessed from output_log folder\n")
     #####################################################################
     con1 <- file.path(toxval.config()$datapath,paste0(source,"_",Sys.Date(),".log"))
-    con1 <- log_open(con1)
+    con1 <- logr::log_open(con1)
     con <- file(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"))
     sink(con, append=TRUE)
     sink(con, append=TRUE, type="message")
@@ -43,14 +43,10 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
   colnames(res)[which(names(res) == "phenotype")] <- "critical_effect"
   res$details_text<-"-"
   res$human_eco <- "human health"
-  res$species_original = "-"
-  res$target_species = "Human"
-  res$human_ra = "Y"
+  res$species = "human"
   res <- unique(res)
   res <- fill.toxval.defaults(toxval.db,res)
   res <- generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] <- tolower(res[,"species_original"])
-  res$species_original = "-"
   res$toxval_numeric <- as.numeric(res$toxval_numeric)
   print(dim(res))
 
@@ -60,7 +56,7 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
   res = unique(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if(is.element("species_original",names(res))) res[,"species_original"] = tolower(res[,"species_original"])
+  if(is.element("species_original",names(res))) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(dim(res))
   res=fix.non_ascii.v2(res,source)
@@ -122,7 +118,7 @@ toxval.load.alaska_dec <- function(toxval.db, source.db,log=F){
     cat("stop output log \n")
     #####################################################################
     closeAllConnections()
-    log_close()
+    logr::log_close()
     output_message = read.delim(paste0(toxval.config()$datapath,source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)
     names(output_message) = "message"
     output_log = read.delim(paste0(toxval.config()$datapath,"log/",source,"_",Sys.Date(),".log"), stringsAsFactors = F, header = F)

@@ -16,7 +16,7 @@ source_chemical.chemidplus <- function(toxval.db,
                                    casrn.col="casrn",
                                    name.col="name",
                                    verbose=F) {
-  printCurrentFunction(paste0(db,"\n",source))
+  printCurrentFunction(paste0(source.db,"\n",source))
   if(!exists("DSSTOX")) load.dsstox()
 
   #####################################################################
@@ -38,7 +38,7 @@ source_chemical.chemidplus <- function(toxval.db,
   ilist = seq(from=1,to=nrow(chems))
   chems$chemical_id = "-"
   for(i in 1:nrow(chems)) {
-    chems[i,"chemical_id"] = paste0(prefix,"_",digest(paste0(chems[i,c("raw_casrn","raw_name","cleaned_casrn","cleaned_name")],collapse=""),algo="xxhash64", serialize = FALSE))
+    chems[i,"chemical_id"] = paste0(prefix,"_",digest::digest(paste0(chems[i,c("raw_casrn","raw_name","cleaned_casrn","cleaned_name")],collapse=""),algo="xxhash64", serialize = FALSE))
   }
   # check for duplicates
   x = chems$chemical_id
@@ -52,7 +52,7 @@ source_chemical.chemidplus <- function(toxval.db,
   chems$chemical_index = paste(chems$raw_casrn,chems$raw_name)
   cat("add the dtxsid\n")
   file = paste0(toxval.config()$datapath,"/ecotox/ecotox_files/ECOTOX chemical mapping 2022-07-21.xlsx")
-  echems = read.xlsx(file)
+  echems = openxlsx::read.xlsx(file)
   rownames(echems) = as.character(echems$casrn)
   dsstox = DSSTOX[is.element(DSSTOX$casrn,chems$cleaned_casrn),]
 

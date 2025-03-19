@@ -2,8 +2,9 @@
 #' Set the molecular weight in the toxval table, for use in unit conversions
 #' @param toxval.db The database version to use
 #' @param source The source
+#' @param subsource The subsource
 #--------------------------------------------------------------------------------------
-toxval.set.mw <- function(toxval.db, source=NULL){
+toxval.set.mw <- function(toxval.db, source=NULL, subsource=NULL){
   printCurrentFunction(toxval.db)
   dsstox.db <- toxval.config()$dsstox.db
   if(!is.null(source)) {
@@ -11,19 +12,30 @@ toxval.set.mw <- function(toxval.db, source=NULL){
   } else {
     slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   }
+
+  # Handle addition of subsource for queries
+  query_addition = ""
+  if(!is.null(subsource)) {
+    query_addition = paste0(" and subsource='", subsource, "'")
+  }
+
   # Loop through each source
   for(source in slist) {
     cat(source,"\n")
-    runQuery(paste0("update toxval set mw=-1 where mw is null and source='",source,"'"),toxval.db)
+    runQuery(paste0("update toxval set mw=-1 where mw is null and source='",source,"'",query_addition),toxval.db)
     # Pull list of DTXSID values as a vector
-    dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0"),toxval.db)[,1]
-
+    dlist = runQuery(paste0("select distinct dtxsid from toxval where source='",source,"' and mw<0 and dtxsid is not null",query_addition),
+                     toxval.db)[,1]
+    # Check if any dtxsid values returned
+    if(!length(dlist) | all(is.na(dlist)) | all(dlist %in% c("-"))){
+      return("No mapped dtxsid values to use to set mw...returning...")
+    }
     # Test of API is up and running
-    api_test <- httr::GET("https://api-ccte.epa.gov/") %>%
+    api_test <- httr::GET("https://api-ccte.epa.gov/docs/chemical.html") %>%
       httr::content()
 
     # Use bulk DTXSID CCTE Chemicals API pull (limit 200 per call)
-    if(!is.null(API_AUTH) & !grepl("404 Not Found", api_test)){
+    if(Sys.getenv("api_auth") != "" & !grepl("404 Not Found", api_test)){
       cat("...Pulling DSSTox mw using CCTE API...\n")
       # Split list into subsets of 200
       mw <- dlist %>%
@@ -38,13 +50,18 @@ toxval.set.mw <- function(toxval.db, source=NULL){
           httr::accept_json(),
           httr::content_type_json(),
           # Use API Key for authorization
-          httr::add_headers(`x-api-key` = API_AUTH),
+          httr::add_headers(`x-api-key` = Sys.getenv("api_auth")),
           encode = "json",
           body=as.list(mw[[i]])
         ) %>%
           httr::content() %>%
-          dplyr::bind_rows() %>%
-          dplyr::select(dtxsid, mw=averageMass)
+          dplyr::bind_rows()
+        # Edge case of not having averageMass returned
+        if(!"averageMass" %in% names(mw[[i]])) mw[[i]]$averageMass = NA
+        # Select mw field and filter out NA values
+        mw[[i]] = mw[[i]] %>%
+          dplyr::select(dtxsid, mw=averageMass) %>%
+          dplyr::filter(!is.na(mw))
       }
       # Combine all results
       mw = dplyr::bind_rows(mw)
@@ -69,7 +86,7 @@ toxval.set.mw <- function(toxval.db, source=NULL){
         "')"
       )
       mw = runQuery(query,toxval.db) %>%
-        filter(!is.na(mw))
+        dplyr::filter(!is.na(mw))
     }
 
     # Only run if mw values are present for selected DTXSID values

@@ -57,6 +57,15 @@ toxval.load.who_ipcs <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   cremove = c("remarks","un_no","chem_type","phys_state", "main_use", "ghs", "table_name")
   res = res[ , !(names(res) %in% cremove)]
 
+  # Set redundant subsource_url values to "-"
+  res = res %>%
+    dplyr::mutate(
+      subsource_url = dplyr::case_when(
+        subsource_url == source_url ~ "-",
+        TRUE ~ subsource_url
+      )
+    )
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -82,17 +91,17 @@ toxval.load.who_ipcs <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
-  res = distinct(res)
+  res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
-  if("species_original" %in% names(res)) { res[,"species_original"] = tolower(res[,"species_original"]) }
+  if("species_original" %in% names(res)) { res$species_original = tolower(res$species_original) }
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(where(is.character), stringr::str_squish))
-  res = distinct(res)
+    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+  res = dplyr::distinct(res)
   res = res[,!is.element(names(res),c("casrn","name"))]
   print(paste0("Dimensions of source data: ", toString(dim(res))))
 
@@ -133,12 +142,10 @@ toxval.load.who_ipcs <- function(toxval.db, source.db, log=FALSE, remove_null_dt
   #####################################################################
   cat("load res and refs to the database\n")
   #####################################################################
-  res = distinct(res)
-  refs = distinct(refs)
+  res = dplyr::distinct(res)
+  refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://www.who.int/publications/i/item/9789240005662"
-  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

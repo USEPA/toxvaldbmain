@@ -1,5 +1,3 @@
-library(dplyr)
-
 #' @title qa_toxval_url_validation
 #' @description Function to pull URLs and log their HTTP statuses
 #' @param tbl_list List of ToxVal tables to pull URLs from, Default: c("toxval", "record_source", "source_info")
