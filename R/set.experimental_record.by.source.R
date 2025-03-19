@@ -33,6 +33,10 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
            toxval.db)
   runQuery("UPDATE toxval SET experimental_record = 'undetermined' WHERE experimental_record = '-'",
            toxval.db)
+  runQuery("UPDATE toxval SET experimental_record = 'undetermined' WHERE experimental_record = 'not determined'",
+           toxval.db)
+  runQuery("UPDATE toxval SET experimental_record = 'experimental' WHERE experimental_record = 'clinical'",
+           toxval.db)
 
   # Pull records to assign
   subset_data <- runQuery(paste0("SELECT toxval_id, source, toxval_type, species_original, source_url, experimental_record
@@ -106,5 +110,24 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
                    "AND source_hash IN ('", hashes, "')")
     runQuery(query, toxval.db)
   }
+
+  # Set as "not experimental" for toxval_type_supercategories of "toxicity value" and "exposure guidelines"
+  tts_tox_id = runQuery(
+    paste0("select a.toxval_id ",
+           "from toxval a ",
+           "left join toxval_type_dictionary b ",
+           "on a.toxval_type = b.toxval_type ",
+           "where source = '", source, "' and (",
+           "b.toxval_type_supercategory = 'Toxicity Value' or ",
+           "b.toxval_type_supercategory like '%Exposure Guidelines%')"),
+    toxval.db
+  ) %>%
+    dplyr::pull(toxval_id)
+
+  runQuery(
+    paste0(
+      "UPDATE toxval SET experimental_record = 'not experimental' ",
+      "WHERE toxval_id in (", toString(tts_tox_id), ")"),
+    toxval.db)
 
 }
