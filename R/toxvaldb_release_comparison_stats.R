@@ -13,7 +13,8 @@ toxvaldb_release_comparison_stats <- function(repoDir){
   # paste0("b.common_name REGEXP '\\b", ., "\\b'", collapse = " OR ")
 
   toxvaldb_list = list(
-    v9.6 = c("res_toxval_v96", Sys.getenv("db_server")),
+    v9.6.1 = c("res_toxval_v96_1", Sys.getenv("db_server")),
+    v9.6.0 = c("res_toxval_v96_0", Sys.getenv("db_server")),
     v9.5 = c("res_toxval_v95", Sys.getenv("db_server")),
     v9.4 = c("res_toxval_v94", Sys.getenv("db_server")),
     v9.3 = c("res_toxval_v93", Sys.getenv("db_server")),
@@ -42,7 +43,7 @@ toxvaldb_release_comparison_stats <- function(repoDir){
 
     data.frame(
       # Overall record count
-      `Record Count` = runQuery("SELECT count(*) as n_records FROM toxval", toxval.db) %>%
+      `Record Count (Overall)` = runQuery("SELECT count(*) as n_records FROM toxval", toxval.db) %>%
         dplyr::pull(n_records),
       # Source count
       `Source Count` = ifelse(db %in% c("v9.5"),
@@ -62,7 +63,7 @@ toxvaldb_release_comparison_stats <- function(repoDir){
         dplyr::pull(n_dtxsid),
       # Count of records with human-relevant species
       # common_name %in% c("Rat", "Mouse", "Dog", "Rabbit", "Human")
-      `Human-Relevant Species Count` = runQuery(paste0("SELECT count(*) as n_human_species_rel FROM toxval a ",
+      `Record Count (Human-Relevant Species)` = runQuery(paste0("SELECT count(*) as n_human_species_rel FROM toxval a ",
                                             "LEFT JOIN ",
                                             # v9 had a separate species_ecotox table
                                             ifelse(db == "v9", "species_ecotox ", "species "),
@@ -75,7 +76,14 @@ toxvaldb_release_comparison_stats <- function(repoDir){
       tidyr::pivot_longer(dplyr::everything(),
                           names_to = "stat",
                           values_to = "count") %>%
-      dplyr::mutate(version = db)
+      dplyr::mutate(version = db,
+                    stat = dplyr::case_when(
+                      stat == "Record.Count..Overall." ~ "Record Count (Overall)",
+                      stat == "Source.Count" ~ "Source Count",
+                      stat == "DTXSID.Count" ~ "DTXSID Count",
+                      stat == "Record.Count..Human.Relevant.Species." ~ "Record Count (Human Relevant Species)",
+                      TRUE ~ stat
+                    ))
   }) %>%
     dplyr::bind_rows() %>%
     # Reformat verison
