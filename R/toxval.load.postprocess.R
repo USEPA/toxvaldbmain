@@ -124,7 +124,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   doit = TRUE
   if(is.element(source,c("ToxRefDB","ECOTOX"))) doit = FALSE
-  if(doit) fix.critical_effect.icf.by.source(toxval.db, source)
+  if(doit) fix.critical_effect.icf.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("fix species by source\n")
@@ -147,6 +147,8 @@ toxval.load.postprocess <- function(toxval.db,
     exposure_form, media, toxval_subtype) by source\n")
   #####################################################################
   fix.all.param.by.source(toxval.db,source,subsource,fill.toxval_fix=TRUE)
+
+  fix.exposure_route.not_specified.by.source(toxval.db, source, subsource)
 
   #####################################################################
   cat("special case for NULL study_duration_value and units\n")
