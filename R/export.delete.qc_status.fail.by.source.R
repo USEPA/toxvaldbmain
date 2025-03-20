@@ -50,10 +50,27 @@ export.delete.qc_status.fail.by.source <- function(toxval.db, source, subsource)
     if(source == "ECHA IUCLID"){
       subsource = unique(df$subsource)
     }
-    writexl::write_xlsx(df,
-                        paste0(outDir, "/qc_status_fail_",
-                               source, "_", subsource, "_", toxval.db, ".xlsx") %>%
-                          gsub("__", "_", .))
+    out_file = paste0(outDir, "/qc_status_fail_",
+                      source, "_", subsource, "_", toxval.db, ".xlsx") %>%
+      gsub("__", "_", .)
+
+    # Check if file exists
+    # Edge case for sources like EFSA where postprocessing is rerun twice
+    # without running the toxval.load that would clear it out of the database first
+    if(file.exists(out_file)){
+      # Read in old log and append new records
+      df_old = readxl::read_xlsx(out_file)
+      df = df_old %>%
+        dplyr::bind_rows(df) %>%
+        dplyr::distinct()
+
+      # Check for duplicate source_hash entries
+      if(anyDuplicated(df$source_hash)){
+        stop("Duplicate source_hash values being logged for qc_status fail logs...")
+      }
+    }
+
+    writexl::write_xlsx(df, out_file)
   }
 
   # Delete qc_status fail records by toxval_id
