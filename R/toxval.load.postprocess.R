@@ -231,6 +231,8 @@ toxval.load.postprocess <- function(toxval.db,
   cat("set experimental_record tag\n")
   set.experimental_record.by.source(toxval.db, source)
 
+  export.delete.qc_status.fail.by.source(toxval.db, source, subsource)
+
   #####################################################################
   cat("export by source\n")
   #####################################################################

@@ -10,14 +10,38 @@
 toxval.summary.stats <- function(toxval.db, export=FALSE) {
   # printCurrentFunction(toxval.db)
 
-  # Get chemical DTXSID (represented by chemical_id) and record count
-  res = runQuery(paste0("SELECT source, count(distinct chemical_id) as chemicals, count(*) as `total records` ",
-                        "FROM toxval GROUP BY source"),
-                 toxval.db)
-
-  # Query summarize all source qc statuses
+  # Query summarize all source qc statuses in the database
   query = paste0("SELECT source, qc_status, count(*) as n FROM toxval GROUP BY source, qc_status")
-  qc_stats = runQuery(query, toxval.db) %>%
+  qc_stats_db = runQuery(query, toxval.db)
+
+  # Get qc_status fail logs
+  outDir = paste0(toxval.config()$datapath, "export_qc_fail/", toxval.db)
+  qc_stats_fail = list.files(outDir, full.names = TRUE)
+  qc_stats_fail = lapply(qc_stats_fail, readxl::read_xlsx) %>%
+    dplyr::bind_rows()
+
+  # Combine and sum counts
+  res_combined = runQuery("SELECT source, chemical_id FROM toxval",
+                 toxval.db) %>%
+    dplyr::bind_rows(qc_stats_fail %>%
+                       dplyr::select(source, chemical_id))
+
+  res = res_combined %>%
+    dplyr::count(source, name = "total records") %>%
+    dplyr::left_join(res_combined %>%
+                       dplyr::distinct() %>%
+                       dplyr::count(source, name = "chemicals"),
+                     by = "source") %>%
+    dplyr::arrange(source) %>%
+    dplyr::select(source, chemicals, `total records`)
+
+  # Summarize qc_status for fails
+  qc_stats_fail = qc_stats_fail %>%
+    dplyr::count(source, qc_status)
+
+  # Combine and summarize
+  qc_stats = qc_stats_db %>%
+    dplyr::bind_rows(qc_stats_fail) %>%
     # Split failure reason lists
     dplyr::mutate(qc_status = qc_status %>%
                     gsub(";", ";fail:", .),
