@@ -196,12 +196,14 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   #####################################################################
   cat("generate export for entries with 'Not Specified' species\n")
   #####################################################################
-  query = paste0("SELECT a.source, a.source_hash, a.species_original, ",
+  query = paste0("SELECT b.species_id, a.source, a.source_hash, a.species_original, b.common_name, ",
                  "a.toxval_type_original, a.study_type_original ",
                  "FROM toxval a INNER JOIN species b ON a.species_id=b.species_id ",
                  "WHERE b.common_name LIKE '%Not Specified%' ",
                  "AND a.source='", source, "' ",
                  "AND qc_status not like '%fail%' ",
+                 # Ignore known/expected missing
+                 "AND a.species_original not in ('-', 'not reported', 'unspecified') ",
                  query_addition %>% gsub("subsource", "a.subsource", .)
                  )
   not_specified = runQuery(query, toxval.db)
