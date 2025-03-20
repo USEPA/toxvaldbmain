@@ -128,6 +128,19 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
                    "WHERE toxval_type_supercategory = 'Point of Departure')")
     runQuery(query, toxval.db)
 
+    #####################################################################
+    # Set toxval_type_supercategory DRSV toxval_subtype to "-" except
+    # for sources 'ATSDR PFAS 2021', 'PFAS 150 SEM v2', 'ECHA IUCLID',
+    # 'HPVIS', 'DOE Wildlife Benchmarks', 'WHO JECFA Tox Studies'
+    #####################################################################
+    query = paste0("UPDATE toxval SET toxval_subtype = '-' ",
+                  # "SELECT distinct source, toxval_subtype FROM toxval ",
+                   "WHERE toxval_type IN (SELECT DISTINCT toxval_type FROM toxval_type_dictionary ",
+                   "WHERE toxval_type_supercategory = 'Dose Response Summary Value') AND ",
+                   "source NOT in ('ATSDR PFAS 2021', 'PFAS 150 SEM v2', 'ECHA IUCLID', 'HPVIS', ",
+                   "'DOE Wildlife Benchmarks', 'WHO JECFA Tox Studies') AND toxval_subtype != '-'")
+    runQuery(query, toxval.db)
+
     export.missing.dictionary.entries(toxval.db,source,subsource)
   }
 }
