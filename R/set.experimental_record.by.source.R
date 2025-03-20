@@ -124,10 +124,11 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
   ) %>%
     dplyr::pull(toxval_id)
 
-  runQuery(
-    paste0(
-      "UPDATE toxval SET experimental_record = 'not experimental' ",
-      "WHERE toxval_id in (", toString(tts_tox_id), ")"),
-    toxval.db)
-
+  if(length(tts_tox_id)){
+    runQuery(
+      paste0(
+        "UPDATE toxval SET experimental_record = 'not experimental' ",
+        "WHERE toxval_id in (", toString(tts_tox_id), ")"),
+      toxval.db)
+  }
 }
