@@ -18,14 +18,7 @@ toxval.load.cancer <- function(toxval.db,source.db) {
   # verbose = log
   printCurrentFunction(toxval.db)
 
-  # runQuery("delete from cancer_summary", toxval.db)
-
-  # chemical_id
-  # dtxsid
-  # source
-  # exposure_route
-  # cancer_call
-  # url
+  runQuery("delete from cancer_summary", toxval.db)
 
   # EPA FERA
   file = paste0(toxval.config()$datapath, "cancer_summary/cancer/EPA FERA/cancer_summary_epa_fera_20210929.xlsx")
@@ -82,7 +75,9 @@ toxval.load.cancer <- function(toxval.db,source.db) {
                   exposure_route,
                   cancer_call) %>%
     dplyr::mutate(
-      url = "https://publications.gc.ca/collections/collection_2021/sc-hc/H129-108-2021-eng.pdf"
+      url = "https://publications.gc.ca/collections/collection_2021/sc-hc/H129-108-2021-eng.pdf",
+      source = source %>%
+        paste0("Health Canada - Source: ", .)
     )
 
   # IARC
@@ -92,9 +87,19 @@ toxval.load.cancer <- function(toxval.db,source.db) {
                   casrn,
                   cancer_call,
                   source,
-                  url)
+                  url) %>%
+    dplyr::mutate(
+      cancer_call = dplyr::case_when(
+        cancer_call == "1" ~ "1 - Carcinogenic to humans",
+        cancer_call == "2A" ~ "2A - Probably carcinogenic to humans",
+        cancer_call == "2B" ~ "2B - Possibly carcinogenic to humans",
+        cancer_call == "3" ~ "3 - Not classifiable as to its carcinogenicity to humans",
+        TRUE ~ cancer_call
+      )
+    )
 
 ################################################################################
+  # Combine data sources
   mat <- dplyr::bind_rows(
     epa_fera,
     epa_iris,
@@ -103,8 +108,11 @@ toxval.load.cancer <- function(toxval.db,source.db) {
     health_canada,
     iarc
   ) %>%
+    # Fix character fields
     dplyr::mutate(dplyr::across(where(is.character), ~ stringr::str_squish(.) %>%
-                                  tidyr::replace_na("-")))
+                                  dplyr::na_if("undefined") %>%
+                                  tidyr::replace_na("-"))) %>%
+    dplyr::filter(cancer_call != "-")
 
 
   mat2 = source_chemical.extra(toxval.db, source.db, mat, "Cancer Summary") %>%
