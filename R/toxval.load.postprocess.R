@@ -20,8 +20,12 @@ toxval.load.postprocess <- function(toxval.db,
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
-    query_addition = paste0(" and subsource='", subsource, "'")
+    query_addition = paste0(" and subsource = '", subsource, "'")
   }
+
+  # Set media and population to "-". Eventually deprecating media and population field altogehter.
+  runQuery(paste0("update toxval SET media = '-', population = '-' WHERE source = '", source, "'", query_addition),
+           toxval.db)
 
   do.convert.units = TRUE # override default because it is not specified in all toxval load functions
   if(source=="ECOTOX") do.convert.units = FALSE
@@ -144,7 +148,7 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   cat("fix all.parameters (exposure_method, exposure_route, sex,strain,
     study_duration_class, study_duration_units, study_type, toxval_type,
-    exposure_form, media, toxval_subtype) by source\n")
+    exposure_form, toxval_subtype) by source\n")
   #####################################################################
   fix.all.param.by.source(toxval.db,source,subsource,fill.toxval_fix=TRUE)
 
