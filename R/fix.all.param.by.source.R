@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------------
 #' Alter the contents of toxval according to an excel dictionary file with fields -
 #' exposure_method, exposure_route, sex,strain, study_duration_class, study_duration_units, study_type,
-#' toxval_type, exposure_form, media, toxval_subtype
+#' toxval_type, exposure_form, toxval_subtype
 #' @param toxval.db The version of toxval in which the data is altered.
 #' @param source The source to be fixed. If source=NULL, fix all sources
 #' @param subsource The subsource to be fixed (NULL default)
@@ -72,8 +72,8 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     runQuery(paste0("update toxval SET exposure_method"," = ", "REPLACE", "( exposure_method",  ",\'\"\',", " \"'\" ) WHERE exposure_method"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
     cat("   exposure_route\n")
     runQuery(paste0("update toxval SET exposure_route"," = ", "REPLACE", "( exposure_route",  ",\'\"\',", " \"'\" ) WHERE exposure_route"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
-    cat("   media\n")
-    runQuery(paste0("update toxval SET media"," = ", "REPLACE", "( media",  ",\'\"\',", " \"'\" ) WHERE media"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
+    # cat("   media\n")
+    # runQuery(paste0("update toxval SET media"," = ", "REPLACE", "( media",  ",\'\"\',", " \"'\" ) WHERE media"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
     cat("   study_type\n")
     runQuery(paste0("update toxval SET study_type"," = ", "REPLACE", "( study_type",  ",\'\"\',", " \"'\" ) WHERE study_type"," LIKE \'%\"%\' and source = '",source,"'",query_addition),toxval.db)
     cat(" iterate through the full_dict\n")
