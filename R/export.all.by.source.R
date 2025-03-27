@@ -5,12 +5,27 @@
 #' @param toxval.db Database version
 #' @param source The source to be updated
 #' @param subsource The subsource to be updated
+#' @param include.qc.status Boolean whether to include teh qc_status field, or filter out "fail" records. Default is TRUE.
 #' #' @return for each source writes an Excel file with the name
 #'  ../export/export_by_source_{data}/toxval_all_{toxval.db}_{source}.xlsx
 #'
 #-----------------------------------------------------------------------------------
-export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
+export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include.qc.status = TRUE) {
   printCurrentFunction(toxval.db)
+
+  # Check if "critical_effect" is a field name
+  tbl_f_list = runQuery(paste0(
+    "SELECT DISTINCT TABLE_NAME, COLUMN_NAME FROM information_schema.columns ",
+    "WHERE table_schema = '", toxval.db, "' AND ",
+    "TABLE_NAME = 'toxval'"
+  ),
+  toxval.db)
+
+  # Boolean switch whether to use "critical_effect" or "toxicolgical_effect"
+  use_critical_effect_name = FALSE
+  if("critical_effect_original" %in% tbl_f_list$COLUMN_NAME){
+    use_critical_effect_name = TRUE
+  }
 
   dir = paste0(toxval.config()$datapath,"export/export_by_source_",toxval.db,"_",Sys.Date())
   if(!dir.exists(dir)) dir.create(dir)
@@ -20,8 +35,14 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
   if(is.null(source)) {
     nlist = c("source","notes","dtxsid","casrn","name","risk_assessment_class","human_eco","toxval_type",
               "b.toxval_numeric","toxval_units","study_type","common_name","strain","sex",
-              "generation","exposure_route","exposure_method","critical_effect"
+              "generation","exposure_route","exposure_method"
     )
+    if(use_critical_effect_name){
+      nlist = c(nlist, "critical_effect")
+    } else {
+      nlist = c(nlist, "toxicological_effect")
+    }
+
     qc = as.data.frame(matrix(nrow=length(slist),ncol=length(nlist)))
     names(qc) = nlist
     qc$source = slist
@@ -58,16 +79,19 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
                    "b.study_duration_units as STUDY_DURATION_UNITS, ",
                    "d.common_name as SPECIES_COMMON, ",
                    "b.strain as STRAIN, ",
-                   "d.LATIN_NAME, ",
+                   "d.latin_name as LATIN_NAME, ",
                    "d.ecotox_group as SPECIES_SUPERCATEGORY, ",
                    "b.sex as SEX, ",
                    "b.generation as GENERATION, ",
                    "b.lifestage as LIFESTAGE, ",
                    "b.exposure_route as EXPOSURE_ROUTE, ",
                    "b.exposure_method as EXPOSURE_METHOD, ",
-                   "b.exposure_method as EXPOSURE_FORM, ",
+                   "b.exposure_form as EXPOSURE_FORM, ",
                    "b.media as MEDIA, ",
-                   "b.critical_effect as CRITICAL_EFFECT, ",
+                   ifelse(use_critical_effect_name,
+                          "b.critical_effect as CRITICAL_EFFECT, ",
+                          "b.toxicological_effect as TOXICOLOGICAL_EFFECT, "
+                   ),
                    "b.experimental_record as EXPERIMENTAL_RECORD, ",
                    "b.study_group as STUDY_GROUP, ",
                    "f.long_ref as LONG_REF, ",
@@ -78,6 +102,7 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
                    "f.guideline as GUIDELINE, ",
                    "f.quality as QUALITY, ",
                    "b.qc_category as QC_CATEGORY, ",
+                   "b.qc_status as QC_STATUS, ",
                    "b.source_hash as SOURCE_HASH, ",
                    "f.external_source_id as EXTERNAL_SOURCE_ID, ",
                    "f.external_source_id_desc as EXTERNAL_SOURCE_ID_DESC, ",
@@ -101,7 +126,10 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
                    "b.exposure_method_original as EXPOSURE_METHOD_ORIGINAL, ",
                    "b.exposure_form_original as EXPOSURE_FORM_ORIGINAL, ",
                    "b.media_original as MEDIA_ORIGINAL, ",
-                   "b.critical_effect_original as CRITICAL_EFFECT_ORIGINAL, ",
+                   ifelse(use_critical_effect_name,
+                          "b.critical_effect_original as CRITICAL_EFFECT_ORIGINAL, ",
+                          "b.toxicological_effect_original as TOXICOLOGICAL_EFFECT_ORIGINAL, "
+                   ),
                    "b.year_original as ORIGINAL_YEAR ",
                    "FROM ",
                    "toxval b ",
@@ -111,12 +139,20 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL) {
                    "LEFT JOIN record_source f on b.toxval_id=f.toxval_id ",
                    "WHERE ",
                    "b.source='",src,"'")
+
     if(!is.null(subsource)) {
       query = paste0(query, " and b.subsource='",subsource,"'")
     }
 
     mat = runQuery(query, toxval.db, TRUE, FALSE) %>%
       dplyr::distinct()
+
+    # If not including qc_status, filter "fail" out and remove columns
+    if(!include.qc.status){
+      mat = mat %>%
+        dplyr::filter(!grepl("$fail", QC_STATUS)) %>%
+        dplyr::select(-QC_STATUS)
+    }
 
     cat(src, nrow(mat),"\n")
     file = paste0(dir,"/toxval_all_",toxval.db,"_",src, " ", subsource, ".xlsx") %>%

@@ -60,8 +60,9 @@ fix.exposure_route.not_specified.by.source <- function(toxval.db, source, subsou
     dplyr::rename(exposure_route = exposure_route_fix)
 
   missing = mat_fix %>%
-    dplyr::mutate(exposure_route_fix = NA) %>%
     dplyr::filter(is.na(exposure_route)) %>%
+    dplyr::mutate(exposure_route_fix = NA,
+                  exposure_route = "not specified") %>%
     dplyr::select(-toxval_id, -subsource) %>%
     dplyr::distinct()
 
