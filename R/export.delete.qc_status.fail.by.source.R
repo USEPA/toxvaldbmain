@@ -10,7 +10,7 @@ export.delete.qc_status.fail.by.source <- function(toxval.db, source, subsource)
   # Handle addition of subsource for queries
   query_addition = ""
   if(!is.null(subsource)) {
-    query_addition = paste0(" and a.subsource = '", subsource, "'")
+    query_addition = paste0(" and subsource = '", subsource, "'")
   }
 
   # Get list of sources
@@ -38,7 +38,7 @@ export.delete.qc_status.fail.by.source <- function(toxval.db, source, subsource)
     dir.create(outDir, recursive = TRUE)
   }
 
-  del_toxval_id = paste0(mat$toxval_id, collapse = "', '")
+  del_toxval_id = toString(mat$toxval_id)
 
   # Split by source
   mat = mat %>%
@@ -76,17 +76,17 @@ export.delete.qc_status.fail.by.source <- function(toxval.db, source, subsource)
 
   # Delete qc_status fail records by toxval_id
   cat("...Deleting from toxval_notes...\n")
-  runQuery(paste0("delete from toxval_notes where toxval_id in ('", del_toxval_id, "')"), toxval.db)
+  runQuery(paste0("delete from toxval_notes where toxval_id in (", del_toxval_id, ")"), toxval.db)
   cat("...Deleting from toxval_qc_notes...\n")
-  runQuery(paste0("delete from toxval_qc_notes where toxval_id in ('", del_toxval_id, "')"), toxval.db)
+  runQuery(paste0("delete from toxval_qc_notes where toxval_id in (", del_toxval_id, ")"), toxval.db)
   cat("...Deleting from record_source...\n")
-  runQuery(paste0("delete from record_source where toxval_id in ('", del_toxval_id, "')"), toxval.db)
+  runQuery(paste0("delete from record_source where toxval_id in (", del_toxval_id, ")"), toxval.db)
   cat("...Deleting from toxval_uf\n")
-  runQuery(paste0("delete from toxval_uf where toxval_id in ('", del_toxval_id, "')"), toxval.db)
-  runQuery(paste0("delete from toxval_uf where parent_id in ('", del_toxval_id, "')"), toxval.db)
+  runQuery(paste0("delete from toxval_uf where toxval_id in (", del_toxval_id, ")"), toxval.db)
+  runQuery(paste0("delete from toxval_uf where parent_id in (", del_toxval_id, ")"), toxval.db)
   cat("...Deleting from toxval_relationship...\n")
-  runQuery(paste0("delete from toxval_relationship where toxval_id_1 in ('", del_toxval_id, "')"), toxval.db)
-  runQuery(paste0("delete from toxval_relationship where toxval_id_2 in ('", del_toxval_id, "')"), toxval.db)
+  runQuery(paste0("delete from toxval_relationship where toxval_id_1 in (", del_toxval_id, ")"), toxval.db)
+  runQuery(paste0("delete from toxval_relationship where toxval_id_2 in (", del_toxval_id, ")"), toxval.db)
   cat("...Deleting from toxval...\n")
-  runQuery(paste0("delete from toxval where toxval_id in ('", del_toxval_id, "')"),toxval.db)
+  runQuery(paste0("delete from toxval where toxval_id in (", del_toxval_id, ")"),toxval.db)
 }
