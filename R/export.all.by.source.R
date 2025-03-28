@@ -148,7 +148,8 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include
       "f.quality as QUALITY, ",
       "f.external_source_id as EXTERNAL_SOURCE_ID, ",
       "f.external_source_id_desc as EXTERNAL_SOURCE_ID_DESC, ",
-      "f.clowder_doc_id as STORED_SOURCE_RECORD ",
+      "f.clowder_doc_id as STORED_SOURCE_RECORD, ",
+      "f.record_source_level as RECORD_SOURCE_LEVEL ",
       "FROM record_source f ",
       "WHERE ",
       "f.toxval_id in (", toString(mat_toxval$toxval_id), ")"
@@ -159,8 +160,14 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include
       dplyr::left_join(mat_toxval %>%
                          dplyr::select(toxval_id, SOURCE_HASH),
                        by = "toxval_id") %>%
+      dplyr::mutate(
+        RECORD_SOURCE_LEVEL = dplyr::case_when(
+          !RECORD_SOURCE_LEVEL %in% c("origin") ~ "Extraction document",
+          TRUE ~ "Additional reference document"
+        )) %>%
       dplyr::select(SOURCE_HASH, dplyr::everything()) %>%
-      dplyr::select(-toxval_id)
+      dplyr::select(-toxval_id) %>%
+      dplyr::arrange(SOURCE_HASH, RECORD_SOURCE_LEVEL)
 
     mat_toxval = mat_toxval %>%
       dplyr::select(-toxval_id)
