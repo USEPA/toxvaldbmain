@@ -167,10 +167,12 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include
         )) %>%
       dplyr::select(SOURCE_HASH, dplyr::everything()) %>%
       dplyr::select(-toxval_id) %>%
-      dplyr::arrange(SOURCE_HASH, RECORD_SOURCE_LEVEL)
+      dplyr::arrange(SOURCE_HASH, dplyr::desc(RECORD_SOURCE_LEVEL)) %>%
+      dplyr::mutate(dplyr::across(where(is.character), ~ tidyr::replace_na(., "-")))
 
     mat_toxval = mat_toxval %>%
-      dplyr::select(-toxval_id)
+      dplyr::select(-toxval_id) %>%
+      dplyr::mutate(dplyr::across(where(is.character), ~ tidyr::replace_na(., "-")))
 
     # If not including qc_status, filter "fail" out and remove columns
     if(!include.qc.status){
