@@ -7,6 +7,9 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     png_units = "in"
   }
 
+  # Parameter to set font size consistently
+  global_font_size = 16
+
   # Empty list to store figures
   dl_fig_list = list()
 
@@ -44,75 +47,117 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                      by="toxval_type") %>%
     dplyr::left_join(sp,
                      by="species_id")%>%
-    dplyr::mutate(species = dplyr::case_when(common_name=="House Mouse" ~ "Mouse",
+    dplyr::mutate(
+      species = dplyr::case_when(common_name=="House Mouse" ~ "Mouse",
                                              common_name=="Western European House Mouse" ~ "Mouse",
                                              common_name=="European Rabbit" ~ "Rabbit",
                                              common_name=="Japanese Quail" ~ "Quail",
-                                             TRUE ~ common_name))
+                                             TRUE ~ common_name),
+      toxval_type_supercategory_abbrev = dplyr::case_when(
+        # toxval_type_supercategory == "Toxicity Value" ~ "",
+        toxval_type_supercategory == "Dose Response Summary Value" ~ "DRSV",
+        # toxval_type_supercategory == "Media Exposure Guidelines" ~ "MEG",
+        toxval_type_supercategory == "Mortality Response Summary Value" ~ "MRSV",
+        # toxval_type_supercategory == "Acute Exposure Guidelines" ~ "AEG",
+        TRUE ~ toxval_type_supercategory
+      )
+      )
 
   ### Figure stacked bar by source----
   # stacked bar supercategory by source
   source_n <- tvdb %>%
-    dplyr::count(source)
+    dplyr::count(source, name = "src_rec_n")
 
-  sources <- tvdb %>%
+  source_nchem <- tvdb %>%
+    dplyr::select(dtxsid,source,toxval_type_supercategory)%>%
+    dplyr::distinct() %>%
+    dplyr::count(source, name = "src_chem_n")
+
+  tvdb <- tvdb %>%
     dplyr::left_join(source_n,
-                     by="source")
+                     by="source") %>%
+    dplyr::left_join(source_nchem,
+                     by = "source") %>%
+    dplyr::mutate(
+      source_name_rec = dplyr::case_when(
+        src_rec_n < 3000 ~ "Other",
+        TRUE ~ source),
+      source_name_chem = dplyr::case_when(
+        src_chem_n < 500 ~ "Other",
+        TRUE ~ source)
+      )
 
-  sources_collapse <- sources %>%
-    dplyr::mutate(source_name = dplyr::case_when(
-      n < 3000 ~ "Other",
-      TRUE ~ source))
+  # Consistent palette colors across plots
+  # https://stackoverflow.com/questions/53506536/need-specific-coloring-in-ggplot2-with-viridis
+  # Named vector of colors by source_name, add "Other"
+  source_name_fill_pal <- viridisLite::viridis(length(unique(c(tvdb$source_name_rec, tvdb$source_name_chem))),
+                                               option = "H") %T>%
+    { names(.) <- unique(c(tvdb$source_name_rec, tvdb$source_name_chem)) }
+
+  species_fill_pal <- viridisLite::viridis(length(unique(tvdb$species)),
+                                         option = "H") %T>%
+    { names(.) <- unique(tvdb$species) }
 
   message("Generating Plots...")
+
   # Fig 2
   dl_fig_list[["Record Count by Effect Type Supercategory"]] =
-    sources_collapse %>%
+    tvdb %>%
     dplyr::filter(!is.na(toxval_type_supercategory)) %>%
-    ggplot2::ggplot(ggplot2::aes(toxval_type_supercategory,
-                                 fill=source_name,
-                                 label=source_name)) +
+    ggplot2::ggplot(ggplot2::aes(toxval_type_supercategory_abbrev,
+                                 fill=source_name_rec,
+                                 label=source_name_rec)) +
     ggplot2::geom_bar() +
-    ggplot2::theme_minimal() +
+    ggplot2::theme_minimal(base_size = global_font_size) +
+    # ggplot2::theme(text = ggplot2::element_text(size = 14)) +
     ggplot2::guides(fill=ggplot2::guide_legend(ncol=2)) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle=45, vjust=1, hjust=1)) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle=45,
+                                                       vjust=1,
+                                                       hjust=1,
+                                                       size=global_font_size),
+                   axis.text.y = ggplot2::element_text(size = global_font_size),
+                   text = ggplot2::element_text(size = global_font_size)) +
     ggplot2::labs(x = "Effect Type Supercategory",
                   y = "Record Count",
                   fill = "Source Name") +
-    ggplot2::scale_fill_viridis_d(option="H") +
+    ggplot2::scale_fill_manual(values=source_name_fill_pal, drop=TRUE) +
+    # ggplot2::scale_fill_viridis_d(option="H") +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
     # ggplot2::scale_fill_manual(values = dichromat::dichromat(viridisLite::turbo(12), type = "protan")) +
     ggplot2::scale_y_continuous(label = scales::comma)
 
-  source_nchem <- tvdb %>%
-    dplyr::select(dtxsid,source,toxval_type_supercategory)%>%
-    dplyr::distinct()%>%
-    dplyr::count(source)
-
-  sources_chem <- tvdb %>%
-    dplyr::left_join(source_nchem,
-                     by="source")
-
-  sources_chem_collapse <- sources_chem %>%
-    dplyr::mutate(source_name = dplyr::case_when(n < 500 ~ "Other",
-                                                 TRUE ~ source))%>%
-    dplyr::select(source_name,toxval_type_supercategory,dtxsid)%>%
+  sources_chem_collapse <- tvdb %>%
+    dplyr::select(source_name_chem, toxval_type_supercategory, toxval_type_supercategory_abbrev, dtxsid) %>%
     dplyr::distinct()
 
   # Optional Panel B
   dl_fig_list[["Chemical Count by Effect Type Supercategory"]] =
     sources_chem_collapse %>%
-    ggplot2::ggplot(ggplot2::aes(toxval_type_supercategory,fill=source_name,label=source_name)) +
+    ggplot2::ggplot(ggplot2::aes(toxval_type_supercategory_abbrev,
+                                 fill=source_name_chem,
+                                 label=source_name_chem)) +
     ggplot2::geom_bar() +
-    ggplot2::theme_minimal() +
+    ggplot2::theme_minimal(base_size = global_font_size) +
     ggplot2::guides(fill=ggplot2::guide_legend(ncol=2)) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle=45, vjust=1, hjust=1)) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle=45,
+                                                       vjust=1,
+                                                       hjust=1,
+                                                       size=global_font_size),
+                   axis.text.y = ggplot2::element_text(size = global_font_size),
+                   text = ggplot2::element_text(size = global_font_size)) +
     ggplot2::labs(x = "Effect Type Supercategory",
                   y = "Chemical Count",
                   fill = "Source Name") +
-    ggplot2::scale_fill_viridis_d(option="H") +
+    ggplot2::scale_fill_manual(values=source_name_fill_pal) +
+    # ggplot2::scale_fill_viridis_d(option="H") +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
     ggplot2::scale_y_continuous(label = scales::comma)
+
+  dl_fig_list[["Record-Chem Count Combined"]] = cowplot::plot_grid(
+    dl_fig_list$`Record Count by Effect Type Supercategory`,
+    dl_fig_list$`Chemical Count by Effect Type Supercategory`,
+    labels = "AUTO"
+  )
 
   ### Figure supercategory effect type panel ----
   toxvaltypes <- tvdb %>%
@@ -155,40 +200,40 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                                      TRUE~toxval_type))
 
   toxvaltypes_collapse <- effect_types %>%
-    dplyr::select(effect_type,toxval_type) %>%
+    dplyr::select(effect_type, toxval_type) %>%
     dplyr::distinct()
 
   effect_types_n = effect_types %>%
-    dplyr::count(toxval_type_supercategory,
+    dplyr::count(toxval_type_supercategory_abbrev,
                  name = "n_total")
 
   # Plot supercategory and effect_type
   effect_types_p = effect_types %>%
-    dplyr::count(toxval_type_supercategory, effect_type) %>%
-    dplyr::group_by(toxval_type_supercategory) %>%
+    dplyr::count(toxval_type_supercategory_abbrev, effect_type) %>%
+    dplyr::group_by(toxval_type_supercategory_abbrev) %>%
     dplyr::mutate(pct = prop.table(n) * 100,
                   effect_type_c = dplyr::case_when(
                     pct < 10 ~ "Other",
                     TRUE ~ effect_type
                   )
     ) %>%
-    dplyr::group_by(toxval_type_supercategory, effect_type_c) %>%
+    dplyr::group_by(toxval_type_supercategory_abbrev, effect_type_c) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
 
   # Get grouped list of effects with proportions to use as caption
   effects_other_caption = effect_types_p %>%
     dplyr::left_join(effect_types_n,
-                     by = "toxval_type_supercategory") %>%
+                     by = "toxval_type_supercategory_abbrev") %>%
     # dplyr::filter(effect_type_c == "Other") %>%
-    dplyr::group_by(toxval_type_supercategory) %>%
+    dplyr::group_by(toxval_type_supercategory_abbrev) %>%
     dplyr::arrange(dplyr::desc(n)) %>%
     dplyr::mutate(effect_type_caption = effect_type %>%
                     paste0("*", ., "*",
                            " (", format(n, big.mark=","),
                            "; ", round(pct, 2), "%)") %>%
                     toString() %>%
-                    paste0("**", toxval_type_supercategory, "**",
+                    paste0("**", toxval_type_supercategory_abbrev, "**",
                            " (N=", format(n_total, big.mark=","),
                            ") Effect Type (N; %): ",
                            .) %>%
@@ -200,8 +245,8 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     paste0(collapse = "\n\n\n")
 
   effect_types_p <- effect_types_p %>%
-    dplyr::select(toxval_type_supercategory, pct, n, effect_type = effect_type_c) %>%
-    group_by(toxval_type_supercategory, effect_type) %>%
+    dplyr::select(toxval_type_supercategory_abbrev, pct, n, effect_type = effect_type_c) %>%
+    group_by(toxval_type_supercategory_abbrev, effect_type) %>%
     dplyr::summarise(n = sum(n),
                      pct = sum(pct)) %>%
     dplyr::mutate(
@@ -221,16 +266,16 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
 
   dl_fig_list[["Effect Type Supercategory Bar Plot"]] =
     effect_types_p %>%
-    dplyr::arrange(toxval_type_supercategory) %>%
+    dplyr::arrange(toxval_type_supercategory_abbrev) %>%
     ggplot2::ggplot() +
     ggplot2::aes(
-      x=toxval_type_supercategory,
+      x=toxval_type_supercategory_abbrev,
       y=pct,
-      group = toxval_type_supercategory,
+      group = toxval_type_supercategory_abbrev,
       fill = effect_type) +
     ggplot2::geom_bar(stat="identity") +
     ggplot2::coord_flip() +
-    ggplot2::theme_minimal() +
+    ggplot2::theme_minimal(base_size = global_font_size) +
     ggplot2::scale_fill_viridis_d(option="H") +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
     # ggplot2::scale_fill_brewer(palette="Set3") +
@@ -239,7 +284,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     ggplot2::guides(fill="none") +
     ggplot2::theme(axis.text.x=ggplot2::element_blank(),
                    axis.ticks.x=ggplot2::element_blank(),
-                   text=ggplot2::element_text(size=12)) +
+                   text=ggplot2::element_text(size=global_font_size)) +
     ggplot2::geom_text(ggplot2::aes(label=pct_label,
                                     color = effect_type),
                        position=ggplot2::position_stack(vjust=0.5),
@@ -250,8 +295,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
   ### Figure panel DRSV----
   species_n <- tvdb %>%
     dplyr::filter(toxval_type_supercategory=="Dose Response Summary Value") %>%
-    dplyr::group_by(species) %>%
-    dplyr::tally()
+    dplyr::count(species)
 
   speciesn <- species_n %>%
     dplyr::left_join(tvdb,
@@ -263,18 +307,23 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     dplyr::filter(toxval_type_supercategory=="Dose Response Summary Value") %>%
     dplyr::filter(study_type%in% c("acute","chronic","short-term","subchronic",
                                    "developmental","reproduction developmental")) %>%
-    dplyr::filter(n>1000) %>%
+    dplyr::filter(n > 1000) %>%
     ggplot2::ggplot(ggplot2::aes(x=study_type,fill=species)) +
     ggplot2::geom_bar() +
-    ggplot2::theme_minimal() +
+    ggplot2::theme_minimal(base_size = global_font_size) +
     ggplot2::scale_fill_viridis_d(option="H") +
+    # ggplot2::scale_fill_manual(values=species_fill_pal) +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
     ggplot2::labs(y="Record Count",
                   x="Study Type",
                   fill="Species") +
     ggplot2::guides(fill=ggplot2::guide_legend(ncol=1)) +
-    ggplot2::theme(text=ggplot2::element_text(size=15),
-                   axis.text.x = ggplot2::element_text(angle=45, vjust=1, hjust=1)) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle=45,
+                                                       vjust=1,
+                                                       hjust=1,
+                                                       size=global_font_size),
+                   axis.text.y = ggplot2::element_text(size = global_font_size),
+                   text = ggplot2::element_text(size = global_font_size)) +
     ggplot2::scale_y_continuous(label = scales::comma)
 
   #### Species by Study Type and Effect Type Category DRSV Box Plots----
@@ -298,8 +347,15 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                   fill="Species") +
 
     ggplot2::scale_fill_viridis_d(option="H") +
+    # ggplot2::scale_fill_manual(values=species_fill_pal) +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
-    ggplot2::theme(text=ggplot2::element_text(size=15))
+    ggplot2::theme(text=ggplot2::element_text(size=global_font_size))
+
+  dl_fig_list[["Species Plots Combined"]] = cowplot::plot_grid(
+    dl_fig_list$`Species by Study Type and Effect Type Category Counts`,
+    dl_fig_list$`Species by Study Type and Effect Type Category DRSV Box Plots`,
+    labels = "AUTO"
+  )
 
   ### Boxplots by chem_class ----
   toxval_dbv_chem <- toxval_dbv %>%
@@ -358,16 +414,17 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                           outlier.fill="white",
                           notch=FALSE) +
     # geom_jitter(aes(color=class_type),size=0.6,alpha = 0.9) +
-    ggplot2::geom_hline(yintercept=1.69897,color="red",size=1) +
+    ggplot2::geom_hline(yintercept=1.69897,color="red",linewidth=1) +
     # scale_y_continuous(trans="log10",limits=c(1e-5,1000)) +
     # scale_fill_manual(values=c("white","red")) +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
     ggplot2::scale_fill_viridis_d(option="H") +
     ggplot2::coord_flip() +
-    ggplot2::theme_bw() +
+    ggplot2::theme_bw(base_size = global_font_size) +
     ggplot2::labs(y="DRSV log10(mg/kg-day)",
                   x="",
-                  fill = "Class Type") # +
+                  fill = "Class Type") +
+    ggplot2::theme(text=ggplot2::element_text(size=global_font_size))
 
   # # Break/testing additional layers
   #
@@ -379,7 +436,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
   #
   # ggplot2::theme(axis.text=ggplot2::element_text(size=10),
   #                axis.title=ggplot2::element_text(size=14),
-  #                plot.title=ggplot2::element_text(size=16,
+  #                plot.title=ggplot2::element_text(size=global_font_size,
   #                                                 vjust=0.5,
   #                                                 hjust=0.5),
   #                strip.text.x = ggplot2::element_text(size = 10),
@@ -394,33 +451,62 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
   #   )
 
   ### Density plots----
-  dl_fig_list[["Oral/Inhalation Density Plots"]] =
+  dl_fig_list[["Oral-Inhalation Density Plots"]] =
     tvdb %>%
     dplyr::filter(toxval_type_supercategory %in% c("Dose Response Summary Value",
                                                    "Mortality Response Summary Value")) %>%
     # dplyr::filter(exposure_route=="oral") %>%
-    dplyr::filter(toxval_units %in% c("mg/kg-day","mg/kg","mg/m3")) %>%
-    ggplot2::ggplot(ggplot2::aes(x=log10(toxval_numeric),ggplot2::after_stat(density))) +
-    ggplot2::geom_histogram(color="black",fill="pink") +
+    dplyr::filter(toxval_units %in% c("mg/kg-day","mg/kg","mg/m3"),
+                  study_type %in% c("acute", "short-term", "subchronic",
+                                    "chronic", "reproduction developmental",
+                                    "developmental")) %>%
+    ggplot2::ggplot(ggplot2::aes(x=log10(toxval_numeric),
+                                 color = study_type,
+                                 ggplot2::after_stat(density))) +
+    # ggplot2::stat_density(ggplot2::aes(x = log10(toxval_numeric),
+    #                                    ggplot2::after_stat(density)),
+    #                       bw = 1) +
+    ggplot2::geom_histogram(color="black",
+                            # fill="transparent",
+                            alpha=0.5
+    ) +
+    ggplot2::geom_line(stat = "density",
+                       linewidth = 1) +
+
     ggplot2::scale_x_continuous(limits=c(-4,8)) +
+    ggplot2::scale_color_viridis_d(option="H") +
     ggplot2::theme_bw() +
     ggplot2::xlab(paste0("log10(effect level)")) +
+
+    ggplot2::labs(x = "log10(effect level)",
+                  color = "Study Type") +
     ggplot2::facet_wrap(ggplot2::vars(toxval_units)) +
-    ggplot2::theme(axis.text=ggplot2::element_text(size=10),
-                   axis.title=ggplot2::element_text(size=16,face="bold"),
-                   plot.title=ggplot2::element_text(size=16,face="bold",vjust=0.5,hjust=0.5),
-                   strip.text.x = ggplot2::element_text(size = 10),
-                   plot.margin = ggplot2::margin(t=20,r=20,b=50,l=20))
+    ggplot2::theme(axis.text=ggplot2::element_text(size=global_font_size),
+                   axis.title=ggplot2::element_text(size=global_font_size),
+                   plot.title=ggplot2::element_text(size=global_font_size,face="bold",vjust=0.5,hjust=0.5),
+                   strip.text.x = ggplot2::element_text(size = global_font_size),
+                   plot.margin = ggplot2::margin(t=20,r=20,b=50,l=20),
+                   legend.position="bottom",
+                   legend.text=ggplot2::element_text(size=global_font_size))
 
 
   if(save_png){
     for(fig in names(dl_fig_list)){
       message("Saving figure '", fig, "' (", which(fig == names(dl_fig_list)), " of ", length(names(dl_fig_list)), ")")
-      ggplot2::ggsave(filename = paste0(outputDir, fig, ".png"),
-                      plot = dl_fig_list[[fig]],
-                      width = png_width,
-                      height = png_height,
-                      units = png_units)
+      if(grepl("Combined", fig)){
+        ggplot2::ggsave(filename = paste0(outputDir, fig, ".png"),
+                        plot = dl_fig_list[[fig]],
+                        width = 2*png_width,
+                        height = 2* png_height,
+                        units = png_units)
+      } else {
+        ggplot2::ggsave(filename = paste0(outputDir, fig, ".png"),
+                        plot = dl_fig_list[[fig]],
+                        width = png_width,
+                        height = png_height,
+                        units = png_units)
+      }
+
     }
   }
 

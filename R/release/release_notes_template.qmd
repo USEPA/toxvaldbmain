@@ -297,7 +297,6 @@ DT::datatable(src_version_date,
 -   Removed qc_status "fail" records from ToxValDB. Instead, they are logged and included in reporting metrics.
 -   New process to export a list of dictionaries and files used throughout the ToxValDB workflow to provide as "GitHub Input Files" for release document.
 
-
 # Known Issues
 
 -   Missing Regional Screening Level (RSL) data: a subset of chemicals with RSL values are missing from the CompTox Chemicals Dashboard (CCD) Executive Summary RSL Table and from the Hazard subtab.
@@ -666,6 +665,8 @@ dl_fig_list = get_data_landscape_figures(toxval.db)
 
 # Programmatically generate the tabset of tables with headers
 for(i in seq_len(length(dl_fig_list$plots))){
+  # Skip combined plots
+  if(grepl("Combined", names(dl_fig_list$plots)[i])) next
   cat('## ', names(dl_fig_list$plots)[i], '\n\n')
   print(dl_fig_list$plots[[i]])
   cat('\n\n')
