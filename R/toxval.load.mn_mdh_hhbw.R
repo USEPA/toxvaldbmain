@@ -51,11 +51,6 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
-  cremove = c("","","","")
-  res = res[ , !(names(res) %in% cremove)]
-
-  #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
   cols1 = runQuery("desc record_source",toxval.db)[,1]
