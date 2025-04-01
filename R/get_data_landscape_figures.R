@@ -49,10 +49,10 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                      by="species_id")%>%
     dplyr::mutate(
       species = dplyr::case_when(common_name=="House Mouse" ~ "Mouse",
-                                             common_name=="Western European House Mouse" ~ "Mouse",
-                                             common_name=="European Rabbit" ~ "Rabbit",
-                                             common_name=="Japanese Quail" ~ "Quail",
-                                             TRUE ~ common_name),
+                                 common_name=="Western European House Mouse" ~ "Mouse",
+                                 common_name=="European Rabbit" ~ "Rabbit",
+                                 common_name=="Japanese Quail" ~ "Quail",
+                                 TRUE ~ common_name),
       toxval_type_supercategory_abbrev = dplyr::case_when(
         # toxval_type_supercategory == "Toxicity Value" ~ "",
         toxval_type_supercategory == "Dose Response Summary Value" ~ "DRSV",
@@ -61,7 +61,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
         # toxval_type_supercategory == "Acute Exposure Guidelines" ~ "AEG",
         TRUE ~ toxval_type_supercategory
       )
-      )
+    )
 
   ### Figure stacked bar by source----
   # stacked bar supercategory by source
@@ -85,7 +85,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
       source_name_chem = dplyr::case_when(
         src_chem_n < 500 ~ "Other",
         TRUE ~ source)
-      )
+    )
 
   # Consistent palette colors across plots
   # https://stackoverflow.com/questions/53506536/need-specific-coloring-in-ggplot2-with-viridis
@@ -95,7 +95,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     { names(.) <- unique(c(tvdb$source_name_rec, tvdb$source_name_chem)) }
 
   species_fill_pal <- viridisLite::viridis(length(unique(tvdb$species)),
-                                         option = "H") %T>%
+                                           option = "H") %T>%
     { names(.) <- unique(tvdb$species) }
 
   message("Generating Plots...")
@@ -326,14 +326,56 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                    text = ggplot2::element_text(size = global_font_size)) +
     ggplot2::scale_y_continuous(label = scales::comma)
 
+  # #### Species by Study Type and Effect Type Category DRSV Box Plots----
+  # dl_fig_list[["Species by Study Type and Effect Type Category DRSV Box Plots"]] =
+  #   speciesn %>%
+  #   dplyr::filter(toxval_type_supercategory=="Dose Response Summary Value") %>%
+  #   dplyr::filter(study_type%in% c("acute","chronic","short-term","subchronic",
+  #                                  "developmental","reproduction developmental")) %>%
+  #   dplyr::filter(n>1000) %>%
+  #   ggplot2::ggplot(ggplot2::aes(x=study_type,y=log10(toxval_numeric),fill=species)) +
+  #   ggplot2::geom_boxplot(outlier.colour="black",
+  #                         outlier.shape=21,outlier.size=1,outlier.fill="white",
+  #                         notch=FALSE) +
+  #   # ggplot2::geom_jitter(aes(color=class_type),size=0.6,alpha = 0.9) +
+  #   # ggplot2::scale_y_continuous(trans="log10",limits=c(1e-5,1000)) +
+  #   # ggplot2::scale_fill_manual(values=c("white","red")) +
+  #   ggplot2::coord_flip(ylim = c(-5,5)) +
+  #   ggplot2::theme_bw() +
+  #   ggplot2::labs(y="DRSV log10(mg/kg-day)",
+  #                 x="",
+  #                 fill="Species") +
+  #
+  #   ggplot2::scale_fill_viridis_d(option="H") +
+  #   # ggplot2::scale_fill_manual(values=species_fill_pal) +
+  #   # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
+  #   ggplot2::theme(text=ggplot2::element_text(size=global_font_size))
+
+  effect_type_g = effect_types %>%
+    dplyr::filter(toxval_type_supercategory=="Dose Response Summary Value",
+                  study_type %in% c("acute","chronic","short-term","subchronic",
+                                    "developmental","reproduction developmental"),
+                  toxval_units %in% c("mg/kg-day")) %>%
+    dplyr::select(effect_type, study_type, toxval_numeric)
+
+  effect_type_g_pal <- viridisLite::viridis(length(unique(effect_type_g$effect_type)),
+                                            option = "H") %T>%
+    { names(.) <- unique(effect_type_g$effect_type) }
+
+  # Manually select colors
+  effect_type_g_pal = c("BMD"="#4454C4FF",
+                        "N(OA)EL"="#A2FC3CFF",
+                        "L(OA)EL"="#FABA39FF")
+
   #### Species by Study Type and Effect Type Category DRSV Box Plots----
-  dl_fig_list[["Species by Study Type and Effect Type Category DRSV Box Plots"]] =
-    speciesn %>%
-    dplyr::filter(toxval_type_supercategory=="Dose Response Summary Value") %>%
-    dplyr::filter(study_type%in% c("acute","chronic","short-term","subchronic",
-                                   "developmental","reproduction developmental")) %>%
-    dplyr::filter(n>1000) %>%
-    ggplot2::ggplot(ggplot2::aes(x=study_type,y=log10(toxval_numeric),fill=species)) +
+  dl_fig_list[["Effect Type Category DRSV Effect Type Box Plots"]] =
+    effect_type_g %>%
+    dplyr::filter(!effect_type %in% c("N(OA)EC", "L(OA)EC")) %>%
+    dplyr::group_by(effect_type) %>%
+    # Filter out small groups
+    dplyr::filter(dplyr::n()>100) %>%
+    dplyr::ungroup() %>%
+    ggplot2::ggplot(ggplot2::aes(x=study_type,y=log10(toxval_numeric), fill=effect_type)) +
     ggplot2::geom_boxplot(outlier.colour="black",
                           outlier.shape=21,outlier.size=1,outlier.fill="white",
                           notch=FALSE) +
@@ -344,16 +386,17 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     ggplot2::theme_bw() +
     ggplot2::labs(y="DRSV log10(mg/kg-day)",
                   x="",
-                  fill="Species") +
+                  fill="Effect Type") +
 
-    ggplot2::scale_fill_viridis_d(option="H") +
+    # ggplot2::scale_fill_viridis_d(option="H") +
+    ggplot2::scale_fill_manual(values=effect_type_g_pal, drop=TRUE) +
     # ggplot2::scale_fill_manual(values=species_fill_pal) +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
     ggplot2::theme(text=ggplot2::element_text(size=global_font_size))
 
   dl_fig_list[["Species Plots Combined"]] = cowplot::plot_grid(
     dl_fig_list$`Species by Study Type and Effect Type Category Counts`,
-    dl_fig_list$`Species by Study Type and Effect Type Category DRSV Box Plots`,
+    dl_fig_list$`Effect Type Category DRSV Effect Type Box Plots`,
     labels = "AUTO"
   )
 
@@ -394,12 +437,27 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
 
   fform <- list %>%
     dplyr::left_join(form,
-                     by="chosen_class")
+                     by="chosen_class") %>%
+    dplyr::group_by(chosen_class) %>%
+    dplyr::ungroup()
   # fform %>%
   #   dplyr::select(chosen_class,class_type) %>%
   #   dplyr::distinct() %>%
   #   dplyr::group_by(class_type) %>%
   #   dplyr::tally()
+
+  chem_class_pal <- viridisLite::viridis(length(unique(fform$class_type)),
+                                         option = "H") %T>%
+    { names(.) <- unique(fform$class_type) }
+
+  # Manually select colors
+  chem_class_pal = c(
+    "Drug"="#4454C4FF",
+    "ClassyFire"="#28BBECFF",
+    "Expert"="#A2FC3CFF",
+    "PFAS"="#FB8022FF",
+    "Pesticide"="#7A0403FF"
+  )
 
   dl_fig_list[["Chemical Class Boxplots"]] =
     fform %>%
@@ -418,13 +476,15 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     # scale_y_continuous(trans="log10",limits=c(1e-5,1000)) +
     # scale_fill_manual(values=c("white","red")) +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
-    ggplot2::scale_fill_viridis_d(option="H") +
+    # ggplot2::scale_fill_viridis_d(option="H") +
+    ggplot2::scale_fill_manual(values=chem_class_pal, drop=TRUE) +
     ggplot2::coord_flip() +
     ggplot2::theme_bw(base_size = global_font_size) +
     ggplot2::labs(y="DRSV log10(mg/kg-day)",
                   x="",
                   fill = "Class Type") +
-    ggplot2::theme(text=ggplot2::element_text(size=global_font_size))
+    ggplot2::theme(text=ggplot2::element_text(size=global_font_size),
+                   legend.position="bottom")
 
   # # Break/testing additional layers
   #
@@ -498,6 +558,12 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                         plot = dl_fig_list[[fig]],
                         width = 2*png_width,
                         height = 2* png_height,
+                        units = png_units)
+      } else if (fig == "Chemical Class Boxplots") {
+        ggplot2::ggsave(filename = paste0(outputDir, fig, ".png"),
+                        plot = dl_fig_list[[fig]],
+                        width = 1.5 * png_width,
+                        height = 1.5 * png_height,
                         units = png_units)
       } else {
         ggplot2::ggsave(filename = paste0(outputDir, fig, ".png"),
