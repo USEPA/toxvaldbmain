@@ -6,14 +6,14 @@
 #' @param dict_date Date stamp of the dictionary file to update
 #' @export
 #--------------------------------------------------------------------------------------
-import.source.info.by.source <- function(toxval.db, source=NULL, dict_date = "2024-10-31") {
+import.source.info.by.source <- function(toxval.db, source=NULL, dict_date = "2025-02-25") {
   printCurrentFunction(toxval.db)
 
   # Read latest source_info dictionary
   file = paste0(toxval.config()$datapath,"dictionary/source_info ", dict_date,".xlsx")
   print(file)
   mat = readxl::read_xlsx(file) %>% # openxlsx::read.xlsx(file)
-    dplyr::filter(!retired == 1)
+    dplyr::filter(!retired %in% c(1, 2))
   cols = runQuery("desc source_info",toxval.db)[,1]
   mat = mat[, names(mat) %in% cols]
 

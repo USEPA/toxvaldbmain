@@ -65,7 +65,8 @@ qc_status_summ = toxval.summary.stats(toxval.db)
 # ToxValDB Stats
 n_records = runQuery("SELECT count(*) as n FROM toxval", toxval.db)
 n_chemicals = runQuery("SELECT count(distinct dtxsid) as n FROM toxval", toxval.db)
-n_sources = runQuery("SELECT count(distinct source) as n FROM toxval", toxval.db)
+n_sources = runQuery("SELECT count(distinct supersource) as n FROM toxval", toxval.db)
+n_source_tables = runQuery("SELECT distinct supersource, source_table FROM toxval", toxval.db) %>% dplyr::pull(source_table)
 
 # Load dictionary terms and acronyms
 field_dictionary_list = readxl::excel_sheets(paste0(toxval.config()$datapath, "release_files/field_dictionary.xlsx"))
@@ -76,17 +77,60 @@ field_dictionary = lapply(field_dictionary_list,
                             }) %T>% {
                               names(.) <- field_dictionary_list
                             }
+
+# Get defined chemical structure count
+
+ccd_batch = list.files(paste0(toxval.config()$datapath, "release_files/",
+                              toxval_version %>% gsub("\\.", "_", .), "/dtxsid_batch_search"), 
+                       pattern = "CCD-Batch-Search_2025", 
+                       full.names = TRUE)
+
+if(length(ccd_batch)){
+  n_chemicals_defined = lapply(ccd_batch, function(f){
+    readxl::read_xlsx(f, sheet = "Main Data")
+  }) %>%
+    dplyr::bind_rows() %>%
+    dplyr::filter(!is.na(QSAR_READY_SMILES)) %>%
+    dplyr::pull(DTXSID) %>%
+    length()
+  
+    n_chemicals_defined = paste0("(", 
+                                 format(n_chemicals_defined, big.mark=","), 
+                                 " with defined chemical structure)")
+} else {
+  n_chemicals_defined = ""
+}
+
+# toxval_super_category coverage by source (count and proportion)
+n_supercategory = runQuery(paste0("select a.supersource, a.source, a.source_table, ",
+" b.toxval_type_supercategory from res_toxval_v96_1.toxval a ",
+"left join res_toxval_v96_1.toxval_type_dictionary b on a.toxval_type = b.toxval_type ",
+"where b.toxval_type_supercategory is not null"),
+                           toxval.db) %>%
+  dplyr::mutate(toxval_type_supercategory = dplyr::case_when(
+    toxval_type_supercategory == "Dose Response Summary Value" ~ "Dose Response Summary Value (DRSV)",
+    toxval_type_supercategory == "Mortality Response Summary Value" ~ "Mortality Response Summary Value (MRSV)",
+    TRUE ~ toxval_type_supercategory
+  ))
+
+n_rec_supercategory = n_supercategory %>%
+  dplyr::count(toxval_type_supercategory) %>%
+  dplyr::mutate(percentage = round((n / n_records$n) * 100, 0),
+                n = format(n, big.mark = ","))
+
+n_source_supercategory = n_supercategory %>%
+  dplyr::count(supersource, toxval_type_supercategory)
 ```
 
 # Overview
 
-The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals from over `r format(plyr::round_any(n_sources$n, 10), big.mark=",")` sources.
+The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals `r n_chemicals_defined` from `r n_sources$n` sources (`r length(n_source_tables)` source tables).
 
 In addition to this release note, the following summary files are available:
 
 -   Data file column dictionary\_`r toxval_version %>% gsub("\\.", "", .)`.xlsx
--   source_count 2024-12-16.xlsx
--   source_info 2024-10-31.xlsx
+-   source_count 2024-12-16.xlsx (**NEED TO UPDATE**)
+-   source_info 2025-02-25.xlsx
 
 # Workflow
 
@@ -173,7 +217,7 @@ Notable version differences:
 
 ## Updated Sources
 
--   Expert QC of a subset of 18 sources (> 10,000 records)
+-   Expert QC of a subset of 18 sources (\> 10,000 records)
     -   ATSDR MRLs, ATSDR PFAS 2021, Cal OEHHA, ECHA IUCLID, ECOTOX, EPA HHTV, HAWC PFAS 150, HAWC PFAS 430, HAWC Project, HEAST, HESS, HPVIS, Health Canada, IRIS, NTP PFAS, PFAS 150 SEM v2, PPRTV (CPHEA), WHO JECFA Tox Studies
 -   ECHA IUCLID
     -   Added 7 OHTs: Acute Toxicity Oral, Acute Toxicity Inhalation, Acute Toxicity Dermal, Acute Toxicity Other Routes, Repeated Dose Toxicity Inhalation, Repeated Dose Toxicity Dermal, Repeated Dose Toxicity Other.
@@ -281,11 +325,11 @@ DT::datatable(src_version_date,
 -   Filled in exposure_route "not specified" based on toxval_type_supercategory, toxval_type, and source. Affected sources: Health Canada, WHO JECFA Tox Studies, ToxRefDB, ECOTOX, PPRTV (CPHEA), ECHA IUCLID.
 -   Fixed subsource_url truncation. Affected sources: HAWC PFAS 150, HAWC PFAS 430, and HAWC Project sources.
 -   Updated strain and toxval_type dictionary for improved mappings and clarity.
--   Simplified deduplication hierarchy (">" means "takes priority over") based on DTXSID. Records from a lower priority source that match the selected field(s) from a higher priority source are flagged as duplicates (e.g., records with the same DTXSID in TEST as ChemIDplus are flagged as duplicates since they are represented in the priority source).
-    -   IRIS > HEAST
-    -   PFAS 150 SEM v2 > HAWC PFAS 150
-    -   EPA OW NPDWR > OW Drinking Water Standards
-    -   ChemIDplus > TEST
+-   Simplified deduplication hierarchy ("\>" means "takes priority over") based on DTXSID. Records from a lower priority source that match the selected field(s) from a higher priority source are flagged as duplicates (e.g., records with the same DTXSID in TEST as ChemIDplus are flagged as duplicates since they are represented in the priority source).
+    -   IRIS \> HEAST
+    -   PFAS 150 SEM v2 \> HAWC PFAS 150
+    -   EPA OW NPDWR \> OW Drinking Water Standards
+    -   ChemIDplus \> TEST
 -   Set experimental_record as "not experimental" toxval_type_supercategory values of "Toxicity Value" and "Exposure Guidelines".
 -   Standardized experimental_record field to:
     -   not experimental
@@ -652,6 +696,13 @@ fail_captions_out = fail_captions %>%
 #| resuts: FALSE
 # Pull figure data
 dl_fig_list = get_data_landscape_figures(toxval.db)
+# Remove combined plots
+dl_fig_comb = names(dl_fig_list$plots)[grepl("Combined", names(dl_fig_list$plots))]
+dl_fig_list$plots[dl_fig_comb] = NULL
+# Update caption
+dl_fig_list$captions$`Record Count by Effect Type Supercategory` = paste0(dl_fig_list$captions$`Record Count by Effect Type Supercategory`, " Percent proportions: ", 
+toString(paste0(n_rec_supercategory$toxval_type_supercategory, " (", 
+                n_rec_supercategory$percentage, "%)")))
 ```
 
 ::: {.panel-tabset .nav-pills}
@@ -660,13 +711,11 @@ dl_fig_list = get_data_landscape_figures(toxval.db)
 #| echo: FALSE
 #| warning: FALSE
 #| results: 'asis'
-#| fig-width: 12
-#| fig-height: 7
+#| fig-width: 14
+#| fig-height: 10
 
 # Programmatically generate the tabset of tables with headers
 for(i in seq_len(length(dl_fig_list$plots))){
-  # Skip combined plots
-  if(grepl("Combined", names(dl_fig_list$plots)[i])) next
   cat('## ', names(dl_fig_list$plots)[i], '\n\n')
   print(dl_fig_list$plots[[i]])
   cat('\n\n')

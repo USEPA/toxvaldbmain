@@ -433,7 +433,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
   list <- form %>%
     dplyr::group_by(chosen_class) %>%
     dplyr::summarise(med = stats::median(log10(toxval_numeric))) %>%
-    dplyr::filter(med<0.85)
+    dplyr::filter(med<0.875)
 
   fform <- list %>%
     dplyr::left_join(form,
@@ -485,6 +485,21 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                   fill = "Class Type") +
     ggplot2::theme(text=ggplot2::element_text(size=global_font_size),
                    legend.position="bottom")
+
+
+  chem_class_cap = fform %>%
+    dplyr::select(class_type, chosen_class) %>%
+    dplyr::distinct() %>%
+    dplyr::count(class_type) %>%
+    dplyr::mutate(class_type = dplyr::case_when(
+      class_type == "PFAS" ~ "PFAS (OECD definition)",
+      class_type == "Drug" ~ "drugs",
+      class_type == "Pesticide" ~ "pesticides",
+      class_type == "Expert" ~ "as expert classed",
+      class_type == "ClassyFire" ~ "categorized in ClassyFire",
+      TRUE ~ class_type
+    )) %>%
+    dplyr::arrange(n)
 
   # # Break/testing additional layers
   #
@@ -549,6 +564,21 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                    legend.position="bottom",
                    legend.text=ggplot2::element_text(size=global_font_size))
 
+  density_percentiles = tvdb %>%
+    dplyr::filter(toxval_type_supercategory %in% c("Dose Response Summary Value",
+                                                   "Mortality Response Summary Value")) %>%
+    # dplyr::filter(exposure_route=="oral") %>%
+    dplyr::filter(toxval_units %in% c("mg/kg-day","mg/kg","mg/m3"),
+                  study_type %in% c("acute", "short-term", "subchronic",
+                                    "chronic", "reproduction developmental",
+                                    "developmental")) %>%
+    dplyr::mutate(toxval_numeric_log10 = log10(toxval_numeric)) %>%
+    dplyr::group_by(toxval_units) %>%
+    dplyr::summarize(`25_quants` = quantile(toxval_numeric_log10, probs = c(0.25)) %>%
+                       round(., 1),
+                     `75_quants` = quantile(toxval_numeric_log10, probs = c(0.75)) %>%
+                       round(., 1))
+
 
   if(save_png){
     for(fig in names(dl_fig_list)){
@@ -581,10 +611,22 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     `Record Count by Effect Type Supercategory` = 'Count of records by source within each Effect Type Supercategory. Sources with fewer than 3,000 records are grouped into "Other".',
     `Chemical Count by Effect Type Supercategory` = 'Count of unique chemicals by source within each Effect Type Supercategory. Sources with fewer than 1,000 chemicals are grouped into "Other".',
     `Effect Type Supercategory Bar Plot` = effects_other_caption,
-    `Species by Study Type and Effect Type Category Counts` = "Evaluation by species for select study types for records within the Effect Type Supercategory Dose Response Summary Value (DRSV) showing record counts. Only species with more than 1000 records are shown.",
-    `Species by Study Type and Effect Type Category DRSV Box Plots` = "Evaluation by species for select study types for records within the Effect Type Supercategory Dose Response Summary Value (DRSV) showing the distribution of DRSVs by study type and species. Only species with more than 1000 records are shown.",
-    `Chemical Class Boxplots` = "Distribution of oral dose response summary values (DRSV) in mg/kg-d by structure class, showing the 50 most potent structure classes. Boxes are colored by the main structure class sources. The red line is log-median for all oral dose response summary values in mg/kg-d.",
-    `Oral/Inhalation Density Plots` = "Distribution of oral and inhalation effect levels with units of mg/kg (oral), mg/kg-day (oral), and mg/m3 (inhalation). Included records are limited to dose response and mortality response summary values."
+    `Species by Study Type and Effect Type Category Counts` = "Evaluation by species for select study types for records within the Effect Type Supercategory Dose Response Summary Value (DRSV) showing record counts. Only species with more than 1,000 records are shown.",
+    `Species by Study Type and Effect Type Category DRSV Box Plots` = "Evaluation by species for select study types for records within the Effect Type Supercategory Dose Response Summary Value (DRSV) showing the distribution of DRSVs by study type and species. Only species with more than 1,000 records are shown.",
+    `Chemical Class Boxplots` = paste0("Distribution of oral dose response summary values (DRSV) in mg/kg-d by structure class, showing the ", sum(chem_class_cap$n)," most potent structure classes. Boxes are colored by the main structure class sources. The red line is log-median for all oral dose response summary values in mg/kg-d. ",
+                                       "The ", sum(chem_class_cap$n), " most potent class types by median DRSV included: ",
+                                       toString(paste0(chem_class_cap$n[1:nrow(chem_class_cap)-1], " ", chem_class_cap$class_type[1:nrow(chem_class_cap)-1])),
+                                       " and ", chem_class_cap$n[nrow(chem_class_cap)], " ", chem_class_cap$class_type[nrow(chem_class_cap)], "."
+                                       ),
+    `Oral/Inhalation Density Plots` = paste0("Distribution of oral and inhalation effect levels with units of mg/kg (oral), mg/kg-day (oral), and mg/m3 (inhalation). Included records are limited to dose response and mortality response summary values. ",
+                                             "The log10 25th and 75th percentiles are ",
+                                             toString(paste0(density_percentiles$`25_quants`[1:nrow(density_percentiles)-1], " and ",
+                                                             density_percentiles$`75_quants`[1:nrow(density_percentiles)-1], " for studies in ",
+                                                             density_percentiles$toxval_units[1:nrow(density_percentiles)-1])),
+                                             ", and ", density_percentiles$`25_quants`[nrow(density_percentiles)], " and ",
+                                             density_percentiles$`75_quants`[nrow(density_percentiles)], " for studies in ",
+                                             density_percentiles$toxval_units[nrow(density_percentiles)],
+                                             ", respectively.")
   )
 
   return(
