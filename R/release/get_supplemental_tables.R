@@ -52,9 +52,9 @@ get_supplemental_tables <- function(toxval.db, source.db){
     })
 
   # https://stackoverflow.com/questions/8091303/simultaneously-merge-multiple-data-frames-in-a-list
-  supp_tables[["Table S4"]] = c(list(supp_tables[["Table S2"]] %>%
-                                       dplyr::select(source = supersource)),
-                                source_toxval_type
+  source_toxval_type = c(list(supp_tables[["Table S2"]] %>%
+                                dplyr::select(source = supersource)),
+                         source_toxval_type
   ) %>%
     purrr::reduce(left_join, by = "source") %>%
     dplyr::mutate(`in vivo` = dplyr::case_when(
@@ -63,5 +63,17 @@ get_supplemental_tables <- function(toxval.db, source.db){
     )) %>%
     dplyr::distinct() %>%
     dplyr::mutate(dplyr::across(where(is.character), ~ tidyr::replace_na(., "N/A")))
+
+  supp_tables[["Table S4a"]] = source_toxval_type %>%
+    dplyr::select(source, `in vivo`) %>%
+    dplyr::distinct()
+
+  supp_tables[["Table S4b"]] = source_toxval_type %>%
+    dplyr::select(source, `toxicity value(s)`) %>%
+    dplyr::distinct()
+
+  supp_tables[["Table S4c"]] = source_toxval_type %>%
+    dplyr::select(source, `exposure guideline(s)`) %>%
+    dplyr::distinct()
 
 }
