@@ -49,7 +49,7 @@ if(!file.exists(v_compare)){
 load(v_compare)
 
 # Load summary stats
-qc_status_summ = toxval.summary.stats(toxval.db)
+qc_status_summ = toxval.summary.stats(toxval.db, summ_level = "supersource")
 
 # library(DT)
 # https://stackoverflow.com/questions/37755037/how-to-add-code-folding-to-output-chunks-in-rmarkdown-html-documents
