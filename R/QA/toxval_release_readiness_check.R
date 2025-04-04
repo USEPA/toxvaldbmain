@@ -9,17 +9,21 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
 
   message("Generating report for...", source_name)
   # Check whether source is direct load
-  is_direct_load = runQuery(paste0("SELECT DISTINCT source_table FROM toxval WHERE source='",
+  is_direct_load = all(runQuery(paste0("SELECT DISTINCT source_table FROM toxval WHERE source='",
                                    source_name, "'"),
-                            db=toxval.db)$source_table %in% c("direct load", "direct_load")
+                            db=toxval.db)$source_table %in% c("direct load", "direct_load"))
 
   # Get source index
   src_index = runQuery(paste0("SELECT chemprefix, source_table FROM chemical_source_index ",
-                              "WHERE source = '", source_name,"'"),
+                              "WHERE source = '", source_name,"' and source_status = 'active'"),
                        db = source.db)
 
   # TODO Test more NULL cases
   if(!is_direct_load) {
+    if(!nrow(src_index)){
+      message("No active chemprefix found for '", source_name, "'...")
+      return()
+    }
     # Get source table name from source name
     src_tbl = src_index$source_table
     # Check if input source_name exists
@@ -103,7 +107,7 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
     dplyr::filter(is.na(dtxsid))
 
   # Check if they've ever had a mapping
-  missing_chems_curated = list.files("Repo/chemical_mapping",
+  missing_chems_curated = list.files(paste0(toxval.config()$datapath, "chemical_mapping"),
                                      recursive = TRUE,
                                      pattern = src_index$chemprefix,
                                      full.names = TRUE) %>%
@@ -201,7 +205,7 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
     dplyr::bind_cols(record_source_clowder_summ)
 
   # Check if export directory exists, create if not present
-  if(!dir.exists("Repo/release_readiness_check")) dir.create("Repo/release_readiness_check")
+  if(!dir.exists(paste0(toxval.config()$datapath, "release_readiness_check"))) dir.create(paste0(toxval.config()$datapath, "release_readiness_check"))
 
   list(summary = out %>%
          tidyr::pivot_longer(cols=dplyr::everything(),
@@ -210,7 +214,7 @@ toxval_release_readiness_check <- function(toxval.db, source.db, source_name){
                              values_transform = as.character),
        missing_chems_mapped = missing_chems_curated) %T>%
     # Save export
-    writexl::write_xlsx(paste0("Repo/release_readiness_check/",
+    writexl::write_xlsx(paste0(toxval.config()$datapath, "release_readiness_check/",
                                source_name, "_", Sys.Date(),".xlsx")) %>%
     # Return dataframe list
     return()
