@@ -236,7 +236,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                     paste0("**", toxval_type_supercategory_abbrev, "**",
                            " (N=", format(n_total, big.mark=","),
                            ") Effect Type (N; %): ",
-                           .) %>%
+                           ., ".") %>%
                     stringr::str_squish() %>%
                     gsub("( ", "(", ., fixed = TRUE)
     ) %>%

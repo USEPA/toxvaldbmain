@@ -49,7 +49,8 @@ if(!file.exists(v_compare)){
 load(v_compare)
 
 # Load summary stats
-qc_status_summ = toxval.summary.stats(toxval.db, summ_level = "supersource")
+qc_status_summ = toxval.summary.stats(toxval.db, summ_level = "supersource") %>%
+  dplyr::rename(source = supersource)
 
 # library(DT)
 # https://stackoverflow.com/questions/37755037/how-to-add-code-folding-to-output-chunks-in-rmarkdown-html-documents
@@ -124,13 +125,13 @@ n_source_supercategory = n_supercategory %>%
 
 # Overview
 
-The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly (no account required) in this [CCTE Clowder Dataset](https://clowder.edap-cluster.com/datasets/61147fefe4b0856fdc65639b?space=6112f2bee4b01a90a3fa7689#folderId=62e184ebe4b055edffbfc22b&page=0). The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals `r n_chemicals_defined` from `r n_sources$n` sources (`r length(n_source_tables)` source tables).
+The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly in this Zenodo (no account required) in this [Zenodo Dataset](https://doi.org/10.5281/zenodo.15169253). The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals `r n_chemicals_defined` from `r n_sources$n` sources (`r length(n_source_tables)` source tables).
 
 In addition to this release note, the following summary files are available:
 
--   Data file column dictionary\_`r toxval_version %>% gsub("\\.", "", .)`.xlsx
--   source_count 2024-12-16.xlsx (**NEED TO UPDATE**)
--   source_info 2025-02-25.xlsx
+-   Data file column dictionary\_`r toxval_version %>% gsub("\\.", "_", .)`.xlsx
+-   source_count `r toxval_version %>% gsub("\\.", "_", .)`.xlsx
+-   source_info `r toxval_version %>% gsub("\\.", "_", .)`.xlsx
 
 # Workflow
 
@@ -207,7 +208,8 @@ for(i in seq_len(length(vc_stat_list))){
 
 Notable version differences:
 
--   TBD
+-   Additional expert QC record reviews completed.
+-   Updated Cancer Summary table.
 
 # Data Source Highlights
 
@@ -217,7 +219,7 @@ Notable version differences:
 
 ## Updated Sources
 
--   Expert QC of a subset of 18 sources (\> 10,000 records)
+-   Expert QC of a subset of 18 sources (\> 10,000 records).
     -   ATSDR MRLs, ATSDR PFAS 2021, Cal OEHHA, ECHA IUCLID, ECOTOX, EPA HHTV, HAWC PFAS 150, HAWC PFAS 430, HAWC Project, HEAST, HESS, HPVIS, Health Canada, IRIS, NTP PFAS, PFAS 150 SEM v2, PPRTV (CPHEA), WHO JECFA Tox Studies
 -   ECHA IUCLID
     -   Added 7 OHTs: Acute Toxicity Oral, Acute Toxicity Inhalation, Acute Toxicity Dermal, Acute Toxicity Other Routes, Repeated Dose Toxicity Inhalation, Repeated Dose Toxicity Dermal, Repeated Dose Toxicity Other.
@@ -316,7 +318,7 @@ DT::datatable(src_version_date,
 
 ## Schema Changes
 
--   toxval table "study_group" field type changed to "text" instead of "varchar(255)"
+-   toxval table "study_group" field type changed to "text" instead of "varchar(255)".
 
 ## Processing Changes
 
@@ -411,7 +413,7 @@ Summary of the sources and counts with QC status values in `r toxval_version`.
 Colors indicate:
 
 -   QC Pass
-    -   All low to high (white to green)
+    -   All low to high (white to green).
 
     -   Column groups (different gradient scales):
 
@@ -427,7 +429,7 @@ Colors indicate:
 
             -   Low to High (white to green)
 
-        -   a-t fail columns (see caption)
+        -   fail columns (see caption for failure tag description)
 
             -   Low to High (light green to light red)
 
@@ -563,7 +565,7 @@ DT::datatable(qc_pass,
 
 ```
 
-i.  Pass percent calculated as (pass + not determined / total records) x 100, where "not determined" is assumed to be a "pass"
+i.  Pass percent calculated as (pass + not determined / total records) x 100, where "not determined" is assumed to be a "pass".
 
 ## QC Fail Status Counts
 
@@ -661,7 +663,7 @@ DT::datatable(qc_fail,
 ```
 
 i.  QC fail status tags listed as programmatically applied during load to ToxValDB toxval table, except for the "fail" status which is from a manually reviewed record.
-ii. Note, an individual record can have multiple fail tags (e.g., fail; toxval_numeric \< 0 would be tag "t" and tag "c")
+ii. Note, an individual record can have multiple fail tags (e.g., 'fail: species out of scope; Eco data out of scope for ToxValDB' would be tag 'e' and tag 'h').
 iii. Failure column tags:
 
 ```{r}
@@ -702,7 +704,7 @@ dl_fig_list$plots[dl_fig_comb] = NULL
 # Update caption
 dl_fig_list$captions$`Record Count by Effect Type Supercategory` = paste0(dl_fig_list$captions$`Record Count by Effect Type Supercategory`, " Percent proportions: ", 
 toString(paste0(n_rec_supercategory$toxval_type_supercategory, " (", 
-                n_rec_supercategory$percentage, "%)")))
+                n_rec_supercategory$percentage, "%)")) ,".")
 ```
 
 ::: {.panel-tabset .nav-pills}
