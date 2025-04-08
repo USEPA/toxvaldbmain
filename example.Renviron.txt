@@ -1,0 +1,19 @@
+# Copy and save this file as .Renviron in the root of the toxvaldbstage or toxvaldbmain GitHub directory. Fill in environment variable values.
+
+## Input file data path
+# Path to the GitHub Input Files (e.g., "./GitHub Input Files/ToxValDB9/Repo")
+datapath = ""
+
+## Database Connection Info
+# ToxValDB Credentials, Host, and Database Names for hosted database
+db_user = ""
+db_pass = ""
+db_server = ""
+db_port = 3306
+# ToxValDB Main (e.g., res_toxval_v96_1)
+toxval.db = ""
+# ToxValDB Source (e.g., res_toxval_source_v96_1)
+source.db = ""
+
+# CCTE CTX Chemicals API Key
+api_auth = ""
