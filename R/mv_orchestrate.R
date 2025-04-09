@@ -199,17 +199,21 @@ mv_orchestrate <- function(toxval.db, include.qc.status = FALSE){
                                      "LEFT JOIN ", mv_db, ".source_chemical a on a.chemical_id=b.chemical_id ",
                                      "LEFT JOIN ", mv_db, ".species d on b.species_id=d.species_id ",
                                      "LEFT JOIN ", mv_db, ".toxval_type_dictionary e on b.toxval_type=e.toxval_type ",
-                                     "LEFT JOIN ", mv_db, ".record_source f on b.toxval_id=f.toxval_id"
+                                     "LEFT JOIN ", mv_db, ".record_source f on b.toxval_id=f.toxval_id ",
+                                     # Filter out origin documents
+                                     "WHERE f.record_source_level not in ('origin')"
                         ) %>%
                           gsub("source_chemical..", "a.", ., fixed = TRUE) %>%
                           gsub("toxval..", "b.", ., fixed = TRUE) %>%
                           gsub("species..", "d.", ., fixed = TRUE) %>%
                           gsub("toxval_type_dictionary..", "e.", ., fixed = TRUE) %>%
-                          gsub("record_source..", "f.", ., fixed = TRUE)
+                          gsub("record_source..", "f.", ., fixed = TRUE) %>%
+                          # Set source as concat with supersource and source
+                          gsub("b.source as source, ", "CONCAT(b.supersource, ': ', b.source) as source, ", .)
 
                         # If not including qc_status, filter "fail" out
                         if(!include.qc.status){
-                          tmp = paste0(tmp, " WHERE b.qc_status NOT LIKE 'fail%'")
+                          tmp = paste0(tmp, " and b.qc_status NOT LIKE 'fail%'")
                         }
                         tmp
                       },
