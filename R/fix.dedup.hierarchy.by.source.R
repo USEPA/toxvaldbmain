@@ -208,7 +208,7 @@ fix.dedup.hierarchy.by.source <- function(toxval.db, source=NULL, subsource=NULL
       dplyr::rename(new_qc_status = qc_status)
 
     writexl::write_xlsx(report.out,
-                        paste0("Repo/QC Reports/fix_dedup_hierarchy_", source, "_", subsource, "_", Sys.Date(), ".xlsx") %>%
+                        paste0(toxval.config()$datapath, "QC Reports/fix_dedup_hierarchy_", source, "_", subsource, "_", Sys.Date(), ".xlsx") %>%
                           gsub("__", "_", .) %>%
                           stringr::str_squish())
     return(report.out)
