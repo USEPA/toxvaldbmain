@@ -12,7 +12,7 @@ This repository contains the R scripts used to generate the "Main" database for 
 - [US EPA FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501)
 	- Versioned releases of ToxValDB in XLSX and MySQL dump file format with associated documentation
 	- Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title.
-	- Version v9.6.1 was also released as a [Zenodo Dataset](https://zenodo.org/records/15169253)
+	- Version v9.6.1 was also released as a [Zenodo Dataset](https://zenodo.org/records/15231010)
 
 # Repository Links
 - [toxvaldbstage](https://github.com/usepa/toxval_stage)
