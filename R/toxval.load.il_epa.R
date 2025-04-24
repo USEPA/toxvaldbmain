@@ -6,9 +6,9 @@
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "il_epa"
-  source_table = "source_il_epa"
+toxval.load.il_epa <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "IL EPA"
+  source_table = "source_il_epa_dws"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
