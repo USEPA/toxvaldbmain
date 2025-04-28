@@ -101,7 +101,7 @@ toxval.load.all <- function(toxval.db,
   if(do.extra) {
     toxval.load.bcfbaf(toxval.db, source.db, verbose=FALSE)
     toxval.load.cancer(toxval.db, source.db)
-    toxval.load.genetox.all(toxval.db, source.db, sys.date="2021-09-10", verbose=FALSE)
+    toxval.load.genetox.all(toxval.db, source.db, sys.date="2024-04-01", verbose=FALSE)
     toxval.load.skin.eye(toxval.db, source.db, verbose=FALSE)
   }
 

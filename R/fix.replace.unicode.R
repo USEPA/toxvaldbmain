@@ -3,9 +3,9 @@
 #' @description A function to check all character fields and handle unicode symbols,
 #' either by removing them or replacing them with alphabetic equivalents.
 #' @return Returns a modified version of the input vector with unicode replacements.
-#' @export 
+#' @export
 #' @details DETAILS
-#' @examples 
+#' @examples
 #' \dontrun{
 #' if(interactive()){
 #'  #EXAMPLE1
@@ -13,7 +13,7 @@
 #' }
 #' @rdname fix.replace.unicode
 #' @param df Character vector to check/replace unicode symbols.
-#' @seealso 
+#' @seealso
 #'  [stri_escape_unicode][stringi::stri_escape_unicode]
 #'  [str_extract][stringr::str_extract]
 #' @importFrom stringi stri_escape_unicode
@@ -21,6 +21,7 @@
 #--------------------------------------------------------------------------------------
 fix.replace.unicode <- function(df) {
   if(!is.character(df)){
+    if(all(is.na(df))) return(NA)
     cat("fix.replace.unicode input must be character vector...\n")
     return()
   }
