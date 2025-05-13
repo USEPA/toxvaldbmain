@@ -12,7 +12,7 @@ toxval.load.genetox.all <- function(toxval.db, source.db, sys.date="2024-04-01",
   # Handle genetox_details
   runQuery("DROP TABLE IF EXISTS genetox_details", toxval.db)
   file <- paste0(toxval.config()$datapath,"genetox/combined_genetox_standard_",sys.date,".xlsx")
-  res0 = readxl::read_xlsx(file, guess_max = 21474836)
+  res0 = readxl::read_xlsx(file, col_types = "text")
 
   # Drop entries missing CASRN (logic brought over from old script)
   res = res0 %>%
