@@ -101,6 +101,8 @@ chem.check.v2 <- function(res0, in_source=NULL,verbose=FALSE) {
         gsub("\u00a0", "", .)
       n1 = iconv(n0,from="UTF-8",to="ASCII//TRANSLIT")
       n2 = n1 %>%
+        # Remove all whitespace
+        gsub("[[:space:]]", "", .) %>%
         stringi::stri_escape_unicode() %>%
         fix.casrn()
       cs = cas_checkSum(n2)
