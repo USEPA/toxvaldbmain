@@ -12,7 +12,7 @@ toxval.load.postprocess <- function(toxval.db,
                                     source.db,
                                     source,
                                     do.convert.units=FALSE,
-                                    chem_source,
+                                    chem_source=NULL,
                                     subsource=NULL,
                                     remove_null_dtxsid=TRUE){
   printCurrentFunction(toxval.db)

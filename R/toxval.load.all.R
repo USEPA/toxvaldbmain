@@ -109,6 +109,10 @@ toxval.load.all <- function(toxval.db,
   cat("fix deduping hierarchy by source\n")
   #####################################################################
   fix.dedup.hierarchy.by.source(toxval.db=toxval.db)
+  #####################################################################
+  cat("Delete qc_status fail records after final dedup hierarchy check\n")
+  #####################################################################
+  export.delete.qc_status.fail.by.source(toxval.db)
 
   # Set QC Category - need Jira and Confluence API tokens
   set.qc.category.by.source(toxval.db, source.db,

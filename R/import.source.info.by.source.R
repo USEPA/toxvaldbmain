@@ -6,7 +6,7 @@
 #' @param dict_date Date stamp of the dictionary file to update
 #' @export
 #--------------------------------------------------------------------------------------
-import.source.info.by.source <- function(toxval.db, source=NULL, dict_date = "2025-02-25") {
+import.source.info.by.source <- function(toxval.db, source=NULL, dict_date = "2025-05-16") {
   printCurrentFunction(toxval.db)
 
   # Read latest source_info dictionary
