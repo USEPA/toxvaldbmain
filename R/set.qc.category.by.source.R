@@ -58,6 +58,9 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
   table_df = table %>%
     rvest::html_table() %>%
     dplyr::select(-`Jira Status`) %>%
+    dplyr::mutate(`Jira Ticket` = `Jira Ticket` %>%
+                    # Extract TOXVAL-#### value (sometimes webpage had excess string info)
+                    stringr::str_extract("TOXVAL-[0-9]+")) %>%
     # Filter out those not reviewed
     dplyr::filter(!`QC Status` %in% c(NA, "Ice Box", "Icebox"),
                   `Source Name` %in% slist)
