@@ -40,7 +40,7 @@ toxval.summary.stats <- function(toxval.db, export=FALSE, summ_level = "source")
                        dplyr::select(dplyr::any_of(c(summ_level, "chemical_id"))))
 
   res = res_combined %>%
-    dplyr::count(dplyr::across(summ_level), name = "total records") %>%
+    dplyr::count(dplyr::across(dplyr::all_of(summ_level)), name = "total records") %>%
     dplyr::left_join(res_combined %>%
                        dplyr::distinct() %>%
                        dplyr::count(dplyr::across(summ_level), name = "chemicals"),

@@ -13,6 +13,7 @@ toxvaldb_release_comparison_stats <- function(repoDir){
   # paste0("b.common_name REGEXP '\\b", ., "\\b'", collapse = " OR ")
 
   toxvaldb_list = list(
+    v9.6.2 = c("res_toxval_v96_2", Sys.getenv("db_server")),
     v9.6.1 = c("res_toxval_v96_1", Sys.getenv("db_server")),
     v9.6.0 = c("res_toxval_v96_0", Sys.getenv("db_server")),
     v9.5 = c("res_toxval_v95", Sys.getenv("db_server")),
