@@ -125,7 +125,7 @@ n_source_supercategory = n_supercategory %>%
 
 # Overview
 
-The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly on FigShare (no account required) in this [FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501.v10). Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title. The data are also available publicly as a [Zenodo Dataset](https://zenodo.org/uploads/15527355).
+The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly on FigShare (no account required) in this [FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501.v10). Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title. The data are also available publicly as a [Zenodo Dataset](https://zenodo.org/records/15527355).
 
 The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals `r n_chemicals_defined` from `r n_sources$n` sources (`r length(n_source_tables)` source tables).
 
@@ -308,6 +308,7 @@ DT::datatable(src_version_date,
 
 # Known Issues
 
+-   Records from source EFSA OpenFoodTox where species common name is "Not specified" should be disregarded. Records from source EPA ETAP where species common name is listed as "Not specified" should be species "human" because this source provides human-relevant toxicity values. Records from source Health Canada with effect type ("toxval_type" field) values of "ADI", "cancer slope factor", "cancer unit risk", "TDI", and "tolerable concentration in air" can be mapped to species "human".
 -   Missing Regional Screening Level (RSL) data: a subset of chemicals with RSL values are missing from the CompTox Chemicals Dashboard (CCD) Executive Summary RSL Table and from the Hazard subtab.
 -   A subset of records is absent from all the included ECHA IUCLID subsources due to chemical mapping issues where the team elected to remove them entirely rather than potentially release records with inaccurate chemical identifiers.
 
