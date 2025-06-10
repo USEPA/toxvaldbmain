@@ -580,6 +580,159 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                        round(., 1))
 
 
+  ### toxval_type_supercategory, risk_assessment_class summary
+  # Initial query (count by supersource, supercategory, and RAC)
+  toxvaldb_data = runQuery(paste0("SELECT DISTINCT a.supersource, b.toxval_type_supercategory, ",
+                                  "a.risk_assessment_class, count(*) as n ",
+                                  "FROM toxval a ",
+                                  "LEFT JOIN toxval_type_dictionary b ",
+                                  "ON a.toxval_type = b.toxval_type ",
+                                  "WHERE b.toxval_type_supercategory in ('Toxicity Value', 'Dose Response Summary Value', ",
+                                  "'Media Exposure Guidelines', 'Mortality Response Summary Value', ",
+                                  "'Acute Exposure Guidelines') and ",
+                                  "a.risk_assessment_class not in ('Developmental/Reproductive') and ",
+                                  "a.qc_status not like '%fail%' ",
+                                  "GROUP BY a.supersource, b.toxval_type_supercategory, a.risk_assessment_class ",
+                                  "ORDER BY a.supersource, b.toxval_type_supercategory, a.risk_assessment_class"),
+                           toxval.db) %>%
+    dplyr::mutate(
+      # Fix supercategory presentation
+      toxval_type_supercategory = dplyr::case_when(
+        toxval_type_supercategory == "Dose Response Summary Value" ~ "DRSV",
+        toxval_type_supercategory == "Mortality Response Summary Value" ~ "MRSV",
+        toxval_type_supercategory == "Toxicity Value" ~ "Toxicity Values",
+        TRUE ~ toxval_type_supercategory
+      ),
+      # Replace - with "N/A"
+      risk_assessment_class = dplyr::case_when(
+        risk_assessment_class == "-" ~ "N/A",
+        TRUE ~ risk_assessment_class
+      )
+    )
+
+  # Get color gradient values
+  # Unique sequence of count values
+  brks_qc = sort(unique(toxvaldb_data$n))
+  # Function to map a gradient between colors
+  ## For row background
+  clrs_rmp_qc <- colorRampPalette(c("white", "black"))
+  clrs_df_qc = clrs_rmp_qc(length(unique(toxvaldb_data$n)))
+  ## For text font
+  clrs_rmp_qc_f <- colorRampPalette(c("black", "white"))
+  clrs_df_qc_f <- ifelse(brks_qc > median(brks_qc), "#FFFFFF", "#000000")
+  ## Supersource groups
+  src_brks = unique(toxvaldb_data$supersource)
+  clrs_src = ifelse(src_brks %in% c("Alaska DEC", "Cal OEHHA", "MA DEP", "PA DEP"), "#B2FBA5",
+                    ifelse(src_brks %in% c("ECHA IUCLID", "EFSA OpenFooxTox", "GESTIS DNEL",
+                                           "Health Canada", "NITE HESS", "WHO IPCS", "WHO JECFA"), "#FAC898",
+                           ifelse(src_brks %in% c("Copper Manufacturers", "HAWC Project", "Uterotrophic Hershberger DB"), "#fbf07b",
+                                  "#ADD8E6")))
+
+  # Prepare columns, have to be united with a "."
+  toxvaldb_data = toxvaldb_data %>%
+    # dplyr::mutate(n = prettyNum(n, big.mark = ",")) %>%
+    tidyr::unite(
+      col = "supcat_rac",
+      sep = ".",
+      toxval_type_supercategory, risk_assessment_class
+    ) %>%
+    tidyr::pivot_wider(
+      id_cols = supersource,
+      names_from = supcat_rac,
+      values_from = n
+    ) %>%
+    dplyr::rename(`Risk assessment class: ` = supersource)
+
+  # Header Columns
+  header_cols = c(
+    "Risk assessment class: ",
+    "DRSV.N/A",
+    "MRSV.N/A",
+    "Toxicity Values.Cancer",
+    "Toxicity Values.Non-cancer",
+    "Media Exposure Guidelines.Water",
+    "Media Exposure Guidelines.Air",
+    "Media Exposure Guidelines.Soil",
+    "Acute Exposure Guidelines.Water",
+    "Acute Exposure Guidelines.Air",
+    "Acute Exposure Guidelines.Soil"
+  )
+
+  # Fill blank header cols
+  toxvaldb_data[, header_cols[!header_cols %in% names(toxvaldb_data)]] <- NA
+
+  # Select to get column order correct
+  toxvaldb_data = toxvaldb_data %>%
+    dplyr::select(dplyr::all_of(header_cols))
+
+  # # https://cran.r-project.org/web/packages/ztable/vignettes/heatmapTable.html
+  # library(ztable)
+
+  # DT Table Approach - sketch out the layout based on column names
+  # https://stackoverflow.com/questions/22897852/how-to-create-datatable-with-complex-header-in-r-shiny
+  # https://rstudio.github.io/DT/
+  sketch = htmltools::withTags(table(
+    class = "row-border",
+    thead(
+      tr(
+        th(rowspan = 2, "Risk assessment class: "),
+        th(colspan = 1, "DRSV"),
+        th(colspan = 1, "MRSV"),
+        th(colspan = 2, "Toxicity Values"),
+        th(colspan = 3, "Media Exposure Guidelines"),
+        th(colspan = 3, "Acute Exposure Guidelines"),
+      ),
+      tr(
+        th("N/A"),
+        th("N/A"),
+        th("Cancer"),
+        th("Non-cancer"),
+        lapply(rep(c("Water", "Air", "Soil"), 2), th)
+      )
+    )
+  ))
+
+  # Create data.table
+  dl_fig_list[["Source Record Count by Effect Type Supercategory-Risk Assessment Class"]] = DT::datatable(toxvaldb_data,
+                      container = sketch,
+                      rownames = FALSE,
+                      class = list(stripe = FALSE),
+                      options = list(
+                        # # Remove pagination
+                        # paging = FALSE,
+                        # # Remove sort icons
+                        # ordering = FALSE,
+                        # # Remove search bar
+                        # searching = FALSE,
+                        # # Remove "n Records" label at bottom
+                        # info = FALSE,
+                        # # Display all rows (no scrolling)
+                        # pageLength = -1,
+                        # Center column values
+                        columnDefs = list(list(className = 'dt-center',
+                                               targets = 1:(length(names(toxvaldb_data))-1)
+                        )
+                        )
+                      )
+  ) %>%
+    DT::formatStyle(columns = names(toxvaldb_data)[!names(toxvaldb_data) %in% "Risk assessment class: "],
+                    # backgroundColor = DT::styleInterval(brks_qc, clrs_df_qc)
+                    backgroundColor = DT::styleEqual(brks_qc, clrs_df_qc),
+                    color = DT::styleEqual(brks_qc, clrs_df_qc_f),
+    ) %>%
+    # Format numbers with comma
+    DT::formatCurrency(columns = names(toxvaldb_data)[!names(toxvaldb_data) %in% "Risk assessment class: "],
+                       currency = "",
+                       interval = 3,
+                       mark = ",",
+                       digits = 0) %>%
+    DT::formatStyle(
+      "Risk assessment class: ",
+      backgroundColor = DT::styleEqual(
+        src_brks, clrs_src
+      )
+    )
+
   if(save_png){
     for(fig in names(dl_fig_list)){
       message("Saving figure '", fig, "' (", which(fig == names(dl_fig_list)), " of ", length(names(dl_fig_list)), ")")
@@ -626,7 +779,12 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                                              ", and ", density_percentiles$`25_quants`[nrow(density_percentiles)], " and ",
                                              density_percentiles$`75_quants`[nrow(density_percentiles)], " for studies in ",
                                              density_percentiles$toxval_units[nrow(density_percentiles)],
-                                             ", respectively.")
+                                             ", respectively."),
+    `Source Record Count by Effect Type Supercategory-Risk Assessment Class` = paste0(
+      "Summary of available values for each source by Effect Type Supercategory",
+      " and Risk Assessment Class. Source name cell color corresponds to source type association ",
+      "(green = state agency; blue = federal; orange = international; yellow = other/non-governmental)."
+    )
   )
 
   return(

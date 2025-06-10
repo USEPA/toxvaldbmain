@@ -683,7 +683,15 @@ toString(paste0(n_rec_supercategory$toxval_type_supercategory, " (",
 # Programmatically generate the tabset of tables with headers
 for(i in seq_len(length(dl_fig_list$plots))){
   cat('## ', names(dl_fig_list$plots)[i], '\n\n')
-  print(dl_fig_list$plots[[i]])
+  dl_plot = dl_fig_list$plots[[i]]
+  if("datatables" %in% class(dl_plot)){
+    # htmltools::renderTags for datatable
+    print(htmltools::tagList(dl_plot))
+  } else {
+    # Print to render ggplot
+    print(dl_plot)
+  }
+  
   cat('\n\n')
   cat(dl_fig_list$captions[[i]])
   cat('\n\n')
