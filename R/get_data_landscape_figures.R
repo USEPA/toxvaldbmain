@@ -430,10 +430,16 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     dplyr::mutate(count = dplyr::n_distinct(dtxsid)) %>%
     dplyr::filter(count>2)
 
+  # Get log10 median for all chemicals
+  v_med_line = stats::median(log10(form$toxval_numeric))
+  # Get 50 chemicals with lowest median log10 value
   list <- form %>%
     dplyr::group_by(chosen_class) %>%
     dplyr::summarise(med = stats::median(log10(toxval_numeric))) %>%
-    dplyr::filter(med<0.875)
+    # Select lowest 50 chemicals
+    dplyr::arrange(med, chosen_class) %>%
+    head(50)
+    # dplyr::filter(med<0.875)
 
   fform <- list %>%
     dplyr::left_join(form,
@@ -472,7 +478,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                           outlier.fill="white",
                           notch=FALSE) +
     # geom_jitter(aes(color=class_type),size=0.6,alpha = 0.9) +
-    ggplot2::geom_hline(yintercept=1.69897,color="red",linewidth=1) +
+    ggplot2::geom_hline(yintercept=v_med_line, color="red", linewidth=1) +
     # scale_y_continuous(trans="log10",limits=c(1e-5,1000)) +
     # scale_fill_manual(values=c("white","red")) +
     # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
@@ -485,7 +491,6 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
                   fill = "Class Type") +
     ggplot2::theme(text=ggplot2::element_text(size=global_font_size),
                    legend.position="bottom")
-
 
   chem_class_cap = fform %>%
     dplyr::select(class_type, chosen_class) %>%
