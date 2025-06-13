@@ -736,7 +736,10 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
   if(save_png){
     for(fig in names(dl_fig_list)){
       message("Saving figure '", fig, "' (", which(fig == names(dl_fig_list)), " of ", length(names(dl_fig_list)), ")")
-      if(grepl("Combined", fig)){
+      if("datatables" %in% class(dl_fig_list[[fig]])){
+        # Save HTML
+        DT::saveWidget(dl_fig_list[[fig]], paste0(outputDir, fig, ".html"))
+      } else if(grepl("Combined", fig)){
         ggplot2::ggsave(filename = paste0(outputDir, fig, ".png"),
                         plot = dl_fig_list[[fig]],
                         width = 2*png_width,
@@ -766,7 +769,7 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
     `Effect Type Supercategory Bar Plot` = effects_other_caption,
     `Species by Study Type and Effect Type Category Counts` = "Evaluation by species for select study types for records within the Effect Type Supercategory Dose Response Summary Value (DRSV) showing record counts. Only species with more than 1,000 records are shown.",
     `Species by Study Type and Effect Type Category DRSV Box Plots` = "Evaluation by species for select study types for records within the Effect Type Supercategory Dose Response Summary Value (DRSV) showing the distribution of DRSVs by study type and species. Only species with more than 1,000 records are shown.",
-    `Chemical Class Boxplots` = paste0("Distribution of oral dose response summary values (DRSV) in mg/kg-d by structure class, showing the ", sum(chem_class_cap$n)," most potent structure classes. Boxes are colored by the main structure class sources. The red line is log-median for all oral dose response summary values in mg/kg-d. ",
+    `Chemical Class Boxplots` = paste0("Distribution of oral dose response summary values (DRSV) in mg/kg-d by structure class, showing the ", sum(chem_class_cap$n)," most potent structure classes. Boxes are colored by the main structure class types with lower and upper hinges corresponding to the first and third quartiles. Whiskers show the range within 1.5 times the interquartile range. Points represent outliers. The red line is logged median across all oral DRSVs for all chemicals in mg/kg-day. ",
                                        "The ", sum(chem_class_cap$n), " most potent class types by median DRSV included: ",
                                        toString(paste0(chem_class_cap$n[1:nrow(chem_class_cap)-1], " ", chem_class_cap$class_type[1:nrow(chem_class_cap)-1])),
                                        " and ", chem_class_cap$n[nrow(chem_class_cap)], " ", chem_class_cap$class_type[nrow(chem_class_cap)], "."
