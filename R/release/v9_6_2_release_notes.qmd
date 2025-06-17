@@ -208,6 +208,11 @@ for(i in seq_len(length(vc_stat_list))){
 <!-- End of tabset -->
 :::
 
+Notable version differences:
+
+-   v9.4 to v9.5
+    -   The scope of ToxValDB was reduced to not include ecologically focused records. Also, a number of sources were retired or updated and a major deduplication effort was undertaken. This contributed to the drop in unique chemicals (DTXSID), human relevant species (defined as having a harmonized common name of “rat”, “mouse”, “dog”, “rabbit”, or “human”), and overall records available in ToxValDB.
+
 # Data Source Highlights
 
 ## New Sources
@@ -683,7 +688,15 @@ toString(paste0(n_rec_supercategory$toxval_type_supercategory, " (",
 # Programmatically generate the tabset of tables with headers
 for(i in seq_len(length(dl_fig_list$plots))){
   cat('## ', names(dl_fig_list$plots)[i], '\n\n')
-  print(dl_fig_list$plots[[i]])
+  dl_plot = dl_fig_list$plots[[i]]
+  if("datatables" %in% class(dl_plot)){
+    # htmltools::renderTags for datatable
+    print(htmltools::tagList(dl_plot))
+  } else {
+    # Print to render ggplot
+    print(dl_plot)
+  }
+  
   cat('\n\n')
   cat(dl_fig_list$captions[[i]])
   cat('\n\n')
