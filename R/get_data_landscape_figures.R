@@ -676,23 +676,26 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
   # DT Table Approach - sketch out the layout based on column names
   # https://stackoverflow.com/questions/22897852/how-to-create-datatable-with-complex-header-in-r-shiny
   # https://rstudio.github.io/DT/
+  # Add border style
+  top_border_style = "text-align: center; border-top-width: 1px; border-top-style: solid; border-top-color: black"
+  bottom_border_style = "text-align: center; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: black"
   sketch = htmltools::withTags(table(
     class = "row-border",
     thead(
       tr(
-        th(rowspan = 2, "Risk assessment class: "),
-        th(colspan = 1, "DRSV"),
-        th(colspan = 1, "MRSV"),
-        th(colspan = 2, "Toxicity Values"),
-        th(colspan = 3, "Media Exposure Guidelines"),
-        th(colspan = 3, "Acute Exposure Guidelines"),
+        th(rowspan = 2, "Risk assessment class: ", style = paste0(top_border_style, "; ", bottom_border_style)),
+        th(colspan = 1, "DRSV", style = top_border_style),
+        th(colspan = 1, "MRSV", style = top_border_style),
+        th(colspan = 2, "Toxicity Values", style = top_border_style),
+        th(colspan = 3, "Media Exposure Guidelines", style = top_border_style),
+        th(colspan = 3, "Acute Exposure Guidelines", style = top_border_style),
       ),
       tr(
-        th("N/A"),
-        th("N/A"),
-        th("Cancer"),
-        th("Non-cancer"),
-        lapply(rep(c("Water", "Air", "Soil"), 2), th)
+        th("N/A", style = paste0(top_border_style, "; ", bottom_border_style)),
+        th("N/A", style = paste0(top_border_style, "; ", bottom_border_style)),
+        th("Cancer", style = paste0(top_border_style, "; ", bottom_border_style)),
+        th("Non-cancer", style = paste0(top_border_style, "; ", bottom_border_style)),
+        lapply(rep(c("Water", "Air", "Soil"), 2), th, style = paste0(top_border_style, "; ", bottom_border_style))
       )
     )
   ))
@@ -736,6 +739,12 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
       backgroundColor = DT::styleEqual(
         src_brks, clrs_src
       )
+    ) %>%
+    DT::formatStyle(
+      columns = names(toxvaldb_data),
+      borderBottomColor = "black",
+      borderBottomStyle = "solid",
+      borderBottomWidth = "1px"
     )
 
   if(save_png){
@@ -766,6 +775,12 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
 
     }
   }
+
+  # Commented out logic for exporting HTML as PNG
+  # Before running, update DT options() to remove search, pagination, etc. that is commented out
+  # https://stackoverflow.com/questions/60287652/how-to-save-a-table-i-created-with-dt-datatable-into-a-high-quality-image
+  # DT::saveWidget(dl_fig_list$`Source Record Count by Effect Type Supercategory-Risk Assessment Class`, "dtable.html")
+  # webshot::webshot("dtable.html", "dtable.png")
 
   # Prep captions
   dl_fig_captions = list(
