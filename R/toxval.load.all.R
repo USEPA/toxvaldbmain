@@ -89,6 +89,9 @@ toxval.load.all <- function(toxval.db,
     toxval.load.who_ipcs(toxval.db, source.db, log)
     toxval.load.who_jecfa_adi(toxval.db, source.db, log)
     toxval.load.who_jecfa_tox_studies(toxval.db, source.db, log)
+    toxval.load.epa_dcap(toxval.db, source.db, log)
+    toxval.load.epa_etap(toxval.db, source.db, log)
+    toxval.load.epa_ncel(toxval.db, source.db, log)
 
   }
 
