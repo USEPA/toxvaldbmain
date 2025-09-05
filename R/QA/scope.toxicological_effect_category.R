@@ -183,11 +183,55 @@ scope.toxicological_effect_category <- function(toxval.db){
     dplyr::count(scope_tox_eff_cat) %>%
     dplyr::mutate(prop = round(n / n_toxval * 100, 3))
 
+  # Get hash length, add 2 characters for ", " delimiter to get a buffer
+  hash_buffer = min(stringr::str_length(crit_cat_curate$source_hash)) + 2
+  excel_str_limit = 32767
+  hash_group_limit = floor(excel_str_limit / hash_buffer)
+
+  crit_cat_split = crit_cat_curate %>%
+    dplyr::mutate(hash_length = stringr::str_length(source_hash),
+                  hash_truncation_needed = hash_length > excel_str_limit,
+                  hash_count = ceiling(hash_length / hash_buffer),
+
+                  group_divisor = dplyr::case_when(
+                    hash_truncation_needed == FALSE ~ 0,
+                    TRUE ~ ceiling(hash_count / hash_group_limit)
+                  ))
+
+
+  # Split large strings into smaller groups
+  split = crit_cat_split %>%
+    dplyr::filter(group_divisor > 0)
+
+  if(nrow(split)){
+    split = split %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(out_groups = strsplit(source_hash, ", ") %>%
+                      unlist() %>%
+                      split(., rep(seq_along(.), each  = hash_group_limit * 0.75, length.out = length(.))) %>%
+                      lapply(., toString) %>%
+                      paste0(collapse = ";")
+      ) %>%
+      dplyr::ungroup() %>%
+      tidyr::separate_rows(out_groups, sep = ";") %>%
+      dplyr::select(-hash_length, -hash_truncation_needed, -hash_count, -group_divisor) %>%
+      dplyr::distinct()
+
+    # Filter out records with strings over limit, append split groups
+    crit_cat_curate = crit_cat_curate %>%
+      dplyr::filter(!source_hash %in% split$source_hash) %>%
+      dplyr::bind_rows(split %>%
+                         dplyr::select(-source_hash) %>%
+                         dplyr::rename(source_hash = out_groups))
+
+    out_check = crit_cat_curate %>%
+      dplyr::mutate(final_hash_length = stringr::str_length(source_hash)) %>%
+      dplyr::filter(final_hash_length >= excel_str_limit)
+  }
+
   # Export sheets
   writexl::write_xlsx(
-    # TODO eventually export records to curate, issue with Excel XLSX character limits
-    # due to source_hash collapse
-    list(# crit_cat_curate = crit_cat_curate,
+    list(crit_cat_curate = crit_cat_curate,
          scope_full = out,
          route = out_route,
          source = out_source,
