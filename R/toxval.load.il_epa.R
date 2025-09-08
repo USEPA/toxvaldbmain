@@ -83,10 +83,6 @@ toxval.load.il_epa <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
