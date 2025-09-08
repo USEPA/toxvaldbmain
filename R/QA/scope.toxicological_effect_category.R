@@ -30,7 +30,10 @@ scope.toxicological_effect_category <- function(toxval.db){
   }
 
   # Pull all toxval data
-  in_data = runQuery(paste0("SELECT source_hash, ", tox_crit_term," as toxicological_effect, study_type, exposure_route, source FROM toxval"),
+  in_data = runQuery(paste0("SELECT source_hash, ", tox_crit_term,
+                            " as toxicological_effect, study_type, exposure_route, source FROM toxval ",
+                            "WHERE toxval_type in (SELECT toxval_type FROM toxval_type_dictionary WHERE ",
+                            "toxval_type_supercategory in ('Dose Response Summary Value', 'Mortality Response Summary Value'))"),
                      toxval.db)
 
   # Constant total rows in toxval
@@ -59,7 +62,8 @@ scope.toxicological_effect_category <- function(toxval.db){
                          'neurotoxicity subchronic','neurotoxicity chronic',
                          'neurotoxicity 28-day', 'neurotoxicity','intermediate','1','104','14','2','24',
                          'immunotoxicity subchronic','immunotoxicity chronic',
-                         'immunotoxicity 28-day','immunotoxicity','growth','chronic','28-day', 'short-term')
+                         'immunotoxicity 28-day','immunotoxicity','growth','chronic','28-day', 'short-term',
+                         'acute', 'occupational', 'epidemiologic', 'clinical')
 
   reprodev_study_types = c('reproduction developmental',
                            'extended one-generation reproductive toxicity - with F2 generation and developmental neurotoxicity (Cohorts 1A, 1B with extension, 2A and 2B)',
