@@ -127,6 +127,15 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "END ",
                     "WHERE toxval_units = '-' and source = '",source,"'",query_addition) ,toxval.db)
 
+    runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
+                    "WHEN qc_status like '%species Unspecified%' THEN qc_status ",
+                    "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; species Unspecified') ",
+                    "ELSE 'fail:species Unspecified'",
+                    "END ",
+                    # species_id for "Unspecified"
+                    "WHERE species_id in (1000000) ",
+                    "and source = '",source,"'",query_addition) ,toxval.db)
+
     ############################################################################
     ### dtxsid cases
     ############################################################################
