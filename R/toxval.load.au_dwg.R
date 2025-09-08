@@ -51,9 +51,12 @@ toxval.load.au_dwg <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
   #####################################################################
-  browser()
-  cremove = c("","","","")
-  res = res[ , !(names(res) %in% cremove)]
+  res = res %>%
+    dplyr::mutate(
+      # Handle ranged study_duration values - maintain original range, set database values to NA
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value)
+    )
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
@@ -85,10 +88,6 @@ toxval.load.au_dwg <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
     browser()
   }
   print(dim(res))
-
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
 
   #####################################################################
   cat("Generic steps \n")
@@ -148,8 +147,8 @@ toxval.load.au_dwg <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
-  res$subsource_url = "-"
+  res$source_url = "https://www.nhmrc.gov.au"
+
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
