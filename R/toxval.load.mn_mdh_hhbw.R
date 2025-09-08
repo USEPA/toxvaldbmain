@@ -87,10 +87,6 @@ toxval.load.mn_mdh_hhbw <- function(toxval.db, source.db, log=FALSE, remove_null
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
