@@ -1,5 +1,5 @@
 ---
-title: "ToxValDB v9.6.2 Release Notes"
+title: "ToxValDB v9.7.0 Release Notes"
 author: Taylor Wall
 description: >
   The following are notes to accompany a release for ToxValDB.
@@ -35,7 +35,7 @@ toxval.db = toxval.config()$toxval.db
 source.db = toxval.config()$source.db
 
 # TODO Set desired database version
-toxval_version = "v9.6.2"
+toxval_version = "v9.7.0"
 
 # Load Comparison stats
 v_compare = paste0(toxval.config()$datapath, "release_files/version_comparison/",
@@ -80,7 +80,6 @@ field_dictionary = lapply(field_dictionary_list,
                             }
 
 # Get defined chemical structure count
-
 ccd_batch = list.files(paste0(toxval.config()$datapath, "release_files/",
                               toxval_version %>% gsub("\\.", "_", .), "/dtxsid_batch_search"), 
                        pattern = "CCD-Batch-Search_2025", 
@@ -217,13 +216,42 @@ Notable version differences:
 
 ## New Sources
 
--   EPA DCAP
-    -   Output from the U.S. EPA Database Calibrated Assessment Process.
-    -   1,001 Calibrated Toxicity Values (CTVs) records for 1,001 DTXSID mapped chemicals.
--   EPA ETAP
-    -   Manually curated records from the U.S. EPA Transcriptomic Assessment Process (ETAP).
-    -   Transcriptomic points of departure and transcriptomic-based reference values (TRVs).
+-   AU DWG
+    -   TBD
+-   CAL OEHHA REL
+    -   TBD
+-   ECHA RAC OEL
+    -   TBD
+-   EPA ECEL
+    -   TBD
+-   EPA HAWC
+    -   TBD
+-   EPA HWIR
+    -   TBD    
+-   EPA NCEL
+    -   TBD
+-   EPA TSCA 8e
+    -   TBD
+-   EU SCOEL
+    -   TBD    
+-   IL EPA
+    -   TBD
+-   MASS. ORSG
+    -   TBD
+-   MN MDH HHBW
+    -   TBD
+-   NIOSH IDLH
+    -   TBD
+-   NJ DEP
+    -   TBD
+-   TX TCEQ
+    -   TBD
+-   VT VDH
+    -   TBD
+-   WHO DWG
+    -   TBD    
 
+    
 ## Updated Sources
 
 -   No sources were updated for this version.
