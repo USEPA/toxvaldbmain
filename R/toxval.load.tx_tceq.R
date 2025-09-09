@@ -8,7 +8,7 @@
 #--------------------------------------------------------------------------------------
 toxval.load.tx_tceq <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "TX TCEQ"
-  source_table = "source_tx_TCEQ"
+  source_table = "source_tx_tceq"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
