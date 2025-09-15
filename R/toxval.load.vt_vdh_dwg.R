@@ -7,7 +7,7 @@
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
 toxval.load.vt_vdh_dwg <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "VT VDH"
+  source = "VT VDH DWG"
   source_table = "source_vt_vdh_dwg"
   verbose = log
   #####################################################################
