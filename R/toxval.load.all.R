@@ -106,6 +106,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.nj_dep(toxval.db, source.db, log)
     toxval.load.tx_tceq(toxval.db, source.db, log)
     toxval.load.vt_vdh_dwg(toxval.db, source.db, log)
+    toxval.load.who_dwg(toxval.db, source.db, log)
   }
 
   if(do.post) {
