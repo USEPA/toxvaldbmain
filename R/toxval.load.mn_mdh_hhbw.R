@@ -81,10 +81,6 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   }
   print(dim(res))
 
-  # examples ...
-  # names(res)[names(res) == "source_url"] = "url"
-  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
-
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
@@ -143,8 +139,7 @@ toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtx
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "source_url"
-  res$subsource_url = "-"
+  res$source_url = "https://www.health.state.mn.us"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
