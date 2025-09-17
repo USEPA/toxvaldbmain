@@ -95,6 +95,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.epa_ncel(toxval.db, source.db, log)
     toxval.load.epa_ecel(toxval.db, source.db, log)
     toxval.load.il_epa(toxval.db, source.db, log)
+    toxval.load.echa_rac_oel(toxval.db, source.db, log)
   }
 
   if(do.post) {
