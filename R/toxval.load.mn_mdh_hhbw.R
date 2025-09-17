@@ -1,12 +1,12 @@
 #--------------------------------------------------------------------------------------
-#' Generic structure for loading to toxval from toxval_source
+#' Loading MN MDH HHBW to toxval from toxval_source
 #'
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.generic <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+toxval.load.mn_mdh_hhbw <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
   source = "MN MDH HHBW"
   source_table = "source_mn_mdh_hhbw"
   verbose = log
