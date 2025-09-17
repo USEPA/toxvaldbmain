@@ -1,14 +1,15 @@
 #--------------------------------------------------------------------------------------
 #' Loading MN MDH HHBW to toxval from toxval_source
 #'
+#' Loading AU DWG to toxval from toxval_source
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.mn_mdh_hhbw <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "MN MDH HHBW"
-  source_table = "source_mn_mdh_hhbw"
+toxval.load.au_dwg <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "AU DWG"
+  source_table = "source_au_nhmrc_dwg"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -50,6 +51,14 @@ toxval.load.mn_mdh_hhbw <- function(toxval.db, source.db, log=FALSE, remove_null
 
   #####################################################################
   cat("Add code to deal with specific issues for this source\n")
+  #####################################################################
+  res = res %>%
+    dplyr::mutate(
+      # Handle ranged study_duration values - maintain original range, set database values to NA
+      study_duration_value_original = study_duration_value,
+      study_duration_value = as.numeric(study_duration_value)
+    )
+
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -139,7 +148,7 @@ toxval.load.mn_mdh_hhbw <- function(toxval.db, source.db, log=FALSE, remove_null
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://www.health.state.mn.us"
+  res$source_url = "https://www.nhmrc.gov.au"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
