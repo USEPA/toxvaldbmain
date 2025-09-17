@@ -99,6 +99,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.echa_rac_oel(toxval.db, source.db, log)
     toxval.load.caloehha_rel_derivations(toxval.db, source.db, log)
     toxval.load.epa_tsca_8e(toxval.db, source.db, log)
+    toxval.load.eu_scoel(toxval.db, source.db, log)
   }
 
   if(do.post) {
