@@ -79,6 +79,8 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     # Combine list of dataframes into single across the RData files
     jira_tickets = lapply(names(RData_list[[1]]), function(l_name){
       tmp = purrr::modify_depth(RData_list, 1, l_name) %>%
+        # Remove column
+        purrr:::map(., ~ select(.x, -dplyr::any_of(c("date")))) %>%
         dplyr::bind_rows()
 
       # # Collapse rows by ticket name

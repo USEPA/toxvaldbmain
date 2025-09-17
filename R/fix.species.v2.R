@@ -202,7 +202,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "AND a.source='", source, "' ",
                  "AND qc_status not like '%fail%' ",
                  # Ignore known/expected missing
-                 "AND a.species_original not in ('-', 'not reported', 'unspecified') ",
+                 "AND a.species_original not in ('-', 'not reported', 'unspecified', 'nr', 'unknown', 'Not specified', 'not specified') ",
                  query_addition %>% gsub("subsource", "a.subsource", .)
                  )
   not_specified = runQuery(query, toxval.db)
