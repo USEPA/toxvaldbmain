@@ -104,6 +104,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.mn_mdh_hhbw(toxval.db, source.db, log)
     toxval.load.niosh_idlh(toxval.db, source.db, log)
     toxval.load.nj_dep(toxval.db, source.db, log)
+    toxval.load.tx_tceq(toxval.db, source.db, log)
   }
 
   if(do.post) {
