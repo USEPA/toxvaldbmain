@@ -89,7 +89,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.who_ipcs(toxval.db, source.db, log)
     toxval.load.who_jecfa_adi(toxval.db, source.db, log)
     toxval.load.who_jecfa_tox_studies(toxval.db, source.db, log)
-
+    
     toxval.load.epa_dcap(toxval.db, source.db, log)
     toxval.load.epa_etap(toxval.db, source.db, log)
     
@@ -101,6 +101,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.epa_tsca_8e(toxval.db, source.db, log)
     toxval.load.eu_scoel(toxval.db, source.db, log)
     toxval.load.mass_orsg(toxval.db, source.db, log)
+    toxval.load.mn_mdh_hhbw(toxval.db, source.db, log)
   }
 
   if(do.post) {
