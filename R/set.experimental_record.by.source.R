@@ -93,7 +93,7 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
 
   # Bulk assignment based on source
   runQuery(paste0("UPDATE toxval SET experimental_record='experimental' ",
-                  "WHERE source IN ('HAWC Project', 'HAWC PFAS 150', 'HAWC PFAS 430')"),
+                  "WHERE source IN ('HAWC Project', 'HAWC PFAS 150', 'HAWC PFAS 430', 'EPA HAWC')"),
            toxval.db)
 
   # Update WHO JECFA Tox Studies experimental_record using hash file
