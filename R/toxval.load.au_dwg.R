@@ -1,4 +1,5 @@
 #--------------------------------------------------------------------------------------
+#' Loading MN MDH HHBW to toxval from toxval_source
 #'
 #' Loading AU DWG to toxval from toxval_source
 #' @param toxval.db The database version to use
@@ -148,7 +149,6 @@ toxval.load.au_dwg <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   res$datestamp = Sys.Date()
   res$source_table = source_table
   res$source_url = "https://www.nhmrc.gov.au"
-
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()

@@ -89,6 +89,7 @@ toxval.load.all <- function(toxval.db,
     toxval.load.who_ipcs(toxval.db, source.db, log)
     toxval.load.who_jecfa_adi(toxval.db, source.db, log)
     toxval.load.who_jecfa_tox_studies(toxval.db, source.db, log)
+    toxval.load.epa_ecel(toxval.db, source.db, log)
 
   }
 
@@ -101,7 +102,7 @@ toxval.load.all <- function(toxval.db,
   if(do.extra) {
     toxval.load.bcfbaf(toxval.db, source.db, verbose=FALSE)
     toxval.load.cancer(toxval.db, source.db)
-    toxval.load.genetox.all(toxval.db, source.db, sys.date="2021-09-10", verbose=FALSE)
+    toxval.load.genetox.all(toxval.db, source.db, sys.date="2024-04-01", verbose=FALSE)
     toxval.load.skin.eye(toxval.db, source.db, verbose=FALSE)
   }
 
@@ -109,6 +110,10 @@ toxval.load.all <- function(toxval.db,
   cat("fix deduping hierarchy by source\n")
   #####################################################################
   fix.dedup.hierarchy.by.source(toxval.db=toxval.db)
+  #####################################################################
+  cat("Delete qc_status fail records after final dedup hierarchy check\n")
+  #####################################################################
+  export.delete.qc_status.fail.by.source(toxval.db)
 
   # Set QC Category - need Jira and Confluence API tokens
   set.qc.category.by.source(toxval.db, source.db,

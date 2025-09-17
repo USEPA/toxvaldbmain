@@ -134,9 +134,8 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   if(source == "Health Canada"){
     query = paste0("UPDATE toxval SET species_id = ", human_id, " ",
                    "WHERE source='Health Canada' ",
-                   "AND toxval_type IN ",
-                   "('TDI', 'ADI', 'cancer slope factor', 'cancer unit risk',",
-                   " 'UL', 'tolerable concentration in air')")
+                   "AND toxval_type_original ",
+                   "REGEXP ('ADI$|SF$|UR$|TDI$|TC$|UL$')")
     runQuery(query, toxval.db)
   }
 

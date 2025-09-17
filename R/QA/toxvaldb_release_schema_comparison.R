@@ -43,7 +43,7 @@ toxvaldb_release_schema_comparison <- function(in.toxval.db, in.toxval.host, com
     message("Summarizing '", toxval.db, "' from ", Sys.getenv("db_server"))
 
     # Check if input databases exist on server
-    tbl_check <- runQuery("SHOW databases", in.toxval.db) %>%
+    tbl_check <- runQuery("SHOW databases", toxval.db) %>%
       dplyr::filter(Database %in% toxval.db)
 
     if(!toxval.db %in% tbl_check$Database){

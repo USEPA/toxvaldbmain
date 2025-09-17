@@ -13,7 +13,7 @@ import.source.info.by.source <- function(toxval.db, source=NULL, dict_date = "20
   file = paste0(toxval.config()$datapath,"dictionary/source_info ", dict_date,".xlsx")
   print(file)
   mat = readxl::read_xlsx(file) %>% # openxlsx::read.xlsx(file)
-    dplyr::filter(!retired == 1)
+    dplyr::filter(!retired %in% c(1, 2))
   cols = runQuery("desc source_info",toxval.db)[,1]
   mat = mat[, names(mat) %in% cols]
 

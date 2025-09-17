@@ -1,14 +1,14 @@
 #--------------------------------------------------------------------------------------
-#
-#' Load EPA OPP data to toxval from toxval_source
+#' Load EPA DCAP source from toxval_source to toxval
+#'
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
 #' @param remove_null_dtxsid If TRUE, delete source records without curated DTXSID value
 #--------------------------------------------------------------------------------------
-toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
-  source = "EPA OPP"
-  source_table = "source_opp"
+toxval.load.epa_dcap <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=TRUE){
+  source = "EPA DCAP"
+  source_table = "source_epa_dcap_ctvs"
   verbose = log
   #####################################################################
   cat("start output log, log files for each source can be accessed from output_log folder\n")
@@ -53,11 +53,7 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
 
   res = res %>%
-    dplyr::mutate(subsource = "HHBP",
-                  year = 2021) %>%
-    # Removing manually curated data until they are QC'd
-    dplyr::filter(!document_type %in% c("OPP Summary"))
-
+    dplyr::rename(source_url = url)
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")
   #####################################################################
@@ -67,7 +63,7 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   colnames(res)[which(names(res) == "species")] = "species_original"
   res = res[ , !(names(res) %in% c("record_url","short_ref"))]
   nlist = names(res)
-  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","hhbp_rfd_id","cancer_id", "document_type",
+  nlist = nlist[!nlist %in% c("casrn","name",
                               # Do not remove fields that would become "_original" fields
                               unique(gsub("_original", "", cols)))]
   nlist = nlist[!nlist %in% cols]
@@ -77,7 +73,7 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
 
   # Check if any non-toxval column still remaining in nlist
   nlist = names(res)
-  nlist = nlist[!nlist %in% c("casrn","name", "range_relationship_id","hhbp_rfd_id","cancer_id", "document_type",
+  nlist = nlist[!nlist %in% c("casrn","name",
                               # Do not remove fields that would become "_original" fields
                               unique(gsub("_original", "", cols)))]
   nlist = nlist[!nlist %in% cols]
@@ -89,20 +85,25 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   }
   print(dim(res))
 
+  # examples ...
+  # names(res)[names(res) == "source_url"] = "url"
+  # colnames(res)[which(names(res) == "phenotype")] = "critical_effect"
+
   #####################################################################
   cat("Generic steps \n")
   #####################################################################
   res = dplyr::distinct(res)
   res = fill.toxval.defaults(toxval.db,res)
   res = generate.originals(toxval.db,res)
+  if("species_original" %in% names(res)) res$species_original = tolower(res$species_original)
   res$toxval_numeric = as.numeric(res$toxval_numeric)
   print(paste0("Dimensions of source data after originals added: ", toString(dim(res))))
   res=fix.non_ascii.v2(res,source)
   # Remove excess whitespace
   res = res %>%
-    dplyr::mutate(dplyr::across(tidyselect::where(is.character), stringr::str_squish))
+    dplyr::mutate(dplyr::across(dplyr::where(is.character), stringr::str_squish))
   res = dplyr::distinct(res)
-  # res = res[, !names(res) %in% c("casrn","name")]
+  res = res[, !names(res) %in% c("casrn","name")]
   print(paste0("Dimensions of source data after ascii fix and removing chemical info: ", toString(dim(res))))
 
   #####################################################################
@@ -117,161 +118,6 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   tids = seq(from=tid0,to=tid0+nrow(res)-1)
   res$toxval_id = tids
   print(dim(res))
-
-  #####################################################################
-  cat("Set the toxval_relationship for separated toxval_numeric range records\n")
-  #####################################################################
-  relationship_initial = res %>%
-    dplyr::filter(grepl("range", toxval_subtype),
-                  !range_relationship_id %in% c("-", NA)) %>%
-    dplyr::mutate(
-      toxval_relationship = dplyr::case_when(
-        grepl("lower", toxval_subtype) ~ "Lower Range",
-        grepl("upper", toxval_subtype) ~ "Upper Range"
-      )
-    )
-  # Add check for filtered values
-  if(nrow(relationship_initial)) {
-    relationship = relationship_initial %>%
-      tidyr::separate_rows(
-        range_relationship_id,
-        sep = " \\|::\\| "
-      ) %>%
-      dplyr::select(toxval_id, range_relationship_id, toxval_relationship) %>%
-      tidyr::pivot_wider(id_cols = "range_relationship_id", names_from=toxval_relationship, values_from = toxval_id) %>%
-      dplyr::rename(toxval_id_1 = `Lower Range`,
-                    toxval_id_2 = `Upper Range`) %>%
-      dplyr::mutate(relationship = "toxval_numeric range") %>%
-      dplyr::select(-range_relationship_id) %>%
-      dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
-
-    # Insert range relationships into toxval_relationship table
-    if(nrow(relationship)){
-      runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
-    }
-  }
-
-  # Remove range_relationship_id and toxval_relationship fields
-  res = res %>%
-    dplyr::select(-range_relationship_id)
-
-  #####################################################################
-  cat("Set the toxval_relationship for HHBP-RfD pairs\n")
-  #####################################################################
-  # Iterate through non-cancer study_types
-  for(study_type in unique(res$study_type)) {
-    if(study_type == "cancer") next
-
-    relationship_initial = res %>%
-      dplyr::filter(study_type == !!study_type,
-                    grepl("HHBP|RfD", toxval_type),
-                    !hhbp_rfd_id %in% c("-", NA)) %>%
-      dplyr::mutate(
-        toxval_relationship = dplyr::case_when(
-          grepl("HHBP", toxval_type) ~ "HHBP",
-          TRUE ~ "RfD"
-        )
-      )
-
-    # Add check for filtered values
-    if(nrow(relationship_initial)) {
-      relationship = relationship_initial %>%
-        tidyr::separate_rows(
-          hhbp_rfd_id,
-          sep = " \\|::\\| "
-        ) %>%
-        dplyr::select(toxval_id, hhbp_rfd_id, toxval_relationship) %>%
-        tidyr::pivot_wider(id_cols = "hhbp_rfd_id", names_from=toxval_relationship, values_from = toxval_id) %>%
-        dplyr::rename(toxval_id_1 = HHBP,
-                      toxval_id_2 = RfD) %>%
-        dplyr::mutate(relationship = stringr::str_c(!!study_type, " HHBP to RfD")) %>%
-        dplyr::select(-hhbp_rfd_id) %>%
-        dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
-
-      # Insert range relationships into toxval_relationship table
-      if(nrow(relationship)){
-        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
-      }
-    }
-  }
-
-  # Remove range_relationship_id and toxval_relationship fields
-  res = res %>%
-    dplyr::select(-hhbp_rfd_id)
-
-  #####################################################################
-  cat("Set the toxval_relationship for cancer column pairs\n")
-  #####################################################################
-  # Handle lower/upper relationships separately
-  for(rel in c("lower", "upper")) {
-    relationship_initial = res %>%
-      dplyr::filter(study_type == "cancer",
-                    !cancer_id %in% c("-", NA),
-                    (grepl(!!rel, toxval_subtype) | toxval_type == "cancer slope factor")) %>%
-      dplyr::mutate(
-        toxval_relationship = dplyr::case_when(
-          grepl("HHBP", toxval_type) ~ "HHBP",
-          TRUE ~ "cancer slope factor"
-        )
-      )
-
-    # Add check for filtered values
-    if(nrow(relationship_initial)) {
-      relationship = relationship_initial %>%
-        tidyr::separate_rows(
-          cancer_id,
-          sep = " \\|::\\| "
-        ) %>%
-        dplyr::select(toxval_id, cancer_id, toxval_relationship) %>%
-        tidyr::pivot_wider(id_cols = "cancer_id", names_from=toxval_relationship, values_from = toxval_id) %>%
-        dplyr::rename(toxval_id_1 = `cancer slope factor`,
-                      toxval_id_2 = HHBP) %>%
-        dplyr::mutate(relationship = "cancer column pair") %>%
-        dplyr::select(-cancer_id) %>%
-        dplyr::filter(!is.na(toxval_id_1), !is.na(toxval_id_2))
-
-      # Insert range relationships into toxval_relationship table
-      if(nrow(relationship)){
-        runInsertTable(mat=relationship, table='toxval_relationship', db=toxval.db)
-      }
-    }
-
-  }
-
-  # Remove range_relationship_id and toxval_relationship fields
-  res = res %>%
-    dplyr::select(-cancer_id)
-
-  #####################################################################
-  cat("Set Summary record relationship/hierarchy\n")
-  #####################################################################
-  # Set Summary record relationship/hierarchy (manual summary NO(A)EL/LO(A)EL records to RfD)
-  res_rfd = res %>%
-    dplyr::filter(grepl("RfD", toxval_type), study_type == "chronic") %>%
-    dplyr::select(toxval_id, name, casrn) %>%
-    tidyr::unite(col="relationship_id", name, casrn, sep = "_", remove=TRUE) %>%
-    dplyr::rename(toxval_id_1 = toxval_id)
-
-  res_manual = res %>%
-    dplyr::filter(document_type == "OPP Summary") %>%
-    dplyr::select(toxval_id, name, casrn) %>%
-    tidyr::unite(col="relationship_id", name, casrn, sep = "_", remove=TRUE) %>%
-    dplyr::rename(toxval_id_2 = toxval_id)
-
-  res_relationship = res_manual %>%
-    dplyr::left_join(res_rfd,
-                     by = "relationship_id") %>%
-    dplyr::mutate(relationship = "chronic RfD derived from POD") %>%
-    dplyr::select(-relationship_id)
-
-  if(nrow(res_relationship)){
-    # Send linkage data to ToxVal
-    runInsertTable(res_relationship, "toxval_relationship", toxval.db)
-  }
-
-  # Remove document_type not in toxval, used in set relationship
-  res = res %>%
-    dplyr::select(-document_type, -name, -casrn)
 
   #####################################################################
   cat("pull out record source to refs\n")
@@ -289,9 +135,9 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   cat("add extra columns to refs\n")
   #####################################################################
-  refs$record_source_type = "website"
-  refs$record_source_note = "to be cleaned up"
-  refs$record_source_level = "primary (risk assessment values)"
+  refs$record_source_type = "-"
+  refs$record_source_note = "-"
+  refs$record_source_level = "-"
   print(paste0("Dimensions of references after adding ref columns: ", toString(dim(refs))))
 
   #####################################################################
@@ -301,7 +147,10 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
+  res$subsource_url = "-"
   res$details_text = paste(source,"Details")
+  #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
+  #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
   runInsertTable(res, "toxval", toxval.db, verbose)
   print(paste0("Dimensions of source data pushed to toxval: ", toString(dim(res))))
   runInsertTable(refs, "record_source", toxval.db, verbose)
@@ -310,7 +159,7 @@ toxval.load.opp <- function(toxval.db, source.db, log=FALSE, remove_null_dtxsid=
   #####################################################################
   cat("do the post processing\n")
   #####################################################################
-  toxval.load.postprocess(toxval.db,source.db,source,do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
+  toxval.load.postprocess(toxval.db, source.db, source, do.convert.units=FALSE, remove_null_dtxsid=remove_null_dtxsid)
 
   if(log) {
     #####################################################################

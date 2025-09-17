@@ -30,7 +30,10 @@ export.delete.qc_status.fail.by.source <- function(toxval.db, source, subsource)
     toxval.db)
 
   # If no cases found, return
-  if(!nrow(mat)) return()
+  if(!nrow(mat)) {
+    message("No qc_status fail records to delete...returning...")
+    return()
+  }
 
   # Log qc_status fail records by source
   outDir = paste0(toxval.config()$datapath, "export_qc_fail/", toxval.db)
@@ -44,33 +47,32 @@ export.delete.qc_status.fail.by.source <- function(toxval.db, source, subsource)
   mat = mat %>%
     dplyr::group_split(source)
 
+  # Loop through each source in the list
   for(df in mat){
     source = unique(df$source)
     subsource = NULL
     if(source == "ECHA IUCLID"){
       subsource = unique(df$subsource)
     }
+
     out_file = paste0(outDir, "/qc_status_fail_",
                       source, "_", subsource, "_", toxval.db, ".xlsx") %>%
       gsub("__", "_", .)
 
-    # Decided to just overwrite, since it's supposed to be a refresh by source
-    # # Check if file exists
-    # # Edge case for sources like EFSA where postprocessing is rerun twice
-    # # without running the toxval.load that would clear it out of the database first
-    # if(file.exists(out_file)){
-    #   # Read in old log and append new records
-    #   df_old = readxl::read_xlsx(out_file)
-    #   df = df_old %>%
-    #     dplyr::bind_rows(df) %>%
-    #     dplyr::distinct()
-    #
-    #   # Check for duplicate source_hash entries
-    #   if(anyDuplicated(df$source_hash)){
-    #     stop("Duplicate source_hash values being logged for qc_status fail logs...")
-    #   }
-    # }
+    # Check if file exists
+    # Edge case for sources like EFSA where postprocessing is rerun twice
+    # without running the toxval.load that would clear it out of the database first
+    # Also cases with fix.dedup.hierarchy.by.source where duplicate records are "failed"
+    # after a source has finished loading.
+    if(file.exists(out_file)){
+      # Read in old log and append new records
+      df_old = readxl::read_xlsx(out_file)
+      df = df_old %>%
+        dplyr::bind_rows(df) %>%
+        dplyr::distinct()
+    }
 
+    # Export log of qc_status "fail" records that were deleted by source and subsource
     writexl::write_xlsx(df, out_file)
   }
 

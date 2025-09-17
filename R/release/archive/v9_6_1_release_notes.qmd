@@ -1,5 +1,5 @@
 ---
-title: "ToxValDB v9.6.2 Release Notes"
+title: "ToxValDB v9.6.1 Release Notes"
 author: Taylor Wall
 description: >
   The following are notes to accompany a release for ToxValDB.
@@ -35,7 +35,7 @@ toxval.db = toxval.config()$toxval.db
 source.db = toxval.config()$source.db
 
 # TODO Set desired database version
-toxval_version = "v9.6.2"
+toxval_version = "v9.6.1"
 
 # Load Comparison stats
 v_compare = paste0(toxval.config()$datapath, "release_files/version_comparison/",
@@ -104,8 +104,8 @@ if(length(ccd_batch)){
 
 # toxval_super_category coverage by source (count and proportion)
 n_supercategory = runQuery(paste0("select a.supersource, a.source, a.source_table, ",
-" b.toxval_type_supercategory from toxval a ",
-"left join toxval_type_dictionary b on a.toxval_type = b.toxval_type ",
+" b.toxval_type_supercategory from res_toxval_v96_1.toxval a ",
+"left join res_toxval_v96_1.toxval_type_dictionary b on a.toxval_type = b.toxval_type ",
 "where b.toxval_type_supercategory is not null"),
                            toxval.db) %>%
   dplyr::mutate(toxval_type_supercategory = dplyr::case_when(
@@ -125,7 +125,7 @@ n_source_supercategory = n_supercategory %>%
 
 # Overview
 
-The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly on FigShare (no account required) in this [FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501.v10). Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title. The data are also available publicly as a [Zenodo Dataset](https://zenodo.org/records/15527355).
+The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly on FigShare (no account required) in this [FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501). Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title.
 
 The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals `r n_chemicals_defined` from `r n_sources$n` sources (`r length(n_source_tables)` source tables).
 
@@ -210,23 +210,39 @@ for(i in seq_len(length(vc_stat_list))){
 
 Notable version differences:
 
--   v9.4 to v9.5
-    -   The scope of ToxValDB was reduced to not include ecologically focused records. Also, a number of sources were retired or updated and a major deduplication effort was undertaken. This contributed to the drop in unique chemicals (DTXSID), human relevant species (defined as having a harmonized common name of “rat”, “mouse”, “dog”, “rabbit”, or “human”), and overall records available in ToxValDB.
+-   Additional expert QC record reviews completed.
+-   Updated Cancer Summary table.
 
 # Data Source Highlights
 
 ## New Sources
 
--   EPA DCAP
-    -   Output from the U.S. EPA Database Calibrated Assessment Process.
-    -   1,001 Calibrated Toxicity Values (CTVs) records for 1,001 DTXSID mapped chemicals.
--   EPA ETAP
-    -   Manually curated records from the U.S. EPA Transcriptomic Assessment Process (ETAP).
-    -   Transcriptomic points of departure and transcriptomic-based reference values (TRVs).
+-   No new sources were added for this version.
 
 ## Updated Sources
 
--   No sources were updated for this version.
+-   Expert QC of a subset of 18 sources (\> 10,000 records).
+    -   ATSDR MRLs, ATSDR PFAS 2021, Cal OEHHA, ECHA IUCLID, ECOTOX, EPA HHTV, HAWC PFAS 150, HAWC PFAS 430, HAWC Project, HEAST, HESS, HPVIS, Health Canada, IRIS, NTP PFAS, PFAS 150 SEM v2, PPRTV (CPHEA), WHO JECFA Tox Studies
+-   ECHA IUCLID
+    -   Added 7 OHTs: Acute Toxicity Oral, Acute Toxicity Inhalation, Acute Toxicity Dermal, Acute Toxicity Other Routes, Repeated Dose Toxicity Inhalation, Repeated Dose Toxicity Dermal, Repeated Dose Toxicity Other.
+    -   Updated "quality" flag of "3 (not reliable)" to qc_status "fail: record removed due to quality score from source".
+-   NTP PFAS
+    -   Re-extraction for improved accuracy and deduplication of toxicological effect.
+-   HAWC PFAS 150 and 430
+    -   Deduplication of records only differing by toxval_numeric unit conversions (e.g., mg/m3 and ppm representations).
+        -   Prefer mg/m3 instead of ppm or mg/L.
+        -   Prefer mg/kg-day instead of mg/kg food, ug/mL, or ug/kg/day.
+        -   Prefer mg/kg-day instead of ppm.
+-   USGS HBSL
+    -   Updated subsource as "USEPA Benchmarks" if toxval_type is MCL or HHBP and "USGS Benchmarks" if toxval_type is HBSL.
+-   Cancer Summary Table
+    -   Updated cancer_summary table with updated sources with cancer calls:
+        -   [EPA FERA](https://www.epa.gov/fera/dose-response-assessment-assessing-health-risks-associated-exposure-hazardous-air-pollutants)
+        -   [EPA IRIS](https://iris.epa.gov/AtoZ/?list_type=alpha)
+        -   [EPA OPP](https://npic.orst.edu/chemicals_evaluated.pdf)
+        -   [EPA PPRTV](https://www.epa.gov/pprtv/provisional-peer-reviewed-toxicity-values-pprtvs-assessments)
+        -   [Health Canada](https://publications.gc.ca/collections/collection_2021/sc-hc/H129-108-2021-eng.pdf)
+        -   [IARC](https://monographs.iarc.who.int/list-of-classifications/)
 
 ## Renamed Sources
 
@@ -304,16 +320,33 @@ DT::datatable(src_version_date,
 
 ## Schema Changes
 
--   No schema changes were made for this version.
+-   toxval table "study_group" field type changed to "text" instead of "varchar(255)".
 
 ## Processing Changes
 
 -   Release notes autogenerated with R Quarto as of v9.6.0.
--   No processing changes were made for this version.
+-   Set final "population" and "media" fields to "-". The team decided these fields were not informative or consistent and will be removed in future releases.
+-   Filled in exposure_route "not specified" based on toxval_type_supercategory, toxval_type, and source. Affected sources: Health Canada, WHO JECFA Tox Studies, ToxRefDB, ECOTOX, PPRTV (CPHEA), ECHA IUCLID.
+-   Fixed subsource_url truncation. Affected sources: HAWC PFAS 150, HAWC PFAS 430, and HAWC Project sources.
+-   Updated strain and toxval_type dictionary for improved mappings and clarity.
+-   Simplified deduplication hierarchy ("\>" means "takes priority over") based on DTXSID. Records from a lower priority source that match the selected field(s) from a higher priority source are flagged as duplicates (e.g., records with the same DTXSID in TEST as ChemIDplus are flagged as duplicates since they are represented in the priority source).
+    -   IRIS \> HEAST
+    -   PFAS 150 SEM v2 \> HAWC PFAS 150
+    -   EPA OW NPDWR \> OW Drinking Water Standards
+    -   ChemIDplus \> TEST
+-   Set experimental_record as "not experimental" toxval_type_supercategory values of "Toxicity Value" and "Exposure Guidelines".
+-   Standardized experimental_record field to:
+    -   not experimental
+    -   experimental
+        -   clinical" recategorized here
+    -   undetermined
+        -   "not determined" recategorized here
+-   Updated toxval_subtype as "-" for DRSVs except for sources "ATSDR PFAS 2021", "PFAS 150 SEM v2", "ECHA IUCLID", "HPVIS", "DOE Wildlife Benchmarks", and "WHO JECFA Tox Studies".
+-   Removed qc_status "fail" records from ToxValDB. Instead, they are logged and included in reporting metrics.
+-   New process to export a list of dictionaries and files used throughout the ToxValDB workflow to provide as "GitHub Input Files" for release document.
 
 # Known Issues
 
--   Records from source EFSA OpenFoodTox where species common name is "Not specified" should be disregarded. Records from source EPA ETAP where species common name is listed as "Not specified" should be species "human" because this source provides human-relevant toxicity values. Records from source Health Canada with effect type ("toxval_type" field) values of "ADI", "cancer slope factor", "cancer unit risk", "TDI", and "tolerable concentration in air" can be mapped to species "human".
 -   Missing Regional Screening Level (RSL) data: a subset of chemicals with RSL values are missing from the CompTox Chemicals Dashboard (CCD) Executive Summary RSL Table and from the Hazard subtab.
 -   A subset of records is absent from all the included ECHA IUCLID subsources due to chemical mapping issues where the team elected to remove them entirely rather than potentially release records with inaccurate chemical identifiers.
 
@@ -688,15 +721,7 @@ toString(paste0(n_rec_supercategory$toxval_type_supercategory, " (",
 # Programmatically generate the tabset of tables with headers
 for(i in seq_len(length(dl_fig_list$plots))){
   cat('## ', names(dl_fig_list$plots)[i], '\n\n')
-  dl_plot = dl_fig_list$plots[[i]]
-  if("datatables" %in% class(dl_plot)){
-    # htmltools::renderTags for datatable
-    print(htmltools::tagList(dl_plot))
-  } else {
-    # Print to render ggplot
-    print(dl_plot)
-  }
-  
+  print(dl_fig_list$plots[[i]])
   cat('\n\n')
   cat(dl_fig_list$captions[[i]])
   cat('\n\n')
