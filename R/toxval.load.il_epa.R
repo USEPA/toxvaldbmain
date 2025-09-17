@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
+#' Load IL EPA source from toxval_source to toxval
 #'
-#' Loading IL EPA to toxval from toxval_source
 #' @param toxval.db The database version to use
 #' @param source.db The source database
 #' @param log If TRUE, send output to a log file
@@ -141,7 +141,6 @@ toxval.load.il_epa <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   refs = dplyr::distinct(refs)
   res$datestamp = Sys.Date()
   res$source_table = source_table
-  res$source_url = "https://epa.illinois.gov"
   res$details_text = paste(source,"Details")
   #for(i in 1:nrow(res)) res[i,"toxval_uuid"] = UUIDgenerate()
   #for(i in 1:nrow(refs)) refs[i,"record_source_uuid"] = UUIDgenerate()
