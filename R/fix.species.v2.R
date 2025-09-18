@@ -15,7 +15,8 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   printCurrentFunction()
   # Read species dictionary files
   file =paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
-  dict = openxlsx::read.xlsx(file)
+  dict = openxlsx::read.xlsx(file) %>%
+    dplyr::distinct()
   file = paste0(toxval.config()$datapath,"species/ecotox_species_synonyms_",date_string,".xlsx")
   synonyms = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/toxvaldb_extra_species_",date_string,".xlsx")
@@ -36,13 +37,26 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   dict2$subspecies = NA
   dict2$variety = NA
   dict2 = dict2[,names(dict)]
-  dict = rbind(dict,dict2)
+  dict = rbind(dict,dict2) %>%
+    dplyr::distinct()
   dict$latin_name = tolower(dict$latin_name)
   dict$common_name = tolower(dict$common_name)
   synonyms$latin_name = tolower(synonyms$latin_name)
   extra$common_name = tolower(extra$common_name)
   extra$latin_name = tolower(extra$latin_name)
   extra$species_original = tolower(extra$species_original)
+
+  if(anyNA(dict$species_id)){
+    stop("Input species dictionary entry has 'NA' for species_id...assign unique species_id value in file.")
+  }
+  # Push updated species dictionary
+  species_dict_old = runQuery("SELECT * FROM species", toxval.db)
+  missing_species = dict %>%
+    dplyr::filter(!species_id %in% species_dict_old$species_id)
+  # Append missing entries
+  if(nrow(missing_species)){
+    runInsertTable(missing_species, "species", toxval.db, do.halt=TRUE, verbose=TRUE)
+  }
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
@@ -202,10 +216,12 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "AND a.source='", source, "' ",
                  "AND qc_status not like '%fail%' ",
                  # Ignore known/expected missing
-                 "AND a.species_original not in ('-', 'not reported', 'unspecified', 'nr', 'unknown', 'Not specified', 'not specified') ",
+                 "AND a.species_original not in ('-', 'not reported', 'unspecified', 'nr', 'unknown', ",
+                 "'Not specified', 'not specified', 'na') ",
                  query_addition %>% gsub("subsource", "a.subsource", .)
                  )
-  not_specified = runQuery(query, toxval.db)
+  not_specified = runQuery(query, toxval.db) %>%
+    dplyr::filter(!common_name %in% c("Not specified"))
 
   if(nrow(not_specified)) {
     out_file = paste0(toxval.config()$datapath, "dictionary/missing/missing_", source, "_", subsource, "_species.xlsx") %>%
