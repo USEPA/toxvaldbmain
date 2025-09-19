@@ -179,6 +179,18 @@ toxval.load.postprocess <- function(toxval.db,
                  "AND a.source='", source, "'", query_addition %>% gsub("subsource", "a.subsource", .))
   runQuery(query, toxval.db)
 
+  # Log missing supercategory
+  missing_supercategory = paste0("SELECT distinct source, toxval_type_original, toxval_type FROM toxval WHERE ",
+                                 "toxval_type NOT IN (SELECT distinct toxval_type FROM toxval_type_dictionary)",
+                                 "AND source='", source, "'", query_addition) %>%
+    runQuery(query=., db=toxval.db)
+  # Log missing for review
+  if(nrow(missing_supercategory)){
+    writexl::write_xlsx(missing_supercategory,
+                        paste0(toxval.config()$datapath, "dictionary/missing/missing_toxval_type_supercategory_", source, "_", subsource, ".xlsx") %>%
+                          gsub("_.xlsx", ".xlsx", ., fixed = TRUE))
+  }
+
   #####################################################################
   cat("add the manual study_type fixes\n")
   #####################################################################

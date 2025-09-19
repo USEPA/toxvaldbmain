@@ -89,17 +89,16 @@ toxval.load.all <- function(toxval.db,
     toxval.load.who_ipcs(toxval.db, source.db, log)
     toxval.load.who_jecfa_adi(toxval.db, source.db, log)
     toxval.load.who_jecfa_tox_studies(toxval.db, source.db, log)
-    
+
     toxval.load.epa_dcap(toxval.db, source.db, log)
     toxval.load.epa_etap(toxval.db, source.db, log)
-    
-    toxval.load.epa_ncel(toxval.db, source.db, log)
-    toxval.load.epa_ecel(toxval.db, source.db, log)
-    toxval.load.il_epa(toxval.db, source.db, log)
-    toxval.load.echa_rac_oel(toxval.db, source.db, log)
+
+    toxval.load.au_dwg(toxval.db, source.db, log)
     toxval.load.caloehha_rel_derivations(toxval.db, source.db, log)
-    toxval.load.epa_tsca_8e(toxval.db, source.db, log)
+    toxval.load.echa_rac_oel(toxval.db, source.db, log)
+    toxval.load.epa_hwir(toxval.db, source.db, log)
     toxval.load.eu_scoel(toxval.db, source.db, log)
+    toxval.load.il_epa(toxval.db, source.db, log)
     toxval.load.mass_orsg(toxval.db, source.db, log)
     toxval.load.mn_mdh_hhbw(toxval.db, source.db, log)
     toxval.load.niosh_idlh(toxval.db, source.db, log)
@@ -107,6 +106,11 @@ toxval.load.all <- function(toxval.db,
     toxval.load.tx_tceq(toxval.db, source.db, log)
     toxval.load.vt_vdh_dwg(toxval.db, source.db, log)
     toxval.load.who_dwg(toxval.db, source.db, log)
+    toxval.load.epa_ncel(toxval.db, source.db, log)
+    toxval.load.epa_ecel(toxval.db, source.db, log)
+    toxval.load.epa_hawc(toxval.db, source.db, log)
+    toxval.load.epa_tsca_8e(toxval.db, source.db, log)
+
   }
 
   if(do.post) {

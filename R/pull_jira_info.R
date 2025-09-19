@@ -88,7 +88,8 @@ pull_jira_info <- function(jira_project="TOXVAL", in_file = NULL, auth_token = N
                      by = "Issue key")
 
   qc_files <- ticket_attachment_metadata %>%
-    dplyr::filter(file_ext %in% c("xlsx"))
+    dplyr::filter(file_ext %in% c("xlsx"),
+                  !is.na(jira_link))
 
   res <- data.frame()
   for(i in seq_len(nrow(qc_files))){

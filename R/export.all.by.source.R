@@ -181,6 +181,41 @@ export.all.by.source <- function(toxval.db, source=NULL, subsource=NULL, include
         dplyr::select(-QC_STATUS)
     }
 
+    # Map toxicological_effect_category
+    crit_cat_map = runQuery(paste0("SELECT source_hash, toxicological_effect_category ",
+                                   "FROM toxicological_effect_terms ",
+                                   "WHERE source_hash IN ('",
+                                   paste0(mat_toxval$SOURCE_HASH, collapse = "', '"), "')"),
+                            toxval.db) %>%
+      dplyr::group_by(source_hash) %>%
+      dplyr::mutate(toxicological_effect_category = paste0(sort(unique(toxicological_effect_category)),
+                                                           collapse = "|") %>%
+                      # Remove none from cases where there are other categories
+                      gsub("|none", "", ., fixed = TRUE) %>%
+                      gsub("none|", "", ., fixed = TRUE)) %>%
+      dplyr::ungroup() %>%
+      distinct() %>%
+      dplyr::rename(TOXICOLOGICAL_EFFECT_CATEGORY = toxicological_effect_category,
+                    SOURCE_HASH = source_hash)
+
+    if(nrow(crit_cat_map)){
+      # Map by source_hash
+      mat_toxval = mat_toxval %>%
+        dplyr::left_join(crit_cat_map,
+                         by = "SOURCE_HASH") %>%
+        dplyr::mutate(TOXICOLOGICAL_EFFECT_CATEGORY = TOXICOLOGICAL_EFFECT_CATEGORY %>%
+                        tidyr::replace_na("-"))
+    } else {
+      mat_toxval$TOXICOLOGICAL_EFFECT_CATEGORY = "-"
+    }
+
+    mat_toxval = mat_toxval %>%
+      # Move category next to term
+      dplyr::relocate(TOXICOLOGICAL_EFFECT_CATEGORY, .after = ifelse(use_critical_effect_name,
+                                                                     "CRITICAL_EFFECT",
+                                                                     "TOXICOLOGICAL_EFFECT"
+      ))
+
     cat(src, nrow(mat_toxval),"\n")
     file = paste0(dir,"/toxval_all_",toxval.db,"_",src, " ", subsource, ".xlsx") %>%
       gsub(" \\.xlsx", ".xlsx", .)
