@@ -152,6 +152,18 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   fix.all.param.by.source(toxval.db,source,subsource,fill.toxval_fix=TRUE)
 
+  # Species set to human for toxval_type_supercategory 'Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'
+  # Performed in fix.species.v2 to prevent reporting "Not Specified" prematurely
+  # Placed after toxval_type mapping for supercategory matching purposes
+  # Get species_id for 'Human'
+  human_id = runQuery("SELECT DISTINCT species_id FROM species WHERE common_name='Human'", toxval.db)[[1]]
+  query = paste0(
+    "UPDATE toxval SET species_id = ", human_id, " ",
+    "WHERE toxval_type IN (SELECT toxval_type FROM toxval_type_dictionary ",
+    "WHERE toxval_type_supercategory IN ('Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'))"
+  )
+  runQuery(query, toxval.db)
+
   fix.exposure_route.not_specified.by.source(toxval.db, source, subsource)
 
   #####################################################################

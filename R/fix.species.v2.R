@@ -186,6 +186,14 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "AND (toxval_type LIKE 'AEGL%' OR toxval_type_original LIKE 'AEGL%')")
   runQuery(query, toxval.db)
 
+  # Species set to human for toxval_type_supercategory 'Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'
+  query = paste0(
+    "UPDATE toxval SET species_id = ", human_id, " ",
+    "WHERE toxval_type IN (SELECT toxval_type FROM toxval_type_dictionary ",
+    "WHERE toxval_type_supercategory IN ('Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'))"
+  )
+  runQuery(query, toxval.db)
+
   # QC fail entries with out of scope species
   out_of_scope = readxl::read_xlsx(paste0(toxval.config()$datapath, "species/out_of_scope_species_ToxValDB.xlsx")) %>%
     dplyr::pull(common_name) %>%
@@ -210,7 +218,7 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   cat("generate export for entries with 'Not Specified' species\n")
   #####################################################################
   query = paste0("SELECT b.species_id, a.source, a.source_hash, a.species_original, b.common_name, ",
-                 "a.toxval_type_original, a.study_type_original ",
+                 "a.toxval_type_original, a.toxval_type, a.study_type_original ",
                  "FROM toxval a INNER JOIN species b ON a.species_id=b.species_id ",
                  "WHERE b.common_name LIKE '%Not Specified%' ",
                  "AND a.source='", source, "' ",
