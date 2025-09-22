@@ -89,10 +89,11 @@ toxval.load.all <- function(toxval.db,
     toxval.load.who_ipcs(toxval.db, source.db, log)
     toxval.load.who_jecfa_adi(toxval.db, source.db, log)
     toxval.load.who_jecfa_tox_studies(toxval.db, source.db, log)
-
+    # v9.6.2 New Sources
     toxval.load.epa_dcap(toxval.db, source.db, log)
     toxval.load.epa_etap(toxval.db, source.db, log)
 
+    # v9.7.0 New Sources
     toxval.load.au_dwg(toxval.db, source.db, log)
     toxval.load.caloehha_rel_derivations(toxval.db, source.db, log)
     toxval.load.echa_rac_oel(toxval.db, source.db, log)

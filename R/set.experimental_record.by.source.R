@@ -67,11 +67,12 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
     dplyr::filter(compare == TRUE) %>%
     dplyr::select(-compare)
 
-  res %>%
-    dplyr::group_by(source, experimental_record, new_experimental_tag) %>%
-    dplyr::summarise(n=dplyr::n()) %>%
-    dplyr::ungroup() %>%
-    View()
+  # View summary
+  # res %>%
+  #   dplyr::group_by(source, experimental_record, new_experimental_tag) %>%
+  #   dplyr::summarise(n=dplyr::n()) %>%
+  #   dplyr::ungroup() %>%
+  #   View()
 
   # User review comparison and decide if changes are acceptable
   # browser()
