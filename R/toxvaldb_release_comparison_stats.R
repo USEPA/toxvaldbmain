@@ -20,11 +20,11 @@ toxvaldb_release_comparison_stats <- function(repoDir){
     v9.5 = c("res_toxval_v95", Sys.getenv("db_server")),
     v9.4 = c("res_toxval_v94", Sys.getenv("db_server")),
     v9.3 = c("res_toxval_v93", Sys.getenv("db_server")),
-    v9.2 = c("res_toxval_v92", Sys.getenv("db_server")),
-    v9.1.1 = c("dev_toxval_v9_1_1", Sys.getenv("db_server")),
-    v9.1 = c("dev_toxval_v9_1", Sys.getenv("db_server")),
-    v9 = c("dev_toxval_v9", Sys.getenv("db_server")),
-    v8 = c("dev_toxval_v8", Sys.getenv("db_server"))
+    v9.2 = c("res_toxval_v92", Sys.getenv("db_server")) #,
+    # v9.1.1 = c("dev_toxval_v9_1_1", Sys.getenv("db_server")),
+    # v9.1 = c("dev_toxval_v9_1", Sys.getenv("db_server")),
+    # v9 = c("dev_toxval_v9", Sys.getenv("db_server")),
+    # v8 = c("dev_toxval_v8", Sys.getenv("db_server"))
   )
 
   # Loop through versions and com
