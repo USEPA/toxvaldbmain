@@ -194,6 +194,15 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   )
   runQuery(query, toxval.db)
 
+  # Get species_id for 'zebrafish'
+  zebrafish_id = runQuery("SELECT DISTINCT species_id FROM species WHERE common_name='Zebra Danio'", toxval.db)[[1]]
+  # Fix case where zebrafish is specified in the strain field
+  query = paste0(
+    "UPDATE toxval SET species_id = ", zebrafish_id, " ",
+    "WHERE species_original like '%zebrafish%' or strain_original like '%zebrafish%'"
+  )
+  runQuery(query, toxval.db)
+
   # QC fail entries with out of scope species
   out_of_scope = readxl::read_xlsx(paste0(toxval.config()$datapath, "species/out_of_scope_species_ToxValDB.xlsx")) %>%
     dplyr::pull(common_name) %>%
@@ -205,9 +214,11 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "WHEN a.qc_status LIKE '%fail%' THEN CONCAT(a.qc_status, '; species out of scope') ",
                  "ELSE 'fail: species out of scope' ",
                  "END ",
-                 "WHERE b.common_name IN ('", out_of_scope, "') or ",
-                 "a.species_original IN ('", out_of_scope, "') ",
-                 "AND a.source='", source, "'",
+                 "WHERE (b.common_name IN ('", out_of_scope, "') OR ",
+                 "a.species_original IN ('", out_of_scope, "')) AND ",
+                 # Zebrafish are in scope, not to be excluded due to "fish"
+                 "b.common_name NOT IN ('Zebra Danio') AND ",
+                 "a.source='", source, "'",
                  query_addition %>% gsub("subsource", "a.subsource", .))
   runQuery(query, toxval.db)
 

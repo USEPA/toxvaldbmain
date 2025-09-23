@@ -117,7 +117,7 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; Ambiguous toxval_units') ",
                     "ELSE 'fail:Ambiguous toxval_units'",
                     "END ",
-                    "WHERE (toxval_units_original in ('g/kg', 'ug/mg/kg') OR toxval_units in ('g/kg', 'ug/mg/kg')) and source = '",
+                    "WHERE (toxval_units_original in ('ug/mg/kg') OR toxval_units in ('ug/mg/kg')) and source = '",
                     source,"'",query_addition) ,toxval.db)
 
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
