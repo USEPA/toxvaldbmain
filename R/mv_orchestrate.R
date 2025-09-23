@@ -193,7 +193,9 @@ mv_orchestrate <- function(toxval.db, include.qc.status = FALSE){
     # Auto generate the query of data to insert into the empty materialized view table
     mv_query = switch(mv_name,
                       "mv_toxvaldb" = {
-                        tmp = paste0("SELECT ",
+                        field_def = field_def %>%
+                          dplyr::filter(!db_table %in% c("toxicological_effect_terms"))
+                        tmp = paste0("SELECT DISTINCT ",
                                      paste0(field_def$db_table, "..", field_def$db_field_name, " as ", field_def$field_name, collapse = ", "),
                                      " FROM ", mv_db, ".toxval b ",
                                      "LEFT JOIN ", mv_db, ".source_chemical a on a.chemical_id=b.chemical_id ",
@@ -229,6 +231,57 @@ mv_orchestrate <- function(toxval.db, include.qc.status = FALSE){
                     "(", paste0(field_def$field_name, collapse = ", "), ") ",
                     mv_query),
              toxval.db)
+
+    # Map toxicological_effect_category in "mv_toxvaldb"
+    if(mv_name == "mv_toxvaldb"){
+      runQuery("ALTER TABLE mv_toxvaldb ADD CONSTRAINT mv_toxvaldb_source_hash_unique UNIQUE KEY (source_hash)",
+               toxval.db)
+      # Map toxicological_effect_category
+      crit_cat_map = runQuery(paste0("SELECT source_hash, toxicological_effect_category ",
+                                     "FROM toxicological_effect_terms ",
+                                     "WHERE source_hash IN (SELECT source_hash FROM toxval)"),
+                              toxval.db) %>%
+        dplyr::group_by(source_hash) %>%
+        dplyr::mutate(toxicological_effect_category = paste0(sort(unique(toxicological_effect_category)),
+                                                             collapse = "|") %>%
+                        # Remove none from cases where there are other categories
+                        gsub("|none", "", ., fixed = TRUE) %>%
+                        gsub("none|", "", ., fixed = TRUE)) %>%
+        dplyr::ungroup() %>%
+        distinct()
+
+      if(nrow(crit_cat_map)){
+        ##############################################################################
+        ### Batch Update
+        ##############################################################################
+        batch_size <- 50000
+        startPosition <- 1
+        endPosition <- nrow(crit_cat_map)
+        incrementPosition <- batch_size
+
+        while(startPosition <= endPosition){
+          if(incrementPosition > endPosition) incrementPosition = endPosition
+          message("...Inserting new data in batch: ", batch_size, " startPosition: ", startPosition," : incrementPosition: ", incrementPosition,
+                  " (",round((incrementPosition/endPosition)*100, 3), "%)", " at: ", Sys.time())
+
+          update_query <- paste0("UPDATE mv_toxvaldb a ",
+                                 "INNER JOIN z_updated_df b ",
+                                 "ON (a.source_hash = b.source_hash) ",
+                                 "SET a.toxicological_effect_category = b.toxicological_effect_category ",
+                                 "WHERE a.source_hash in ('", paste0(crit_cat_map$source_hash[startPosition:incrementPosition], collapse = "', '"),
+                                 "')")
+
+          runUpdate(table="mv_toxvaldb",
+                    updateQuery = update_query,
+                    updated_df = crit_cat_map[startPosition:incrementPosition,],
+                    db=toxval.db)
+
+          startPosition <- startPosition + batch_size
+          incrementPosition <- startPosition + batch_size - 1
+        }
+      }
+    }
+
     message("Done -- ", Sys.time())
     cat("\n")
   }

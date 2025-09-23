@@ -8,6 +8,7 @@ get.toxval_source.tbl.list <- function(toxval.db, source.db){
   # Get live source table list from toxval
   toxval_src_tblList = runQuery("SELECT distinct source_table FROM toxval",
                                 db = toxval.db) %>%
+    dplyr::filter(!source_table %in% c("direct load")) %>%
     dplyr::pull(source_table)
 
   # Get full list of tables in source database
