@@ -6,7 +6,7 @@
 #' @export
 #' @return Overwrite existing source info dictionary with updated fields
 #'
-export.update.source.info <- function(toxval.db, source.db, dict_date = "2024-08-28"){
+export.update.source.info <- function(toxval.db, source.db, dict_date = "2025-05-29"){
 
   # Load source info dictionary
   file = paste0(toxval.config()$datapath,"dictionary/source_info ", dict_date, ".xlsx")
@@ -36,7 +36,24 @@ export.update.source.info <- function(toxval.db, source.db, dict_date = "2024-08
 
     # Query and format date
     tmp = runQuery(query, db) %>%
-      dplyr::mutate(source_version_date = format(as.Date(source_version_date, format="%Y-%m-%d"),"%Y"))
+      dplyr::mutate(source_version_date = format(as.Date(source_version_date, format="%Y-%m-%d"),"%Y")) %>%
+      dplyr::filter(!source_version_date %in% c("0000-00-00"))
+
+    t_version = switch(src_tbl,
+                       "ToxRefDB" = "2024-04-11",
+                       "ChemIDplus" = "2022-10-19",
+                       "Uterotrophic Hershberger DB" = "2018-10-01",
+                       "ECOTOX" = "2024-09-19",
+                       NA
+    )
+
+    if(!is.na(t_version)){
+      t_version = t_version %>%
+        as.Date(., format="%Y-%m-%d") %>%
+        format("%Y")
+    } else {
+      t_version = toString(sort(unique(tmp$source_version_date)))
+    }
 
     # Summarize
     data.frame(
@@ -47,7 +64,7 @@ export.update.source.info <- function(toxval.db, source.db, dict_date = "2024-08
       # Number of chemicals
       chemicals = length(unique(tmp$chemical_id)),
       # Source year
-      source_year = as.numeric(unique(tmp$source_version_date))
+      source_year = t_version
     ) %>%
       return()
   }) %>%

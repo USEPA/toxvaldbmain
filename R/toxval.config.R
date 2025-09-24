@@ -46,7 +46,9 @@ toxval.config <- function() {
     "HEAST" = "IRIS",
     "HAWC PFAS 150" = "PFAS 150 SEM v2",
     "OW Drinking Water Standards" = "EPA OW NPDWR",
-    "TEST" = "ChemIDplus"
+    "TEST" = "ChemIDplus",
+    "NIOSH IDLH" = "NIOSH",
+    "Cal OEHHA REL derivations" = "Cal OEHHA"
   )
 
   # Return configuration variables

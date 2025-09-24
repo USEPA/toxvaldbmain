@@ -1,7 +1,7 @@
 # toxvaldbmain
 
 # Background
-ToxValDB is a large compilation of in vivo toxicology data and risk assessment values. The database originated in response to the need for consistently annotated and computable toxicology data for use in the development and validation of non-animal new approach methods (NAMs). The database has two major components. The first, ToxValDB Stage contains data that closely match data from each source, in both structure and terminology. The second (the main ToxValDB database) maps all source data to a consistent structure and set of vocabularies. The current version of the database (9.6.2) contains 243,155 records covering 41,772 chemicals (34,644 with defined chemical structure) from 38 sources (57 source tables).
+ToxValDB is a large compilation of in vivo toxicology data and risk assessment values. The database originated in response to the need for consistently annotated and computable toxicology data for use in the development and validation of non-animal new approach methods (NAMs). The database has two major components. The first, ToxValDB Stage contains data that closely match data from each source, in both structure and terminology. The second (the main ToxValDB database) maps all source data to a consistent structure and set of vocabularies. The current version of the database (9.7.0) contains 249,071 records covering 41,855 chemicals (27,068 with defined chemical structure) from 51 sources (74 source tables).
 
 # Repository Content
 This repository contains the R scripts used to generate the "Main" database for ToxValDB. Note, the code provided is for publication transparency sake only. Users are not meant to run the code and reproduce the database themselves. The generation of the database is a semi-automated process, so it is not possible to completely reproduce the database from running the provided code alone. Please access the complete database data from the links provided below.
@@ -12,10 +12,10 @@ This repository contains the R scripts used to generate the "Main" database for 
 - [US EPA FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501)
 	- Versioned releases of ToxValDB in XLSX and MySQL dump file format with associated documentation
 	- Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title.
-	- Version v9.6.2 was also released as a [Zenodo Dataset](https://zenodo.org/records/15527355)
+	- Version v9.7.0 was also released as a [Zenodo Dataset](https://zenodo.org/records/17088058)
 
 # Repository Links
-- [toxvaldbstage](https://github.com/usepa/toxval_stage)
+- [toxvaldbstage](https://github.com/usepa/toxvaldbstage)
 - [toxvaldbmain](https://github.com/usepa/toxvaldbmain/)
 
 # Contribute to ToxValDB

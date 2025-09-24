@@ -25,17 +25,19 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
     dplyr::select(source, source_url, toxval_type, species_original, new_experimental_tag = experimental)
 
   # Normalized experimental record entries
-  runQuery("UPDATE toxval SET experimental_record = 'not experimental' WHERE experimental_record = 'No'",
+  runQuery(paste0("UPDATE toxval SET experimental_record = 'not experimental' ",
+                  "WHERE experimental_record in ('No', 'epidemiological')"),
            toxval.db)
-  runQuery("UPDATE toxval SET experimental_record = 'experimental' WHERE experimental_record = 'Yes'",
+  runQuery(paste0("UPDATE toxval SET experimental_record = 'experimental' ",
+                  "WHERE experimental_record in ('Yes', 'clinical')"),
            toxval.db)
-  runQuery("UPDATE toxval SET experimental_record = 'undetermined' WHERE experimental_record = 'Undetermined'",
+  runQuery(paste0("UPDATE toxval SET experimental_record = 'undetermined' ",
+                  "WHERE experimental_record in ('Undetermined', '-', 'not determined', '?', ",
+                  "'Unable to identify a specific study', 'other', 'unclear'",
+                  ")"),
            toxval.db)
-  runQuery("UPDATE toxval SET experimental_record = 'undetermined' WHERE experimental_record = '-'",
-           toxval.db)
-  runQuery("UPDATE toxval SET experimental_record = 'undetermined' WHERE experimental_record = 'not determined'",
-           toxval.db)
-  runQuery("UPDATE toxval SET experimental_record = 'experimental' WHERE experimental_record = 'clinical'",
+  runQuery(paste0("UPDATE toxval SET experimental_record = 'undetermined' ",
+                  "WHERE experimental_record like '%unknown%'"),
            toxval.db)
 
   # Pull records to assign
@@ -65,11 +67,12 @@ set.experimental_record.by.source <- function(toxval.db, source=NULL){
     dplyr::filter(compare == TRUE) %>%
     dplyr::select(-compare)
 
-  res %>%
-    dplyr::group_by(source, experimental_record, new_experimental_tag) %>%
-    dplyr::summarise(n=dplyr::n()) %>%
-    dplyr::ungroup() %>%
-    View()
+  # View summary
+  # res %>%
+  #   dplyr::group_by(source, experimental_record, new_experimental_tag) %>%
+  #   dplyr::summarise(n=dplyr::n()) %>%
+  #   dplyr::ungroup() %>%
+  #   View()
 
   # User review comparison and decide if changes are acceptable
   # browser()

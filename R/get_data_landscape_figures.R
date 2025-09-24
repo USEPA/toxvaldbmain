@@ -747,6 +747,53 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
       borderBottomWidth = "1px"
     )
 
+  # toxicological_effect_category summary
+  # Pull all toxval data
+  toxval_data = runQuery(paste0("SELECT source_hash, study_type, exposure_route, source FROM toxval ",
+                            "WHERE toxval_type in (SELECT toxval_type FROM toxval_type_dictionary WHERE ",
+                            "toxval_type_supercategory in ('Dose Response Summary Value', 'Mortality Response Summary Value'))"),
+                     toxval.db)
+
+  toxicological_eff_cat = runQuery(paste0("SELECT source_hash, toxicological_effect_category ",
+                                          "FROM toxicological_effect_terms"),
+                                   toxval.db) %>%
+    dplyr::filter(source_hash %in% toxval_data$source_hash) %>%
+    dplyr::left_join(toxval_data, by = "source_hash") %>%
+    # dplyr::count(study_type, toxicological_effect_category) %>%
+    dplyr::filter(study_type %in% c("short-term", "subchronic", "chronic"))
+
+  # Consistent palette colors across plots
+  # https://stackoverflow.com/questions/53506536/need-specific-coloring-in-ggplot2-with-viridis
+  # Named vector of colors by source_name, add "Other"
+  tox_eff_cat_fill_pal <- viridisLite::viridis(length(unique(toxicological_eff_cat$toxicological_effect_category)),
+                                               option = "H") %T>%
+    { names(.) <- unique(toxicological_eff_cat$toxicological_effect_category) }
+
+  dl_fig_list[["Record Count by Study Type Toxicological Effect Category"]] =
+    toxicological_eff_cat %>%
+    ggplot2::ggplot(ggplot2::aes(study_type,
+                                 fill=toxicological_effect_category,
+                                 label=toxicological_effect_category)) +
+    ggplot2::geom_bar() +
+    ggplot2::theme_minimal(base_size = global_font_size) +
+    # ggplot2::theme(text = ggplot2::element_text(size = 14)) +
+    ggplot2::guides(fill=ggplot2::guide_legend(ncol=2)) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle=45,
+                                                       vjust=1,
+                                                       hjust=1,
+                                                       size=global_font_size),
+                   axis.text.y = ggplot2::element_text(size = global_font_size),
+                   text = ggplot2::element_text(size = global_font_size)) +
+    ggplot2::labs(x = "Study Type",
+                  y = "Record Count",
+                  fill = "Toxicological Effect Category") +
+    ggplot2::scale_fill_manual(values=tox_eff_cat_fill_pal, drop=TRUE) +
+    # ggplot2::scale_fill_viridis_d(option="H") +
+    # ggplot2::scale_fill_manual(values=unname(pals::trubetskoy())) +
+    # ggplot2::scale_fill_manual(values = dichromat::dichromat(viridisLite::turbo(12), type = "protan")) +
+    ggplot2::scale_y_continuous(label = scales::comma)
+
+################################################################################
   if(save_png){
     for(fig in names(dl_fig_list)){
       message("Saving figure '", fig, "' (", which(fig == names(dl_fig_list)), " of ", length(names(dl_fig_list)), ")")
@@ -807,6 +854,9 @@ get_data_landscape_figures <- function(toxval.db, save_png=FALSE){
       "Summary of available values for each source by Effect Type Supercategory",
       " and Risk Assessment Class. Source name cell color corresponds to source type association ",
       "(green = state agency; blue = federal; orange = international; yellow = other/non-governmental)."
+    ),
+    `Record Count by Study Type Toxicological Effect Category` = paste0(
+      "Summary of records with Toxicological Effect Category assignments by study type. Note, a single record can have multiple category assignments due to having multiple toxicological effect terms."
     )
   )
 

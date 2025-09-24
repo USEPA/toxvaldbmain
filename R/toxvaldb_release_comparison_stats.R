@@ -13,17 +13,18 @@ toxvaldb_release_comparison_stats <- function(repoDir){
   # paste0("b.common_name REGEXP '\\b", ., "\\b'", collapse = " OR ")
 
   toxvaldb_list = list(
+    v9.7.0 = c("res_toxval_v97_0", Sys.getenv("db_server")),
     v9.6.2 = c("res_toxval_v96_2", Sys.getenv("db_server")),
     v9.6.1 = c("res_toxval_v96_1", Sys.getenv("db_server")),
     v9.6.0 = c("res_toxval_v96_0", Sys.getenv("db_server")),
     v9.5 = c("res_toxval_v95", Sys.getenv("db_server")),
     v9.4 = c("res_toxval_v94", Sys.getenv("db_server")),
     v9.3 = c("res_toxval_v93", Sys.getenv("db_server")),
-    v9.2 = c("res_toxval_v92", Sys.getenv("db_server")),
-    v9.1.1 = c("dev_toxval_v9_1_1", Sys.getenv("db_server")),
-    v9.1 = c("dev_toxval_v9_1", Sys.getenv("db_server")),
-    v9 = c("dev_toxval_v9", Sys.getenv("db_server")),
-    v8 = c("dev_toxval_v8", Sys.getenv("db_server"))
+    v9.2 = c("res_toxval_v92", Sys.getenv("db_server")) #,
+    # v9.1.1 = c("dev_toxval_v9_1_1", Sys.getenv("db_server")),
+    # v9.1 = c("dev_toxval_v9_1", Sys.getenv("db_server")),
+    # v9 = c("dev_toxval_v9", Sys.getenv("db_server")),
+    # v8 = c("dev_toxval_v8", Sys.getenv("db_server"))
   )
 
   # Loop through versions and com

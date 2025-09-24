@@ -1,10 +1,10 @@
 ---
-title: "ToxValDB v9.6.2 Release Notes"
+title: "ToxValDB v9.7.0 Release Notes"
 author: Taylor Wall
 description: >
   The following are notes to accompany a release for ToxValDB.
 resource_files:
-- images/tovaldb_workflow.jpg
+- images/tovaldb_workflow.png
 format: 
   html:
     toc: TRUE
@@ -35,7 +35,7 @@ toxval.db = toxval.config()$toxval.db
 source.db = toxval.config()$source.db
 
 # TODO Set desired database version
-toxval_version = "v9.6.2"
+toxval_version = "v9.7.0"
 
 # Load Comparison stats
 v_compare = paste0(toxval.config()$datapath, "release_files/version_comparison/",
@@ -80,7 +80,6 @@ field_dictionary = lapply(field_dictionary_list,
                             }
 
 # Get defined chemical structure count
-
 ccd_batch = list.files(paste0(toxval.config()$datapath, "release_files/",
                               toxval_version %>% gsub("\\.", "_", .), "/dtxsid_batch_search"), 
                        pattern = "CCD-Batch-Search_2025", 
@@ -93,6 +92,7 @@ if(length(ccd_batch)){
     dplyr::bind_rows() %>%
     dplyr::filter(!is.na(QSAR_READY_SMILES)) %>%
     dplyr::pull(DTXSID) %>%
+    unique() %>%
     length()
   
     n_chemicals_defined = paste0("(", 
@@ -125,7 +125,7 @@ n_source_supercategory = n_supercategory %>%
 
 # Overview
 
-The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly on FigShare (no account required) in this [FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501.v10). Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title. The data are also available publicly as a [Zenodo Dataset](https://zenodo.org/records/15527355).
+The Toxicity Values Database (ToxValDB) contains summary data on *in vivo* toxicology experiments and assessments. This release note seeks to describe the process for creating ToxValDB and highlight recent changes that the user can expect in the annual release of this resource. Summary files and the full MySQL database download are available publicly on FigShare (no account required) in this [FigShare Dataset](https://doi.org/10.23645/epacomptox.20394501.v10). Note, the FigShare DOI link will land on the most recent version of the FigShare posting. Use the version dropdown menu to navigate to the desired release version based on the dataset title. The data are also available publicly as a [Zenodo Dataset](https://zenodo.org/records/17088058). For a detailed description of database development, see [Wall et al. 2025](https://doi.org/10.1016/j.comtox.2025.100365).
 
 The ToxValDB `r toxval_version` contains `r format(n_records$n, big.mark=",")` records covering `r format(n_chemicals$n, big.mark=",")` chemicals `r n_chemicals_defined` from `r n_sources$n` sources (`r length(n_source_tables)` source tables).
 
@@ -160,7 +160,7 @@ An important part of both "toxval_source" and "toxval" databases is making sure 
 With a few exceptions, the complete workflow is carried out using code in an R package. Originally derived from the toxvaldb92 R package, the package is now split into two to reflect the separate "import" and "load" processes. The names have been changed to "[toxvaldbstage](https://github.com/USEPA/toxvaldbstage)" (import) and "[toxvaldbmain](https://github.com/USEPA/toxvaldbmain)" (load), respectively. Both are accessible on the USEPA GitHub.
 
 ::: {#fig-toxvaldbworkflow2 fig-alt="Overall dataflow for the construction of ToxValDB." fig-align="center"}
-![Overall dataflow for the construction of ToxValDB.](images/toxvaldb_workflow.jpg)
+![Overall dataflow for the construction of ToxValDB.](images/toxvaldb_workflow.png)
 :::
 
 # Version Comparison
@@ -217,12 +217,40 @@ Notable version differences:
 
 ## New Sources
 
--   EPA DCAP
-    -   Output from the U.S. EPA Database Calibrated Assessment Process.
-    -   1,001 Calibrated Toxicity Values (CTVs) records for 1,001 DTXSID mapped chemicals.
--   EPA ETAP
-    -   Manually curated records from the U.S. EPA Transcriptomic Assessment Process (ETAP).
-    -   Transcriptomic points of departure and transcriptomic-based reference values (TRVs).
+```{r}
+#| label: "tbl-new-sources-desc"
+#| echo: FALSE
+#| tbl-cap: !expr 'paste0("New Sources included in ToxValDB ", toxval_version)'
+
+new_src_desc = readxl::read_xlsx(paste0(toxval.config()$datapath, 
+                                       "/release_files/v9_7_0/new source tables_20250909.xlsx"))
+
+new_src_rec_count = runQuery(paste0("SELECT source_table, count(*) as 'Record Count' ",
+                                    "FROM toxval ",
+                                    "WHERE source_table in ('", 
+                                    paste0(new_src_desc$source_table, collapse = "', '"), 
+                                    "') GROUP BY source"),
+                             toxval.db)
+
+new_src_desc = new_src_desc %>%
+  dplyr::left_join(new_src_rec_count,
+                   by = "source_table") %>%
+  dplyr::select(-source_table) %>%
+  dplyr::relocate(`Record Count`, .after=`Included ToxVal Type(s)`)
+
+DT::datatable(new_src_desc, 
+              options = list(
+                scrollX = TRUE,
+                columnDefs = list(list(className = 'dt-left',
+                                       targets = 0:(length(new_src_desc))
+                                       )
+                                  )
+                ),
+              # rownames = FALSE,
+              # Render HTML
+              escape = FALSE
+              )
+```
 
 ## Updated Sources
 
@@ -266,13 +294,14 @@ src_version_date = lapply(seq_len(nrow(tbl_list)), function(i){
   } else {
     t_version = runQuery(paste0("SELECT distinct source_version_date FROM ", t_name),
                          source.db) %>%
+      dplyr::filter(!source_version_date %in% c("0000-00-00")) %>%
       dplyr::pull(source_version_date)
   }
   
   return(
     data.frame(source = tbl_list$source[i],
                source_table = t_name,
-              source_version_date = t_version)
+              source_version_date = toString(sort(unique(t_version))))
     )
 }) %>%
   dplyr::bind_rows()
@@ -309,7 +338,17 @@ DT::datatable(src_version_date,
 ## Processing Changes
 
 -   Release notes autogenerated with R Quarto as of v9.6.0.
--   No processing changes were made for this version.
+-   Deduplication hierarchy was updated to account for new sources:
+    -   "NIOSH" > "NIOSH IDLH"
+    -   "Cal OEHHA" > "Cal OEHHA REL derivations"
+-   The "study_group" field generation was updated to include the "study_duration_class" field.
+-   The toxval_type field mapping for Cal OEHHA was updated from "Reference Exposure Level" to "REL".
+-   For qc_fail flag assignment logic, we removed a case where "g/kg" would be flagged as "Ambiguous toxval_units". This affected records from ECHA IUCLID (2), ECOTOX (8), EFSA (4), HAWC Project (2), and IRIS (1). Due to time constraints, they could not be reincorporated into the main database but do remain in the qc_fail log files for reference.
+-   For qc_fail flag assignment logic, we removed a case where "gerbils" were flagged as "species out of scope". This affected records from ECHA IUCLID (13) and ATSDR MRLs (1). Due to time constraints, they could not be reincorporated into the main database but do remain in the qc_fail log files for reference.
+
+## New Fields
+
+-   **Toxicological Effect Category** Toxicological effects were manually assigned to one of the following toxicological effect categories: body weight, cancer, clinical chemistry, clinical signs, developmental, enzyme activity, food and/or water consumption, gross pathology, hematology, mortality/survival, multiple, neurobehavior, neurotransmitter, none, nonneoplastic histopathology, organ weight, other, reproductive, and urinalysis. Categories were adopted from the 2018 WHO/IPCS guidance document, “Guidance document on evaluating and expressing uncertainty in hazard characterization” and were applied in a manner consistent with published approaches (https://doi.org/10.1080/10937404.2025.2552108) (note DOI may not be live until later in 2025). See Data Landscape Figures section, figure "Record Count by Study Type Toxicological effect Category" for a visualization of the categories by record count and study type.
 
 # Known Issues
 
@@ -322,7 +361,6 @@ DT::datatable(src_version_date,
 -   Data Source Curation
     -   EPA OPP
         -   Manual curation of oral chronic RfD POD data from EPA OPP risk assessment documents complete. Following QC, records will be added in a future release.
-    -   Additional state (e.g., Minnesota Department of Health (MDH), New Jersey, Illinois), federal, and international sources in progress.
 -   Process
     -   Disambiguate lifestage and generation fields.
     -   Standardize the subsource field.

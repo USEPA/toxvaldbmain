@@ -152,6 +152,18 @@ toxval.load.postprocess <- function(toxval.db,
   #####################################################################
   fix.all.param.by.source(toxval.db,source,subsource,fill.toxval_fix=TRUE)
 
+  # Species set to human for toxval_type_supercategory 'Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'
+  # Performed in fix.species.v2 to prevent reporting "Not Specified" prematurely
+  # Placed after toxval_type mapping for supercategory matching purposes
+  # Get species_id for 'Human'
+  human_id = runQuery("SELECT DISTINCT species_id FROM species WHERE common_name='Human'", toxval.db)[[1]]
+  query = paste0(
+    "UPDATE toxval SET species_id = ", human_id, " ",
+    "WHERE toxval_type IN (SELECT toxval_type FROM toxval_type_dictionary ",
+    "WHERE toxval_type_supercategory IN ('Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'))"
+  )
+  runQuery(query, toxval.db)
+
   fix.exposure_route.not_specified.by.source(toxval.db, source, subsource)
 
   #####################################################################
@@ -178,6 +190,18 @@ toxval.load.postprocess <- function(toxval.db,
                  "WHERE (b.toxval_type_supercategory IS NULL OR b.toxval_type_supercategory IN ('-', '')) ",
                  "AND a.source='", source, "'", query_addition %>% gsub("subsource", "a.subsource", .))
   runQuery(query, toxval.db)
+
+  # Log missing supercategory
+  missing_supercategory = paste0("SELECT distinct source, toxval_type_original, toxval_type FROM toxval WHERE ",
+                                 "toxval_type NOT IN (SELECT distinct toxval_type FROM toxval_type_dictionary)",
+                                 "AND source='", source, "'", query_addition) %>%
+    runQuery(query=., db=toxval.db)
+  # Log missing for review
+  if(nrow(missing_supercategory)){
+    writexl::write_xlsx(missing_supercategory,
+                        paste0(toxval.config()$datapath, "dictionary/missing/missing_toxval_type_supercategory_", source, "_", subsource, ".xlsx") %>%
+                          gsub("_.xlsx", ".xlsx", ., fixed = TRUE))
+  }
 
   #####################################################################
   cat("add the manual study_type fixes\n")

@@ -1,3 +1,5 @@
+#' @title toxval_relationship.suggestions
+#' @description Provide suggestions for linking records to each other.
 #' @param toxval.db The version of toxvaldb to use.
 #' @param source Source to be fixed
 #' @param subsource Subsource to be fixed (NULL default)

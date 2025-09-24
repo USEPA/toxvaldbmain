@@ -79,6 +79,8 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
     # Combine list of dataframes into single across the RData files
     jira_tickets = lapply(names(RData_list[[1]]), function(l_name){
       tmp = purrr::modify_depth(RData_list, 1, l_name) %>%
+        # Remove column
+        purrr:::map(., ~ select(.x, -dplyr::any_of(c("date")))) %>%
         dplyr::bind_rows()
 
       # # Collapse rows by ticket name
@@ -306,6 +308,17 @@ set.qc.category.by.source <- function(toxval.db, source.db, source=NULL,
                          "WHERE a.qc_category IS NOT NULL")
     # Run update query
     runUpdate(table="toxval", updateQuery=updateQuery, updated_df=res, db=toxval.db)
+
+    # Update statement to set qc_category is "and this record was manually checked" when qc_status = pass
+    # and qc_status is "not determined" (not already pass or fail)
+    runQuery(paste0("UPDATE toxval SET qc_category = CASE ",
+                    "WHEN qc_category = '-' THEN qc_category ",
+                    "WHEN qc_category like '%, and this record was expert reviewed%' THEN qc_category ",
+                    "WHEN qc_category like '%, and this record was manually checked%' THEN qc_category ",
+                    "ELSE CONCAT(qc_category, ', and this record was manually checked') ",
+                    "END ",
+                    "WHERE qc_status = 'pass'"),
+                    toxval.db)
 
     # Update statement to set qc_status = pass where qc_category is "and this record was manually checked"
     # and qc_status is "not determined" (not already pass or fail)

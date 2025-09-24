@@ -19,7 +19,11 @@ fix.all.param.by.source <- function(toxval.db, source=NULL,subsource=NULL, fill.
     cat("load toxval_fix\n")
     runQuery("delete from toxval_fix",toxval.db)
 
-    filenames <- list.files(path = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/"), pattern="_5.xlsx", full.names = T)
+    filenames <- list.files(path = paste0(toxval.config()$datapath,"dictionary/2021_dictionaries/"),
+                            pattern="_5.xlsx",
+                            full.names = TRUE) %>%
+      # Ignore temp files
+      .[!grepl("\\~\\$", .)]
 
     full_dict <- lapply(filenames, function(x) openxlsx::read.xlsx(x, colNames = T)) %T>% {
       names(.) <- gsub("_5.xlsx", "", basename(filenames))
