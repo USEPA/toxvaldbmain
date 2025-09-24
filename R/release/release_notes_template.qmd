@@ -92,6 +92,7 @@ if(length(ccd_batch)){
     dplyr::bind_rows() %>%
     dplyr::filter(!is.na(QSAR_READY_SMILES)) %>%
     dplyr::pull(DTXSID) %>%
+    unique() %>%
     length()
   
     n_chemicals_defined = paste0("(", 
