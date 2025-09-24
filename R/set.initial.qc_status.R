@@ -50,6 +50,16 @@ set.initial.qc_status <- function(toxval.db, source.db, source, subsource=NULL){
         "SET a.qc_status=b.qc_status"
       )
       runQuery(update_query, toxval.db)
+
+      # Normalize qc_status
+      # undetermined = not determined
+      update_query = paste0(
+        "UPDATE ", toxval.db, ".toxval ",
+        "SET qc_status='not determined' ",
+        "WHERE qc_status = 'undetermined'"
+      )
+      runQuery(update_query, toxval.db)
+
     }
     cat("qc_status set to intitial values for", paste(source, subsource), "\n")
   }

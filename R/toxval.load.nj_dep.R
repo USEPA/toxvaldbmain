@@ -53,13 +53,7 @@ toxval.load.nj_dep <- function(toxval.db, source.db, log=FALSE, remove_null_dtxs
   #####################################################################
 
   res = res %>%
-    dplyr::rename(source_url = url) %>%
-    dplyr::mutate(url = subsource_url,
-                  # Fill in missing source url
-                  source_url = dplyr::case_when(
-                    source_url == "-" & subsource_url == "-" ~ "https://dep.nj.gov",
-                    TRUE ~ source_url
-                  ))
+    dplyr::mutate(source_url = "https://dep.nj.gov")
 
   #####################################################################
   cat("find columns in res that do not map to toxval or record_source\n")

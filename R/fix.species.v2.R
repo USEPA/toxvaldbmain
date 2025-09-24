@@ -15,7 +15,8 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   printCurrentFunction()
   # Read species dictionary files
   file =paste0(toxval.config()$datapath,"species/ecotox_species_dictionary_",date_string,".xlsx")
-  dict = openxlsx::read.xlsx(file)
+  dict = openxlsx::read.xlsx(file) %>%
+    dplyr::distinct()
   file = paste0(toxval.config()$datapath,"species/ecotox_species_synonyms_",date_string,".xlsx")
   synonyms = openxlsx::read.xlsx(file)
   file = paste0(toxval.config()$datapath,"species/toxvaldb_extra_species_",date_string,".xlsx")
@@ -36,13 +37,26 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   dict2$subspecies = NA
   dict2$variety = NA
   dict2 = dict2[,names(dict)]
-  dict = rbind(dict,dict2)
+  dict = rbind(dict,dict2) %>%
+    dplyr::distinct()
   dict$latin_name = tolower(dict$latin_name)
   dict$common_name = tolower(dict$common_name)
   synonyms$latin_name = tolower(synonyms$latin_name)
   extra$common_name = tolower(extra$common_name)
   extra$latin_name = tolower(extra$latin_name)
   extra$species_original = tolower(extra$species_original)
+
+  if(anyNA(dict$species_id)){
+    stop("Input species dictionary entry has 'NA' for species_id...assign unique species_id value in file.")
+  }
+  # Push updated species dictionary
+  species_dict_old = runQuery("SELECT * FROM species", toxval.db)
+  missing_species = dict %>%
+    dplyr::filter(!species_id %in% species_dict_old$species_id)
+  # Append missing entries
+  if(nrow(missing_species)){
+    runInsertTable(missing_species, "species", toxval.db, do.halt=TRUE, verbose=TRUE)
+  }
 
   slist = runQuery("select distinct source from toxval",toxval.db)[,1]
   if(!is.null(source)) slist = source
@@ -172,6 +186,23 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "AND (toxval_type LIKE 'AEGL%' OR toxval_type_original LIKE 'AEGL%')")
   runQuery(query, toxval.db)
 
+  # Species set to human for toxval_type_supercategory 'Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'
+  query = paste0(
+    "UPDATE toxval SET species_id = ", human_id, " ",
+    "WHERE toxval_type IN (SELECT toxval_type FROM toxval_type_dictionary ",
+    "WHERE toxval_type_supercategory IN ('Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines'))"
+  )
+  runQuery(query, toxval.db)
+
+  # Get species_id for 'zebrafish'
+  zebrafish_id = runQuery("SELECT DISTINCT species_id FROM species WHERE common_name='Zebra Danio'", toxval.db)[[1]]
+  # Fix case where zebrafish is specified in the strain field
+  query = paste0(
+    "UPDATE toxval SET species_id = ", zebrafish_id, " ",
+    "WHERE species_original like '%zebrafish%' or strain_original like '%zebrafish%'"
+  )
+  runQuery(query, toxval.db)
+
   # QC fail entries with out of scope species
   out_of_scope = readxl::read_xlsx(paste0(toxval.config()$datapath, "species/out_of_scope_species_ToxValDB.xlsx")) %>%
     dplyr::pull(common_name) %>%
@@ -183,9 +214,11 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
                  "WHEN a.qc_status LIKE '%fail%' THEN CONCAT(a.qc_status, '; species out of scope') ",
                  "ELSE 'fail: species out of scope' ",
                  "END ",
-                 "WHERE b.common_name IN ('", out_of_scope, "') or ",
-                 "a.species_original IN ('", out_of_scope, "') ",
-                 "AND a.source='", source, "'",
+                 "WHERE (b.common_name IN ('", out_of_scope, "') OR ",
+                 "a.species_original IN ('", out_of_scope, "')) AND ",
+                 # Zebrafish are in scope, not to be excluded due to "fish"
+                 "b.common_name NOT IN ('Zebra Danio') AND ",
+                 "a.source='", source, "'",
                  query_addition %>% gsub("subsource", "a.subsource", .))
   runQuery(query, toxval.db)
 
@@ -196,16 +229,18 @@ fix.species.v2 <- function(toxval.db,source=NULL,subsource=NULL,date_string="202
   cat("generate export for entries with 'Not Specified' species\n")
   #####################################################################
   query = paste0("SELECT b.species_id, a.source, a.source_hash, a.species_original, b.common_name, ",
-                 "a.toxval_type_original, a.study_type_original ",
+                 "a.toxval_type_original, a.toxval_type, a.study_type_original ",
                  "FROM toxval a INNER JOIN species b ON a.species_id=b.species_id ",
                  "WHERE b.common_name LIKE '%Not Specified%' ",
                  "AND a.source='", source, "' ",
                  "AND qc_status not like '%fail%' ",
                  # Ignore known/expected missing
-                 "AND a.species_original not in ('-', 'not reported', 'unspecified') ",
+                 "AND a.species_original not in ('-', 'not reported', 'unspecified', 'nr', 'unknown', ",
+                 "'Not specified', 'not specified', 'na') ",
                  query_addition %>% gsub("subsource", "a.subsource", .)
                  )
-  not_specified = runQuery(query, toxval.db)
+  not_specified = runQuery(query, toxval.db) %>%
+    dplyr::filter(!common_name %in% c("Not specified"))
 
   if(nrow(not_specified)) {
     out_file = paste0(toxval.config()$datapath, "dictionary/missing/missing_", source, "_", subsource, "_species.xlsx") %>%
