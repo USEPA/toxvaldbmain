@@ -67,7 +67,7 @@ fix.qc_status.by.source <- function(toxval.db, source.db, source=NULL, subsource
                     "WHEN qc_status like '%fail%' THEN CONCAT(qc_status, '; toxval_numeric<0') ",
                     "ELSE 'fail:toxval_numeric<0'",
                     "END ",
-                    "WHERE toxval_numeric<=0 and source = '",source,"'",query_addition) ,toxval.db)
+                    "WHERE toxval_numeric<=0 AND study_type NOT IN ('Toxicity Value', 'Media Exposure Guidelines', 'Acute Exposure Guidelines') AND source = '",source,"'",query_addition) ,toxval.db)
 
     runQuery(paste0("UPDATE toxval SET  qc_status = CASE ",
                     "WHEN qc_status like '%toxval_numeric is null%' THEN qc_status ",
